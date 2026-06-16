@@ -16,6 +16,7 @@ public struct ClosetFilterState: Equatable, Sendable {
     public var color: ClosetColor?
     public var favoritesOnly: Bool
     public var sort: ClosetSortOption
+    public var closetID: UUID?
 
     public init(
         searchText: String = "",
@@ -23,7 +24,8 @@ public struct ClosetFilterState: Equatable, Sendable {
         subtype: ClothingSubtype? = nil,
         color: ClosetColor? = nil,
         favoritesOnly: Bool = false,
-        sort: ClosetSortOption = .newest
+        sort: ClosetSortOption = .newest,
+        closetID: UUID? = nil
     ) {
         self.searchText = searchText
         self.category = category
@@ -31,6 +33,7 @@ public struct ClosetFilterState: Equatable, Sendable {
         self.color = color
         self.favoritesOnly = favoritesOnly
         self.sort = sort
+        self.closetID = closetID
     }
 }
 
@@ -39,11 +42,24 @@ public struct ClosetFilteringService: Sendable {
 
     public func filteredItems(
         _ items: [ClosetItem],
-        state: ClosetFilterState
+        state: ClosetFilterState,
+        closets: [Closet] = []
     ) -> [ClosetItem] {
         let query = state.searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let closetItemIDs: Set<UUID>?
+        if let closetID = state.closetID {
+            guard let closet = closets.first(where: { $0.id == closetID }) else {
+                return []
+            }
+            closetItemIDs = Set(closet.itemIDs)
+        } else {
+            closetItemIDs = nil
+        }
 
         let filtered = items.filter { item in
+            if let closetItemIDs, !closetItemIDs.contains(item.id) {
+                return false
+            }
             if let category = state.category, item.category != category {
                 return false
             }

@@ -13,7 +13,8 @@ public enum SwiftDataContainer {
     public static func makeContainer(isStoredInMemoryOnly: Bool) throws -> ModelContainer {
         let schema = Schema([
             ClosetItem.self,
-            Outfit.self
+            Outfit.self,
+            Closet.self
         ])
         let configuration = ModelConfiguration(
             "Pyxis",

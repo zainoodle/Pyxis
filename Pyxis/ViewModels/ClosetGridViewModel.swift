@@ -10,8 +10,8 @@ final class ClosetGridViewModel: ObservableObject {
         self.filteringService = filteringService
     }
 
-    func filteredItems(from items: [ClosetItem]) -> [ClosetItem] {
-        filteringService.filteredItems(items, state: filterState)
+    func filteredItems(from items: [ClosetItem], closets: [Closet] = []) -> [ClosetItem] {
+        filteringService.filteredItems(items, state: filterState, closets: closets)
     }
 
     func selectCategory(_ category: ClothingCategory?) {

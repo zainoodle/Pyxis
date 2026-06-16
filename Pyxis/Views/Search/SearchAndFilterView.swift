@@ -57,6 +57,7 @@ struct SearchAndFilterView: View {
             }
         }
         .labelsHidden()
+        .tint(PyxisColors.text)
         .frame(width: 128)
     }
 

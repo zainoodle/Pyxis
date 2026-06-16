@@ -50,6 +50,38 @@ final class FilteringTests: XCTestCase {
         XCTAssertEqual(result.map(\.itemCode), ["HD-001"])
     }
 
+    func testFiltersBySelectedCustomCloset() {
+        let hoodie = ClosetItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000101")!,
+            itemCode: "HD-001",
+            category: .tops,
+            subtype: .hoodie,
+            primaryColor: .black,
+            imageOriginalPath: "Images/Originals/hoodie.jpg"
+        )
+        let jeans = ClosetItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000102")!,
+            itemCode: "JE-001",
+            category: .bottoms,
+            subtype: .jeans,
+            primaryColor: .blue,
+            imageOriginalPath: "Images/Originals/jeans.jpg"
+        )
+        let goingOut = Closet(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000201")!,
+            name: "Going Out",
+            itemIDs: [hoodie.id]
+        )
+
+        let result = ClosetFilteringService().filteredItems(
+            [hoodie, jeans],
+            state: ClosetFilterState(closetID: goingOut.id),
+            closets: [goingOut]
+        )
+
+        XCTAssertEqual(result.map(\.itemCode), ["HD-001"])
+    }
+
     func testSortsByNewestCategoryColorAndMostWorn() {
         let oldMostWorn = ClosetItem(
             itemCode: "JE-001",

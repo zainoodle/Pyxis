@@ -5,6 +5,7 @@ struct ItemDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
+    @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @Bindable var item: ClosetItem
     @StateObject private var viewModel = ItemDetailViewModel()
     @State private var isEditingDetails = false
@@ -126,8 +127,20 @@ struct ItemDetailView: View {
                 }
             }
 
+            if !closets.isEmpty {
+                DisclosureGroup("CLOSETS") {
+                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                        ForEach(closets) { closet in
+                            Toggle(closet.displayName.uppercased(), isOn: closetBinding(for: closet))
+                        }
+                    }
+                    .padding(.top, PyxisSpacing.sm)
+                }
+            }
+
             Button("DELETE ITEM") {
                 viewModel.deleteImages(for: item)
+                closets.forEach { $0.remove(item) }
                 modelContext.delete(item)
                 try? modelContext.save()
                 dismiss()
@@ -186,6 +199,16 @@ struct ItemDetailView: View {
         Binding(
             get: { item.primaryColor },
             set: { item.primaryColor = $0 }
+        )
+    }
+
+    private func closetBinding(for closet: Closet) -> Binding<Bool> {
+        Binding(
+            get: { closet.contains(item) },
+            set: { isIncluded in
+                closet.setContains(isIncluded, item: item)
+                try? modelContext.save()
+            }
         )
     }
 

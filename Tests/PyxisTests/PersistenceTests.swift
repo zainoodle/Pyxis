@@ -110,4 +110,20 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.first?.footwearItemID, footwearID)
         XCTAssertEqual(fetched.first?.notes, "Simple daily fit")
     }
+
+    func testInsertsAndFetchesCustomCloset() throws {
+        let container = try SwiftDataContainer.makeTestContainer()
+        let context = ModelContext(container)
+        let itemID = UUID(uuidString: "00000000-0000-0000-0000-000000000301")!
+        let closet = Closet(name: "Dinner Clothes", itemIDs: [itemID])
+
+        context.insert(closet)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Closet>())
+
+        XCTAssertEqual(fetched.count, 1)
+        XCTAssertEqual(fetched.first?.name, "Dinner Clothes")
+        XCTAssertEqual(fetched.first?.itemIDs, [itemID])
+    }
 }

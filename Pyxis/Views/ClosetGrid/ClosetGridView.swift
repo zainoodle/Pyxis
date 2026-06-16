@@ -3,10 +3,12 @@ import SwiftUI
 
 struct ClosetGridView: View {
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
+    @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
     @State private var isShowingAddFlow = false
     @State private var isShowingBuilder = false
     @State private var isShowingSavedFits = false
+    @State private var isShowingClosets = false
     @State private var selectedItem: ClosetItem?
     @State private var builderFocusItem: ClosetItem?
     @State private var savedItemPrompt: ClosetItem?
@@ -22,12 +24,14 @@ struct ClosetGridView: View {
         VStack(spacing: PyxisSpacing.lg) {
             TopNavigationView(
                 filterState: $viewModel.filterState,
+                closets: closets,
                 addAction: { isShowingAddFlow = true },
                 buildAction: {
                     builderFocusItem = nil
                     isShowingBuilder = true
                 },
-                fitsAction: { isShowingSavedFits = true }
+                fitsAction: { isShowingSavedFits = true },
+                manageClosetsAction: { isShowingClosets = true }
             )
             .padding(.top, PyxisSpacing.lg)
 
@@ -64,11 +68,14 @@ struct ClosetGridView: View {
             .keyboardShortcut("f", modifiers: .command)
         }
         .sheet(isPresented: $isShowingAddFlow) {
-            AddItemFlow { item in
+            AddItemFlow(initialClosetID: viewModel.filterState.closetID) { item in
                 withAnimation(.easeOut(duration: 0.2)) {
                     savedItemPrompt = item
                 }
             }
+        }
+        .sheet(isPresented: $isShowingClosets) {
+            ClosetManagementView(selectedClosetID: $viewModel.filterState.closetID)
         }
         .sheet(isPresented: $isShowingBuilder) {
             OutfitBuilderView(initialItem: builderFocusItem)
@@ -88,11 +95,16 @@ struct ClosetGridView: View {
                 }
             }
         }
+        .onChange(of: closets.map(\.id)) { _, closetIDs in
+            if let closetID = viewModel.filterState.closetID, !closetIDs.contains(closetID) {
+                viewModel.filterState.closetID = nil
+            }
+        }
     }
 
     @ViewBuilder
     private var content: some View {
-        let filteredItems = viewModel.filteredItems(from: items)
+        let filteredItems = viewModel.filteredItems(from: items, closets: closets)
 
         if items.isEmpty {
             Spacer()
@@ -118,9 +130,18 @@ struct ClosetGridView: View {
             Spacer()
         } else if filteredItems.isEmpty {
             Spacer()
-            Text("NO MATCHES")
-                .font(PyxisTypography.body)
-                .foregroundStyle(PyxisColors.inactiveText)
+            VStack(spacing: PyxisSpacing.md) {
+                Text(emptyFilteredTitle)
+                    .font(PyxisTypography.body)
+                    .foregroundStyle(PyxisColors.inactiveText)
+
+                if viewModel.filterState.closetID != nil {
+                    Button("MANAGE CLOSETS") {
+                        isShowingClosets = true
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                }
+            }
             Spacer()
         } else {
             ScrollView {
@@ -134,6 +155,20 @@ struct ClosetGridView: View {
                 .padding(.top, PyxisSpacing.md)
             }
         }
+    }
+
+    private var selectedCloset: Closet? {
+        guard let closetID = viewModel.filterState.closetID else {
+            return nil
+        }
+        return closets.first { $0.id == closetID }
+    }
+
+    private var emptyFilteredTitle: String {
+        if selectedCloset?.itemCount == 0 {
+            return "THIS CLOSET IS EMPTY"
+        }
+        return "NO MATCHES"
     }
 
     #if DEBUG

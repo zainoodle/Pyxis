@@ -5,18 +5,24 @@ struct AddItemFlow: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query private var existingItems: [ClosetItem]
+    @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = AddItemViewModel()
+    @State private var selectedClosetIDs: Set<UUID> = []
+    @State private var didApplyInitialCloset = false
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
+    private let initialClosetID: UUID?
     private let onSave: ((ClosetItem) -> Void)?
 
     init(
         initialCategory: ClothingCategory? = nil,
         initialSubtype: ClothingSubtype? = nil,
+        initialClosetID: UUID? = nil,
         onSave: ((ClosetItem) -> Void)? = nil
     ) {
         self.initialCategory = initialCategory
         self.initialSubtype = initialSubtype
+        self.initialClosetID = initialClosetID
         self.onSave = onSave
     }
 
@@ -49,6 +55,10 @@ struct AddItemFlow: View {
             .padding(PyxisSpacing.md)
         }
         .background(PyxisColors.background)
+        .onAppear(perform: applyInitialCloset)
+        .onChange(of: closets.map(\.id)) { _, _ in
+            applyInitialCloset()
+        }
     }
 
     @ViewBuilder
@@ -65,14 +75,22 @@ struct AddItemFlow: View {
             HStack(alignment: .top, spacing: PyxisSpacing.xl) {
                 previewAndActions
 
-                MetadataEditorView(viewModel: viewModel)
+                MetadataEditorView(
+                    viewModel: viewModel,
+                    closets: closets,
+                    selectedClosetIDs: $selectedClosetIDs
+                )
                     .frame(maxWidth: 320)
             }
 
             VStack(spacing: PyxisSpacing.lg) {
                 previewAndActions
 
-                MetadataEditorView(viewModel: viewModel)
+                MetadataEditorView(
+                    viewModel: viewModel,
+                    closets: closets,
+                    selectedClosetIDs: $selectedClosetIDs
+                )
             }
         }
     }
@@ -147,6 +165,9 @@ struct AddItemFlow: View {
             return
         }
         modelContext.insert(item)
+        for closet in closets where selectedClosetIDs.contains(closet.id) {
+            closet.add(item)
+        }
         try? modelContext.save()
         onSave?(item)
         dismiss()
@@ -158,6 +179,17 @@ struct AddItemFlow: View {
         }
 
         viewModel.updateCategory(initialCategory, preferredSubtype: initialSubtype)
+    }
+
+    private func applyInitialCloset() {
+        guard !didApplyInitialCloset, let initialClosetID else {
+            return
+        }
+        guard closets.contains(where: { $0.id == initialClosetID }) else {
+            return
+        }
+        selectedClosetIDs.insert(initialClosetID)
+        didApplyInitialCloset = true
     }
 }
 
