@@ -31,8 +31,36 @@ struct MinimalButtonStyle: ButtonStyle {
             .foregroundStyle(PyxisColors.text)
             .padding(.horizontal, PyxisSpacing.md)
             .padding(.vertical, PyxisSpacing.sm)
-            .background(PyxisColors.field)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(PyxisColors.field)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(PyxisColors.hairline, lineWidth: 1)
+            }
             .opacity(configuration.isPressed ? 0.55 : 1)
+    }
+}
+
+struct PremiumCardBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(PyxisColors.surface)
+                    .shadow(color: PyxisColors.shadow, radius: 18, x: 0, y: 10)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(PyxisColors.hairline, lineWidth: 1)
+            }
+    }
+}
+
+extension View {
+    func premiumCardBackground() -> some View {
+        modifier(PremiumCardBackground())
     }
 }
 

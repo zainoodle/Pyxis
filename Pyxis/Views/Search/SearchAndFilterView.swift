@@ -26,13 +26,26 @@ struct SearchAndFilterView: View {
     }
 
     private var searchField: some View {
-        TextField("SEARCH", text: $filterState.searchText)
-            .textFieldStyle(.plain)
-            .font(PyxisTypography.body)
-            .focused(isSearchFocused)
+        HStack(spacing: PyxisSpacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PyxisColors.inactiveText)
+
+            TextField("SEARCH", text: $filterState.searchText)
+                .textFieldStyle(.plain)
+                .font(PyxisTypography.body)
+                .focused(isSearchFocused)
+        }
             .padding(.horizontal, PyxisSpacing.sm)
             .padding(.vertical, PyxisSpacing.sm)
-            .background(PyxisColors.field)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(PyxisColors.field)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(PyxisColors.hairline, lineWidth: 1)
+            }
             .frame(maxWidth: 180)
             .accessibilityLabel("Search closet")
     }
@@ -48,8 +61,31 @@ struct SearchAndFilterView: View {
     }
 
     private var favoritesToggle: some View {
-        Toggle("FAV", isOn: $filterState.favoritesOnly)
-            .font(PyxisTypography.label)
+        Button {
+            filterState.favoritesOnly.toggle()
+        } label: {
+            HStack(spacing: PyxisSpacing.xs) {
+                Image(systemName: filterState.favoritesOnly ? "heart.fill" : "heart")
+                    .font(.system(size: 11, weight: .semibold))
+
+                Text("FAVORITES")
+                    .font(PyxisTypography.label)
+            }
+            .foregroundStyle(filterState.favoritesOnly ? PyxisColors.surface : PyxisColors.secondaryText)
+            .padding(.horizontal, PyxisSpacing.sm)
+            .padding(.vertical, PyxisSpacing.sm)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(filterState.favoritesOnly ? PyxisColors.text : PyxisColors.field)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(filterState.favoritesOnly ? PyxisColors.text : PyxisColors.hairline, lineWidth: 1)
+            }
+        }
+            .buttonStyle(.plain)
             .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel("Show favorites only")
+            .accessibilityValue(filterState.favoritesOnly ? "On" : "Off")
     }
 }

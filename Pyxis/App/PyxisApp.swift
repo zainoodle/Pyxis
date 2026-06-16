@@ -16,6 +16,7 @@ struct PyxisApp: App {
     var body: some Scene {
         WindowGroup {
             ClosetGridView()
+                .preferredColorScheme(.light)
         }
         .modelContainer(modelContainer)
     }
