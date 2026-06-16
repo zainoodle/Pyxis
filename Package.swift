@@ -5,6 +5,7 @@ import PackageDescription
 let package = Package(
     name: "ARCHIVE",
     platforms: [
+        .macOS(.v14),
         .iOS(.v17)
     ],
     products: [
@@ -17,6 +18,7 @@ let package = Package(
             exclude: [
                 "App",
                 "DesignSystem",
+                "Services/DebugClosetSeedService.swift",
                 "ViewModels",
                 "Views"
             ]

@@ -5,7 +5,13 @@ struct ClosetGridView: View {
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @StateObject private var viewModel = ClosetGridViewModel()
     @State private var isShowingAddFlow = false
+    @State private var isShowingBuilder = false
+    @State private var isShowingSavedFits = false
     @State private var selectedItem: ClosetItem?
+    @State private var builderFocusItem: ClosetItem?
+    @State private var savedItemPrompt: ClosetItem?
+    @State private var seedMessage: String?
+    @Environment(\.modelContext) private var modelContext
     @FocusState private var isSearchFocused: Bool
 
     private let columns = [
@@ -14,10 +20,27 @@ struct ClosetGridView: View {
 
     var body: some View {
         VStack(spacing: ArchiveSpacing.lg) {
-            TopNavigationView(filterState: $viewModel.filterState) {
-                isShowingAddFlow = true
-            }
+            TopNavigationView(
+                filterState: $viewModel.filterState,
+                addAction: { isShowingAddFlow = true },
+                buildAction: {
+                    builderFocusItem = nil
+                    isShowingBuilder = true
+                },
+                fitsAction: { isShowingSavedFits = true }
+            )
             .padding(.top, ArchiveSpacing.lg)
+
+            if let savedItemPrompt {
+                SavedItemBuildPrompt(item: savedItemPrompt) {
+                    builderFocusItem = savedItemPrompt
+                    self.savedItemPrompt = nil
+                    isShowingBuilder = true
+                } dismissAction: {
+                    self.savedItemPrompt = nil
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
             SearchAndFilterView(
                 filterState: $viewModel.filterState,
@@ -26,9 +49,8 @@ struct ClosetGridView: View {
 
             content
         }
-        .padding(.horizontal, ArchiveSpacing.xl)
+        .padding(.horizontal, ArchiveSpacing.md)
         .padding(.bottom, ArchiveSpacing.xl)
-        .frame(minWidth: 820, minHeight: 620)
         .background(ArchiveColors.background)
         .toolbar {
             Button("ADD") {
@@ -42,12 +64,29 @@ struct ClosetGridView: View {
             .keyboardShortcut("f", modifiers: .command)
         }
         .sheet(isPresented: $isShowingAddFlow) {
-            AddItemFlow()
-                .frame(minWidth: 760, minHeight: 620)
+            AddItemFlow { item in
+                withAnimation(.easeOut(duration: 0.2)) {
+                    savedItemPrompt = item
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingBuilder) {
+            OutfitBuilderView(initialItem: builderFocusItem)
+        }
+        .sheet(isPresented: $isShowingSavedFits) {
+            SavedFitsGalleryView()
         }
         .sheet(item: $selectedItem) { item in
-            ItemDetailView(item: item)
-                .frame(minWidth: 760, minHeight: 620)
+            ItemDetailView(item: item) { buildItem in
+                builderFocusItem = buildItem
+                selectedItem = nil
+                Task {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    await MainActor.run {
+                        isShowingBuilder = true
+                    }
+                }
+            }
         }
     }
 
@@ -57,8 +96,24 @@ struct ClosetGridView: View {
 
         if items.isEmpty {
             Spacer()
-            EmptyArchiveState {
-                isShowingAddFlow = true
+            VStack(spacing: ArchiveSpacing.md) {
+                EmptyArchiveState {
+                    isShowingAddFlow = true
+                }
+
+                #if DEBUG
+                Button("SEED CLOSET") {
+                    seedDebugCloset()
+                }
+                .buttonStyle(MinimalButtonStyle())
+                .accessibilityLabel("Seed closet with sample clothing")
+
+                if let seedMessage {
+                    Text(seedMessage.uppercased())
+                        .font(ArchiveTypography.label)
+                        .foregroundStyle(ArchiveColors.secondaryText)
+                }
+                #endif
             }
             Spacer()
         } else if filteredItems.isEmpty {
@@ -71,14 +126,61 @@ struct ClosetGridView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: ArchiveSpacing.xl) {
                     ForEach(filteredItems) { item in
-                        ClosetGridItemView(item: item)
-                            .onTapGesture {
-                                selectedItem = item
-                            }
+                        ClosetGridItemView(item: item) {
+                            selectedItem = item
+                        }
                     }
                 }
                 .padding(.top, ArchiveSpacing.md)
             }
         }
+    }
+
+    #if DEBUG
+    private func seedDebugCloset() {
+        do {
+            let result = try DebugClosetSeedService.seedCloset(in: modelContext, existingItems: items)
+            seedMessage = result.insertedCount == 0
+                ? "Sample closet already seeded"
+                : "Seeded \(result.insertedCount) items"
+        } catch {
+            seedMessage = "Seed failed"
+        }
+    }
+    #endif
+}
+
+private struct SavedItemBuildPrompt: View {
+    let item: ClosetItem
+    let buildAction: () -> Void
+    let dismissAction: () -> Void
+
+    var body: some View {
+        HStack(spacing: ArchiveSpacing.md) {
+            VStack(alignment: .leading, spacing: ArchiveSpacing.xs) {
+                Text("SAVED \(item.itemCode)")
+                    .font(ArchiveTypography.label)
+                    .foregroundStyle(ArchiveColors.secondaryText)
+
+                Text(item.displayName?.uppercased() ?? item.subtype.rawValue.uppercased())
+                    .font(ArchiveTypography.body)
+                    .foregroundStyle(ArchiveColors.text)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            if OutfitBuilderService().slot(for: item.category) != nil {
+                Button("BUILD WITH THIS", action: buildAction)
+                    .buttonStyle(MinimalButtonStyle())
+            }
+
+            Button("READY", action: dismissAction)
+                .buttonStyle(.plain)
+                .font(ArchiveTypography.label)
+                .foregroundStyle(ArchiveColors.secondaryText)
+        }
+        .padding(ArchiveSpacing.md)
+        .background(ArchiveColors.field)
     }
 }

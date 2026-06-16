@@ -83,4 +83,31 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertTrue(fetched.isEmpty)
     }
+
+    func testInsertsAndFetchesSavedOutfit() throws {
+        let container = try SwiftDataContainer.makeTestContainer()
+        let context = ModelContext(container)
+        let topID = UUID()
+        let bottomID = UUID()
+        let footwearID = UUID()
+        let outfit = Outfit(
+            name: "Friday",
+            topItemID: topID,
+            bottomItemID: bottomID,
+            footwearItemID: footwearID,
+            notes: "Simple daily fit"
+        )
+
+        context.insert(outfit)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Outfit>())
+
+        XCTAssertEqual(fetched.count, 1)
+        XCTAssertEqual(fetched.first?.name, "Friday")
+        XCTAssertEqual(fetched.first?.topItemID, topID)
+        XCTAssertEqual(fetched.first?.bottomItemID, bottomID)
+        XCTAssertEqual(fetched.first?.footwearItemID, footwearID)
+        XCTAssertEqual(fetched.first?.notes, "Simple daily fit")
+    }
 }

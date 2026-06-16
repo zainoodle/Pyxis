@@ -1,21 +1,39 @@
 import CoreImage
 import Foundation
+
+#if canImport(UIKit)
 import UIKit
+public typealias ArchiveImage = UIImage
+#elseif canImport(AppKit)
+import AppKit
+public typealias ArchiveImage = NSImage
+#endif
 
 public enum ImageUtilities {
-    public static func pngData(from image: UIImage) -> Data? {
+    public static func pngData(from image: ArchiveImage) -> Data? {
+        #if canImport(UIKit)
         image.pngData()
+        #elseif canImport(AppKit)
+        bitmapRepresentation(from: image)?.representation(using: .png, properties: [:])
+        #endif
     }
 
-    public static func jpegData(from image: UIImage, compression: CGFloat = 0.9) -> Data? {
+    public static func jpegData(from image: ArchiveImage, compression: CGFloat = 0.9) -> Data? {
+        #if canImport(UIKit)
         image.jpegData(compressionQuality: compression)
+        #elseif canImport(AppKit)
+        bitmapRepresentation(from: image)?.representation(
+            using: .jpeg,
+            properties: [.compressionFactor: compression]
+        )
+        #endif
     }
 
     public static func thumbnailPNGData(
         from imageURL: URL,
         maxPixelSize: CGFloat = 420
     ) throws -> Data {
-        guard let image = UIImage(contentsOfFile: imageURL.path) else {
+        guard let image = ArchiveImage(contentsOfFile: imageURL.path) else {
             throw ImageUtilityError.couldNotLoadImage
         }
 
@@ -26,14 +44,15 @@ public enum ImageUtilities {
         return data
     }
 
-    public static func thumbnail(from image: UIImage, maxPixelSize: CGFloat) -> UIImage {
+    public static func thumbnail(from image: ArchiveImage, maxPixelSize: CGFloat) -> ArchiveImage {
+        #if canImport(UIKit)
         let originalSize = image.size
         guard originalSize.width > 0, originalSize.height > 0 else {
             return image
         }
 
         let scale = min(maxPixelSize / originalSize.width, maxPixelSize / originalSize.height, 1)
-        let targetSize = NSSize(
+        let targetSize = CGSize(
             width: originalSize.width * scale,
             height: originalSize.height * scale
         )
@@ -42,7 +61,35 @@ public enum ImageUtilities {
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: targetSize))
         }
+        #elseif canImport(AppKit)
+        let originalSize = image.size
+        guard originalSize.width > 0, originalSize.height > 0 else {
+            return image
+        }
+
+        let scale = min(maxPixelSize / originalSize.width, maxPixelSize / originalSize.height, 1)
+        let targetSize = CGSize(
+            width: originalSize.width * scale,
+            height: originalSize.height * scale
+        )
+
+        let thumbnail = NSImage(size: targetSize)
+        thumbnail.lockFocus()
+        image.draw(in: CGRect(origin: .zero, size: targetSize))
+        thumbnail.unlockFocus()
+        return thumbnail
+        #endif
     }
+
+    #if canImport(AppKit) && !canImport(UIKit)
+    private static func bitmapRepresentation(from image: NSImage) -> NSBitmapImageRep? {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+        return bitmap
+    }
+    #endif
 }
 
 public enum ImageUtilityError: LocalizedError {

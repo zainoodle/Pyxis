@@ -66,6 +66,7 @@ final class AddItemViewModel: ObservableObject {
         }
 
         stage = .processing
+        let processingStartedAt = Date()
         let processed = await backgroundRemovalService.processImage(
             at: selectedImageURL,
             itemID: itemID
@@ -75,6 +76,12 @@ final class AddItemViewModel: ObservableObject {
         if let analysisURL = analysisURL(from: processed),
            let analysis = try? colorAnalysisService.analyze(imageURL: analysisURL) {
             primaryColor = analysis.primaryColor
+        }
+
+        let elapsed = Date().timeIntervalSince(processingStartedAt)
+        let minimumRevealDuration: TimeInterval = 1.15
+        if elapsed < minimumRevealDuration {
+            try? await Task.sleep(nanoseconds: UInt64((minimumRevealDuration - elapsed) * 1_000_000_000))
         }
 
         switch processed.status {

@@ -1,5 +1,13 @@
 import Foundation
+import ImageIO
+
+#if canImport(UIKit)
 import UIKit
+public typealias ArchiveColor = UIColor
+#elseif canImport(AppKit)
+import AppKit
+public typealias ArchiveColor = NSColor
+#endif
 
 public struct ColorAnalysisResult: Equatable, Sendable {
     public let primaryColor: ClosetColor
@@ -21,8 +29,8 @@ public struct ColorAnalysisService: Sendable {
     public init() {}
 
     public func analyze(imageURL: URL) throws -> ColorAnalysisResult {
-        guard let image = UIImage(contentsOfFile: imageURL.path),
-              let cgImage = image.cgImage else {
+        guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw ColorAnalysisError.couldNotLoadImage
         }
 
@@ -86,12 +94,21 @@ public struct ColorAnalysisService: Sendable {
         )
     }
 
-    public func mapToClosetColor(_ color: UIColor) -> ClosetColor {
+    public func mapToClosetColor(_ color: ArchiveColor) -> ClosetColor {
         var red: CGFloat = 0
         var green: CGFloat = 0
         var blue: CGFloat = 0
         var alpha: CGFloat = 0
+
+        #if canImport(UIKit)
         color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        #elseif canImport(AppKit)
+        guard let rgbColor = color.usingColorSpace(.deviceRGB) else {
+            return .unknown
+        }
+        rgbColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        #endif
+
         return mapToClosetColor(red: red, green: green, blue: blue)
     }
 
@@ -114,7 +131,7 @@ public struct ColorAnalysisService: Sendable {
         if red > 0.35 && red < 0.62 && green < 0.2 && blue < 0.25 { return .burgundy }
         if red > 0.65 && blue > 0.45 && green < 0.45 { return .pink }
         if red > 0.35 && blue > 0.45 && green < 0.35 { return .purple }
-        if blue > 0.35 && red < 0.2 && green < 0.24 { return .navy }
+        if blue > red && blue > green && brightness < 0.32 { return .navy }
         if blue > red && blue > green { return .blue }
         if green > red && green > blue {
             return red > 0.22 && blue < 0.28 ? .olive : .green

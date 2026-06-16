@@ -4,87 +4,163 @@ import SwiftUI
 struct ItemDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
     @Bindable var item: ClosetItem
     @StateObject private var viewModel = ItemDetailViewModel()
+    @State private var isEditingDetails = false
+    let buildAction: ((ClosetItem) -> Void)?
+
+    init(item: ClosetItem, buildAction: ((ClosetItem) -> Void)? = nil) {
+        self.item = item
+        self.buildAction = buildAction
+    }
+
+    private var fitUsageCount: Int {
+        OutfitBuilderService().fitUsageCounts(from: outfits)[item.id, default: 0]
+    }
+
+    private var canBuildWithItem: Bool {
+        OutfitBuilderService().slot(for: item.category) != nil
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: ArchiveSpacing.xl) {
-            VStack(spacing: ArchiveSpacing.md) {
-                LocalImageView(url: viewModel.displayURL(for: item))
-                    .frame(width: 330, height: 420)
-
-                ItemCodeLabel(code: item.itemCode)
-
-                Toggle("ORIGINAL", isOn: $viewModel.showOriginal)
-                    .font(ArchiveTypography.label)
-
-                Button(viewModel.isRetryingBackgroundRemoval ? "RETRYING" : "RETRY BACKGROUND") {
-                    Task {
-                        await viewModel.retryBackgroundRemoval(for: item)
-                        try? modelContext.save()
-                    }
+        ScrollView {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: ArchiveSpacing.xl) {
+                    imagePanel
+                    detailPanel
+                        .frame(maxWidth: 330)
                 }
-                .buttonStyle(MinimalButtonStyle())
 
-                if let retryMessage = viewModel.retryMessage {
-                    Text(retryMessage.uppercased())
-                        .font(ArchiveTypography.label)
-                        .foregroundStyle(ArchiveColors.secondaryText)
+                VStack(spacing: ArchiveSpacing.lg) {
+                    imagePanel
+                    detailPanel
                 }
             }
+            .padding(ArchiveSpacing.md)
+        }
+        .background(ArchiveColors.background)
+    }
 
-            VStack(alignment: .leading, spacing: ArchiveSpacing.md) {
-                HStack {
-                    Text("DETAIL")
-                        .font(ArchiveTypography.title)
-                    Spacer()
-                    Button("CLOSE") {
-                        dismiss()
-                    }
-                    .buttonStyle(.plain)
-                }
+    private var imagePanel: some View {
+        VStack(spacing: ArchiveSpacing.md) {
+            LocalImageView(url: viewModel.displayURL(for: item))
+                .frame(maxWidth: 330)
+                .frame(height: 420)
 
-                TextField("DISPLAY NAME", text: optionalString($item.displayName))
-                TextField("BRAND", text: optionalString($item.brand))
-                TextField("SIZE", text: optionalString($item.size))
-                TextField("NOTES", text: optionalString($item.notes), axis: .vertical)
+            ItemCodeLabel(code: item.itemCode)
 
-                Picker("CATEGORY", selection: categoryBinding) {
-                    ForEach(ClothingCategory.allCases) { category in
-                        Text(category.rawValue.uppercased()).tag(category)
-                    }
-                }
+            Text(ClosetItemImageResolver.hasCutout(for: item) ? "READY" : "ORIGINAL ONLY")
+                .font(ArchiveTypography.label)
+                .foregroundStyle(ArchiveColors.secondaryText)
 
-                Picker("SUBTYPE", selection: subtypeBinding) {
-                    ForEach(ClothingSubtype.allCases) { subtype in
-                        Text(subtype.rawValue.uppercased()).tag(subtype)
-                    }
-                }
+            Toggle("USE ORIGINAL", isOn: $viewModel.showOriginal)
+                .font(ArchiveTypography.label)
 
-                Picker("COLOR", selection: colorBinding) {
-                    ForEach(ClosetColor.allCases) { color in
-                        Text(color.rawValue.uppercased()).tag(color)
-                    }
-                }
-
-                Toggle("FAVORITE", isOn: $item.favorite)
-
-                Stepper("WEAR COUNT \(item.wearCount)", value: $item.wearCount, in: 0...999)
-
-                Button("DELETE ITEM") {
-                    viewModel.deleteImages(for: item)
-                    modelContext.delete(item)
+            Button(viewModel.isRetryingBackgroundRemoval ? "IMPROVING" : "IMPROVE CUTOUT") {
+                Task {
+                    await viewModel.retryBackgroundRemoval(for: item)
                     try? modelContext.save()
+                }
+            }
+            .buttonStyle(MinimalButtonStyle())
+
+            if let retryMessage = viewModel.retryMessage {
+                Text(retryMessage.uppercased())
+                    .font(ArchiveTypography.label)
+                    .foregroundStyle(ArchiveColors.secondaryText)
+            }
+        }
+    }
+
+    private var detailPanel: some View {
+        VStack(alignment: .leading, spacing: ArchiveSpacing.md) {
+            HStack {
+                Text("DETAIL")
+                    .font(ArchiveTypography.title)
+                Spacer()
+                Button("CLOSE") {
+                    dismiss()
+                }
+                .buttonStyle(.plain)
+            }
+
+            utilityBlock
+
+            if canBuildWithItem, let buildAction {
+                Button("BUILD WITH THIS") {
+                    buildAction(item)
                     dismiss()
                 }
                 .buttonStyle(MinimalButtonStyle())
             }
-            .font(ArchiveTypography.body)
-            .textFieldStyle(.plain)
-            .frame(width: 330)
+
+            DisclosureGroup("EDIT DETAILS", isExpanded: $isEditingDetails) {
+                VStack(alignment: .leading, spacing: ArchiveSpacing.md) {
+                    TextField("DISPLAY NAME", text: optionalString($item.displayName))
+                    TextField("BRAND", text: optionalString($item.brand))
+                    TextField("SIZE", text: optionalString($item.size))
+                    TextField("NOTES", text: optionalString($item.notes), axis: .vertical)
+
+                    Picker("CATEGORY", selection: categoryBinding) {
+                        ForEach(ClothingCategory.allCases) { category in
+                            Text(category.rawValue.uppercased()).tag(category)
+                        }
+                    }
+
+                    Picker("SUBTYPE", selection: subtypeBinding) {
+                        ForEach(ClothingSubtype.allCases) { subtype in
+                            Text(subtype.rawValue.uppercased()).tag(subtype)
+                        }
+                    }
+
+                    Picker("COLOR", selection: colorBinding) {
+                        ForEach(ClosetColor.allCases) { color in
+                            Text(color.rawValue.uppercased()).tag(color)
+                        }
+                    }
+
+                    Toggle("FAVORITE", isOn: $item.favorite)
+
+                    Stepper("WEAR COUNT \(item.wearCount)", value: $item.wearCount, in: 0...999)
+                }
+            }
+
+            Button("DELETE ITEM") {
+                viewModel.deleteImages(for: item)
+                modelContext.delete(item)
+                try? modelContext.save()
+                dismiss()
+            }
+            .buttonStyle(MinimalButtonStyle())
         }
-        .padding(ArchiveSpacing.xl)
-        .background(ArchiveColors.background)
+        .font(ArchiveTypography.body)
+        .textFieldStyle(.plain)
+    }
+
+    private var utilityBlock: some View {
+        VStack(alignment: .leading, spacing: ArchiveSpacing.sm) {
+            Text("USED IN \(fitUsageCount) FIT\(fitUsageCount == 1 ? "" : "S")")
+            Text("WORN \(item.wearCount) TIME\(item.wearCount == 1 ? "" : "S")")
+            Text(lastWornText)
+        }
+        .font(ArchiveTypography.body)
+        .foregroundStyle(ArchiveColors.secondaryText)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, ArchiveSpacing.sm)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(ArchiveColors.hairline)
+                .frame(height: 1)
+        }
+    }
+
+    private var lastWornText: String {
+        guard let lastWornDate = item.lastWornDate else {
+            return "LAST WORN NEVER"
+        }
+
+        return "LAST WORN \(lastWornDate.formatted(date: .abbreviated, time: .omitted).uppercased())"
     }
 
     private var categoryBinding: Binding<ClothingCategory> {

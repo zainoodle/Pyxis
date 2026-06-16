@@ -1,13 +1,9 @@
 import SwiftUI
 
-struct ClosetGridItemView: View {
+struct OutfitCarouselItemView: View {
     let item: ClosetItem
+    let isSelected: Bool
     let action: () -> Void
-
-    init(item: ClosetItem, action: @escaping () -> Void = {}) {
-        self.item = item
-        self.action = action
-    }
 
     private var imageURL: URL? {
         guard let storage = try? ImageStorageService() else {
@@ -20,19 +16,17 @@ struct ClosetGridItemView: View {
         Button(action: action) {
             VStack(spacing: ArchiveSpacing.sm) {
                 LocalImageView(url: imageURL)
-                    .frame(height: 178)
+                    .frame(height: 126)
                     .padding(.horizontal, ArchiveSpacing.sm)
 
                 ItemCodeLabel(code: item.itemCode)
 
-                if let displayName = item.displayName, !displayName.isEmpty {
-                    Text(displayName.uppercased())
-                        .font(ArchiveTypography.label)
-                        .foregroundStyle(ArchiveColors.secondaryText)
-                        .lineLimit(1)
-                }
+                Text(ClosetItemImageResolver.hasCutout(for: item) ? "READY" : "ORIGINAL ONLY")
+                    .font(ArchiveTypography.label)
+                    .foregroundStyle(isSelected ? ArchiveColors.secondaryText : ArchiveColors.inactiveText)
+                    .lineLimit(1)
             }
-            .frame(minWidth: 150, minHeight: 230)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
