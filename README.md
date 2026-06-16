@@ -1,6 +1,6 @@
-# ARCHIVE
+# Pyxis
 
-ARCHIVE is a local-first iOS SwiftUI app for logging and organizing clothing items.
+Pyxis is a local-first iOS SwiftUI app for logging and organizing clothing items.
 
 The macOS prototype has been preserved on the `macos-main` branch. The `main` branch is the iOS version.
 
@@ -10,10 +10,14 @@ The macOS prototype has been preserved on the `macos-main` branch. The `main` br
 - iOS 17+ simulator or device
 - A signing team selected in Xcode for physical iPhone deployment
 
+## Contributor Notes
+
+- Confirm the project/app name with the user before naming or renaming project surfaces. Suggestions are welcome, but do not decide the name without approval.
+
 ## Run On iPhone
 
-1. Open `ARCHIVE.xcodeproj` in Xcode.
-2. Select the `ARCHIVE` scheme.
+1. Open `Pyxis.xcodeproj` in Xcode.
+2. Select the `Pyxis` scheme.
 3. Select your connected iPhone.
 4. In Signing & Capabilities, choose your team if Xcode asks.
 5. Press Run.

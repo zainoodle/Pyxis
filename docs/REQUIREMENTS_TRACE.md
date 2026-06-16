@@ -1,4 +1,4 @@
-# ARCHIVE Requirements Trace
+# Pyxis Requirements Trace
 
 This file maps the `Instructions.docx` MVP requirements to implementation artifacts and verification evidence.
 
@@ -54,13 +54,13 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| White or near-white background | `ArchiveColors`, grid root view | Visual QA |
-| Centered uppercase navigation | `TopNavigationView`, `ArchiveComponents` | Visual QA |
-| Monospaced typography | `ArchiveTypography` | Visual QA/code review |
+| White or near-white background | `PyxisColors`, grid root view | Visual QA |
+| Centered uppercase navigation | `TopNavigationView`, `PyxisComponents` | Visual QA |
+| Monospaced typography | `PyxisTypography` | Visual QA/code review |
 | Product-code labels under items | `ClosetGridItemView` | Visual QA |
 | No heavy cards/shadows/gradients | Design system and view review | CSS-style color/shadow scan equivalent in SwiftUI |
 | Empty state says `ADD FIRST ITEM` | `ClosetGridView` | Manual QA on empty store |
-| `Command+N` opens add flow | `ArchiveApp` or grid commands | Manual QA |
+| `Command+N` opens add flow | `PyxisApp` or grid commands | Manual QA |
 | `Command+F` focuses search | `SearchAndFilterView`, focus state | Manual QA |
 | Escape closes modal/detail where appropriate | Add/detail view handlers | Manual QA |
 | Accessible labels | All interactive controls | Accessibility review/manual inspection |

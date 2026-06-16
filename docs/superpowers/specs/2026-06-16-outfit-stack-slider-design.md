@@ -2,7 +2,7 @@
 
 ## Summary
 
-Build a premium manual outfit builder for ARCHIVE where users see a complete fit at once: shirts on top, pants in the middle, and shoes at the bottom. Each row is a swipeable bay-window carousel inspired by the reference video, with the centered item in each row becoming the active outfit piece. Users can save the assembled fit locally.
+Build a premium manual outfit builder for Pyxis where users see a complete fit at once: shirts on top, pants in the middle, and shoes at the bottom. Each row is a swipeable bay-window carousel inspired by the reference video, with the centered item in each row becoming the active outfit piece. Users can save the assembled fit locally.
 
 This feature remains local-first. It does not add accounts, cloud sync, remote image processing, recommendations, analytics, or network calls.
 
@@ -10,7 +10,7 @@ This feature remains local-first. It does not add accounts, cloud sync, remote i
 
 The provided reference video is a 4-second image slider loop. Its key behavior is a bay-window carousel: the focused image sits forward and readable in the center, neighboring images rotate backward in perspective, and farther images fade into the sides. The effect creates depth without hiding the current item.
 
-For ARCHIVE, the animation should be translated into function rather than copied literally. Each clothing category row should use the same depth grammar:
+For Pyxis, the animation should be translated into function rather than copied literally. Each clothing category row should use the same depth grammar:
 
 - Center item: full opacity, largest scale, no horizontal rotation, active selection.
 - Near side items: lower opacity, smaller apparent size, rotated on the Y axis toward the center.
@@ -20,7 +20,7 @@ For ARCHIVE, the animation should be translated into function rather than copied
 
 ## Current App Context
 
-ARCHIVE currently launches directly into `ClosetGridView`, queries `ClosetItem` records with SwiftData, and displays items in a grid. Tapping an item opens `ItemDetailView`; adding an item opens `AddItemFlow`.
+Pyxis currently launches directly into `ClosetGridView`, queries `ClosetItem` records with SwiftData, and displays items in a grid. Tapping an item opens `ItemDetailView`; adding an item opens `AddItemFlow`.
 
 Existing useful foundations:
 
@@ -65,7 +65,7 @@ Outerwear and accessories should be supported by the data model from the start b
 
 The screen should feel premium and calm:
 
-- Use the existing minimal ARCHIVE visual language: near-white background, black type, restrained lines, no heavy chrome.
+- Use the existing minimal Pyxis visual language: near-white background, black type, restrained lines, no heavy chrome.
 - Put clothing images on clean transparent or near-white surfaces so the garments carry the interface.
 - Avoid loud gradients, marketing hero layouts, nested cards, and decorative shapes.
 - Use steady spring-like snapping, subtle scale, and perspective. The animation should feel deliberate, not bouncy or game-like.
@@ -137,17 +137,17 @@ If background removal fails, users may still save the item with the original ima
 
 Add the feature in focused units:
 
-- `ARCHIVE/Models/Outfit.swift`: SwiftData model for saved fits.
-- `ARCHIVE/Persistence/SwiftDataContainer.swift`: include `Outfit` in the schema.
-- `ARCHIVE/Services/OutfitBuilderService.swift`: pure logic for grouping items into rows, choosing default selections, advancing row indices, and creating outfit draft data.
-- `ARCHIVE/ViewModels/OutfitBuilderViewModel.swift`: UI state for selected indices, current draft, saving, and row empty states.
-- `ARCHIVE/Views/OutfitBuilder/OutfitBuilderView.swift`: screen shell with top controls, stacked rows, and save rail.
-- `ARCHIVE/Views/OutfitBuilder/OutfitCarouselRow.swift`: reusable bay-window row.
-- `ARCHIVE/Views/OutfitBuilder/OutfitCarouselItemView.swift`: item rendering, image priority, labels, and accessibility.
-- `ARCHIVE/Views/OutfitBuilder/SavedFitsStrip.swift`: compact saved-fit surface inside the builder.
-- `ARCHIVE/Views/Shared/ClosetItemImageResolver.swift`: shared helper for cutout/thumbnail/original URL priority.
+- `Pyxis/Models/Outfit.swift`: SwiftData model for saved fits.
+- `Pyxis/Persistence/SwiftDataContainer.swift`: include `Outfit` in the schema.
+- `Pyxis/Services/OutfitBuilderService.swift`: pure logic for grouping items into rows, choosing default selections, advancing row indices, and creating outfit draft data.
+- `Pyxis/ViewModels/OutfitBuilderViewModel.swift`: UI state for selected indices, current draft, saving, and row empty states.
+- `Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift`: screen shell with top controls, stacked rows, and save rail.
+- `Pyxis/Views/OutfitBuilder/OutfitCarouselRow.swift`: reusable bay-window row.
+- `Pyxis/Views/OutfitBuilder/OutfitCarouselItemView.swift`: item rendering, image priority, labels, and accessibility.
+- `Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift`: compact saved-fit surface inside the builder.
+- `Pyxis/Views/Shared/ClosetItemImageResolver.swift`: shared helper for cutout/thumbnail/original URL priority.
 
-The reusable row should not know about SwiftData or saving. It should render item view data and report selection changes. The service should be testable in `ArchiveCore` without UI automation.
+The reusable row should not know about SwiftData or saving. It should render item view data and report selection changes. The service should be testable in `PyxisCore` without UI automation.
 
 ## Data Flow
 

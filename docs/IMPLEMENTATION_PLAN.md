@@ -1,6 +1,6 @@
-# ARCHIVE Implementation Plan
+# Pyxis Implementation Plan
 
-> Note: This original plan described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `ARCHIVE.xcodeproj`.
+> Note: This original plan described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `Pyxis.xcodeproj`.
 
 This plan starts after explicit approval of `docs/ARCHITECTURE_REVIEW.md`. It follows the phases in `Instructions.docx` and the macOS build/run guidance from the Build macOS Apps workflow.
 
@@ -10,7 +10,7 @@ Do not begin this section until architecture approval is given.
 
 1. Confirm the workspace is still not inside a parent git repo.
 2. If no repo is present, run `git init` at `C:\Users\zaino\OneDrive\Documents\Github\Pyxis`.
-3. Create a SwiftPM macOS app package for `ARCHIVE`.
+3. Create a SwiftPM macOS app package for `Pyxis`.
 4. Keep all MVP functionality local-first.
 5. Add no third-party package dependencies unless the user explicitly approves them.
 6. Add no network, analytics, telemetry, cloud storage, account, or remote processing code.
@@ -20,17 +20,17 @@ Do not begin this section until architecture approval is given.
 ### Files
 
 - `Package.swift`
-- `ARCHIVE/App/ArchiveApp.swift`
-- `ARCHIVE/Models/ClosetItem.swift`
-- `ARCHIVE/Models/ClothingCategory.swift`
-- `ARCHIVE/Models/ClothingSubtype.swift`
-- `ARCHIVE/Models/ClosetColor.swift`
-- `ARCHIVE/Models/Season.swift`
-- `ARCHIVE/Models/ItemSource.swift`
-- `ARCHIVE/Persistence/SwiftDataContainer.swift`
-- `ARCHIVE/Services/ItemCodeGenerator.swift`
-- `Tests/ArchiveTests/ItemCodeGeneratorTests.swift`
-- `Tests/ArchiveTests/PersistenceTests.swift`
+- `Pyxis/App/PyxisApp.swift`
+- `Pyxis/Models/ClosetItem.swift`
+- `Pyxis/Models/ClothingCategory.swift`
+- `Pyxis/Models/ClothingSubtype.swift`
+- `Pyxis/Models/ClosetColor.swift`
+- `Pyxis/Models/Season.swift`
+- `Pyxis/Models/ItemSource.swift`
+- `Pyxis/Persistence/SwiftDataContainer.swift`
+- `Pyxis/Services/ItemCodeGenerator.swift`
+- `Tests/PyxisTests/ItemCodeGeneratorTests.swift`
+- `Tests/PyxisTests/PersistenceTests.swift`
 
 ### Work
 
@@ -62,16 +62,16 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `ARCHIVE/Services/ImageStorageService.swift`
-- `ARCHIVE/Services/BackgroundRemovalService.swift`
-- `ARCHIVE/Utilities/ImageUtilities.swift`
-- `ARCHIVE/Utilities/FileManagerExtensions.swift`
-- `Tests/ArchiveTests/ImageStorageTests.swift`
-- `Tests/ArchiveTests/BackgroundRemovalFallbackTests.swift`
+- `Pyxis/Services/ImageStorageService.swift`
+- `Pyxis/Services/BackgroundRemovalService.swift`
+- `Pyxis/Utilities/ImageUtilities.swift`
+- `Pyxis/Utilities/FileManagerExtensions.swift`
+- `Tests/PyxisTests/ImageStorageTests.swift`
+- `Tests/PyxisTests/BackgroundRemovalFallbackTests.swift`
 
 ### Work
 
-1. Resolve `Application Support/ARCHIVE/Images`.
+1. Resolve `Application Support/Pyxis/Images`.
 2. Create `Originals`, `Cutouts`, and `Thumbnails` directories.
 3. Save imported original images using UUID filenames.
 4. Create thumbnails for grid display.
@@ -99,12 +99,12 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `ARCHIVE/Services/ColorAnalysisService.swift`
-- `ARCHIVE/Services/ClothingClassificationService.swift`
-- `ARCHIVE/Services/FutureAI/OutfitRecommendationService.swift`
-- `ARCHIVE/Services/FutureAI/PurchaseCompatibilityService.swift`
-- `ARCHIVE/Services/FutureAI/EmbeddingService.swift`
-- `Tests/ArchiveTests/ColorAnalysisTests.swift`
+- `Pyxis/Services/ColorAnalysisService.swift`
+- `Pyxis/Services/ClothingClassificationService.swift`
+- `Pyxis/Services/FutureAI/OutfitRecommendationService.swift`
+- `Pyxis/Services/FutureAI/PurchaseCompatibilityService.swift`
+- `Pyxis/Services/FutureAI/EmbeddingService.swift`
+- `Tests/PyxisTests/ColorAnalysisTests.swift`
 
 ### Work
 
@@ -133,22 +133,22 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `ARCHIVE/DesignSystem/ArchiveTypography.swift`
-- `ARCHIVE/DesignSystem/ArchiveColors.swift`
-- `ARCHIVE/DesignSystem/ArchiveSpacing.swift`
-- `ARCHIVE/DesignSystem/ArchiveComponents.swift`
-- `ARCHIVE/ViewModels/ClosetGridViewModel.swift`
-- `ARCHIVE/ViewModels/AddItemViewModel.swift`
-- `ARCHIVE/ViewModels/ItemDetailViewModel.swift`
-- `ARCHIVE/Views/ClosetGrid/ClosetGridView.swift`
-- `ARCHIVE/Views/ClosetGrid/ClosetGridItemView.swift`
-- `ARCHIVE/Views/AddItem/AddItemFlow.swift`
-- `ARCHIVE/Views/AddItem/ImageImportView.swift`
-- `ARCHIVE/Views/AddItem/MetadataEditorView.swift`
-- `ARCHIVE/Views/ItemDetail/ItemDetailView.swift`
-- `ARCHIVE/Views/Navigation/TopNavigationView.swift`
-- `ARCHIVE/Views/Search/SearchAndFilterView.swift`
-- `Tests/ArchiveTests/FilteringTests.swift`
+- `Pyxis/DesignSystem/PyxisTypography.swift`
+- `Pyxis/DesignSystem/PyxisColors.swift`
+- `Pyxis/DesignSystem/PyxisSpacing.swift`
+- `Pyxis/DesignSystem/PyxisComponents.swift`
+- `Pyxis/ViewModels/ClosetGridViewModel.swift`
+- `Pyxis/ViewModels/AddItemViewModel.swift`
+- `Pyxis/ViewModels/ItemDetailViewModel.swift`
+- `Pyxis/Views/ClosetGrid/ClosetGridView.swift`
+- `Pyxis/Views/ClosetGrid/ClosetGridItemView.swift`
+- `Pyxis/Views/AddItem/AddItemFlow.swift`
+- `Pyxis/Views/AddItem/ImageImportView.swift`
+- `Pyxis/Views/AddItem/MetadataEditorView.swift`
+- `Pyxis/Views/ItemDetail/ItemDetailView.swift`
+- `Pyxis/Views/Navigation/TopNavigationView.swift`
+- `Pyxis/Views/Search/SearchAndFilterView.swift`
+- `Tests/PyxisTests/FilteringTests.swift`
 
 ### Work
 
@@ -198,9 +198,9 @@ Do not begin this section until architecture approval is given.
 ### Work
 
 1. Add `script/build_and_run.sh` after the runnable target exists.
-2. Stage SwiftPM GUI output into `dist/ARCHIVE.app`.
+2. Stage SwiftPM GUI output into `dist/Pyxis.app`.
 3. Generate minimal `Info.plist`.
-4. Launch with `/usr/bin/open -n dist/ARCHIVE.app`.
+4. Launch with `/usr/bin/open -n dist/Pyxis.app`.
 5. Add `--verify`, `--logs`, and `--debug` support where practical.
 6. Wire `.codex/environments/environment.toml` Run action to `./script/build_and_run.sh`.
 7. Run unit tests.

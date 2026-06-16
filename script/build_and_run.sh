@@ -2,9 +2,9 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-PROJECT="ARCHIVE.xcodeproj"
-SCHEME="ARCHIVE"
-BUNDLE_ID="com.zainoodle.archive"
+PROJECT="Pyxis.xcodeproj"
+SCHEME="Pyxis"
+BUNDLE_ID="com.zainoodle.pyxis"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="$ROOT_DIR/DerivedData"

@@ -1,6 +1,6 @@
-# ARCHIVE Architecture Review
+# Pyxis Architecture Review
 
-> Note: This original review described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `ARCHIVE.xcodeproj`.
+> Note: This original review described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `Pyxis.xcodeproj`.
 
 ## Current Workspace
 
@@ -18,7 +18,7 @@ This review is Phase 1 only. The instruction document requires approval before l
 
 ## Product Summary
 
-ARCHIVE is a local-first macOS SwiftUI app for logging and organizing clothing items. The MVP focuses on:
+Pyxis is a local-first macOS SwiftUI app for logging and organizing clothing items. The MVP focuses on:
 
 1. Importing or dropping clothing photos.
 2. Attempting local background removal.
@@ -36,9 +36,9 @@ Use a SwiftPM-first macOS SwiftUI application. Xcode can open the package direct
 
 ```text
 Package.swift
-ARCHIVE/
+Pyxis/
   App/
-    ArchiveApp.swift
+    PyxisApp.swift
   Models/
     ClosetItem.swift
     ClothingCategory.swift
@@ -77,15 +77,15 @@ ARCHIVE/
     Search/
       SearchAndFilterView.swift
   DesignSystem/
-    ArchiveTypography.swift
-    ArchiveColors.swift
-    ArchiveSpacing.swift
-    ArchiveComponents.swift
+    PyxisTypography.swift
+    PyxisColors.swift
+    PyxisSpacing.swift
+    PyxisComponents.swift
   Utilities/
     ImageUtilities.swift
     FileManagerExtensions.swift
 Tests/
-  ArchiveTests/
+  PyxisTests/
     ItemCodeGeneratorTests.swift
     ColorAnalysisTests.swift
     ImageStorageTests.swift
@@ -143,7 +143,7 @@ Use SwiftData for closet item metadata and Application Support for image assets.
 Image storage root:
 
 ```text
-Application Support/ARCHIVE/Images/
+Application Support/Pyxis/Images/
   Originals/
   Cutouts/
   Thumbnails/
@@ -328,11 +328,11 @@ After implementation approval:
 3. Create `script/build_and_run.sh`.
 4. Wire `.codex/environments/environment.toml` Run action to `./script/build_and_run.sh`.
 5. For the SwiftPM GUI app, the script should:
-   - stop an existing `ARCHIVE` process,
+   - stop an existing `Pyxis` process,
    - run `swift build`,
-   - stage `dist/ARCHIVE.app`,
+   - stage `dist/Pyxis.app`,
    - generate a minimal `Info.plist`,
-   - launch with `/usr/bin/open -n dist/ARCHIVE.app`,
+   - launch with `/usr/bin/open -n dist/Pyxis.app`,
    - support `--verify`, `--logs`, and `--debug` where practical.
 
 Current environment note: this workspace is on Windows/PowerShell. Swift/Xcode build and app launch verification require macOS with Xcode or a Swift toolchain.

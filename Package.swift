@@ -3,18 +3,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "ARCHIVE",
+    name: "Pyxis",
     platforms: [
         .macOS(.v14),
         .iOS(.v17)
     ],
     products: [
-        .library(name: "ArchiveCore", targets: ["ArchiveCore"])
+        .library(name: "PyxisCore", targets: ["PyxisCore"])
     ],
     targets: [
         .target(
-            name: "ArchiveCore",
-            path: "ARCHIVE",
+            name: "PyxisCore",
+            path: "Pyxis",
             exclude: [
                 "App",
                 "DesignSystem",
@@ -23,9 +23,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "ArchiveTests",
-            dependencies: ["ArchiveCore"],
-            path: "Tests/ArchiveTests"
+            name: "PyxisTests",
+            dependencies: ["PyxisCore"],
+            path: "Tests/PyxisTests"
         )
     ]
 )

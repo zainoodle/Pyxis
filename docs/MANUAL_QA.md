@@ -1,8 +1,8 @@
-# ARCHIVE Manual QA
+# Pyxis Manual QA
 
-Run this checklist on iPhone or iOS Simulator after Xcode builds the `ARCHIVE` scheme and `./script/build_and_run.sh --verify` launches the app on a booted simulator.
+Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` scheme and `./script/build_and_run.sh --verify` launches the app on a booted simulator.
 
-1. Launch ARCHIVE.
+1. Launch Pyxis.
 2. Confirm the first screen is the closet grid.
 3. Confirm the empty state says `ADD FIRST ITEM`.
 4. Press `Command+N`.
@@ -14,8 +14,8 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `ARCHIVE` s
 10. Edit display name, brand, size, tags, notes, category, subtype, color, and favorite.
 11. Save the item.
 12. Confirm the item appears in the grid with a product-style code below it.
-13. Quit ARCHIVE.
-14. Relaunch ARCHIVE.
+13. Quit Pyxis.
+14. Relaunch Pyxis.
 15. Confirm the item persists.
 16. Filter by category.
 17. Filter by color.
@@ -27,5 +27,5 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `ARCHIVE` s
 23. Edit metadata in detail and close/reopen detail.
 24. Delete the item.
 25. Confirm the item disappears from the grid.
-26. Inspect `Application Support/ARCHIVE/Images` and confirm related original, cutout, and thumbnail files are cleaned up.
+26. Inspect `Application Support/Pyxis/Images` and confirm related original, cutout, and thumbnail files are cleaned up.
 27. Disconnect network and repeat launch/import/save/search to confirm local-only behavior.
