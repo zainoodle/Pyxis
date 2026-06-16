@@ -19,7 +19,6 @@ let package = Package(
                 "App",
                 "DesignSystem",
                 "Services/DebugClosetSeedService.swift",
-                "ViewModels",
                 "Views"
             ]
         ),

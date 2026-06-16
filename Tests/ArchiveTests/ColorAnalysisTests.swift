@@ -30,6 +30,52 @@ final class ColorAnalysisTests: XCTestCase {
         XCTAssertEqual(result.primaryColor, .blue)
     }
 
+    func testPrefersSubstantialGarmentColorOverPlainPhotoBackground() throws {
+        let url = try makeCenteredGarmentImage(
+            background: .white,
+            garment: ArchiveColor(red: 0.02, green: 0.05, blue: 0.22, alpha: 1)
+        )
+        let result = try ColorAnalysisService().analyze(imageURL: url)
+
+        XCTAssertEqual(result.primaryColor, .navy)
+        XCTAssertGreaterThan(result.confidence, 0.2)
+    }
+
+    func testKeepsWhiteWhenNoNonBackgroundGarmentColorIsPresent() throws {
+        let url = try makeImageFile(color: .white)
+        let result = try ColorAnalysisService().analyze(imageURL: url)
+
+        XCTAssertEqual(result.primaryColor, .white)
+        XCTAssertEqual(result.secondaryColors, [])
+    }
+
+    func testInfersColorHintFromFilenameTokens() {
+        let service = ColorAnalysisService()
+
+        XCTAssertEqual(service.colorHint(filename: "washed-black-hoodie.jpg")?.primaryColor, .black)
+        XCTAssertEqual(service.colorHint(filename: "off-white-tee.png")?.primaryColor, .cream)
+        XCTAssertEqual(service.colorHint(filename: "army-green-jacket.heic")?.primaryColor, .green)
+        XCTAssertEqual(service.colorHint(filename: "maroon-loafers.jpeg")?.primaryColor, .burgundy)
+    }
+
+    func testInfersBroaderColorVocabularyFromFilenameTokens() {
+        let service = ColorAnalysisService()
+
+        XCTAssertEqual(service.colorHint(filename: "light-blue-shirt.jpg")?.primaryColor, .blue)
+        XCTAssertEqual(service.colorHint(filename: "dark-grey-hoodie.jpg")?.primaryColor, .gray)
+        XCTAssertEqual(service.colorHint(filename: "ecru-knit.png")?.primaryColor, .cream)
+        XCTAssertEqual(service.colorHint(filename: "stone-chinos.jpeg")?.primaryColor, .tan)
+        XCTAssertEqual(service.colorHint(filename: "silver-bracelet.png")?.primaryColor, .gray)
+        XCTAssertEqual(service.colorHint(filename: "gold-watch.png")?.primaryColor, .yellow)
+    }
+
+    func testFilenameColorHintDoesNotMatchInsideUnrelatedWords() {
+        let service = ColorAnalysisService()
+
+        XCTAssertNil(service.colorHint(filename: "blackbird-reference-photo.jpg"))
+        XCTAssertNil(service.colorHint(filename: "orangeade-campaign.png"))
+    }
+
     func testReturnsUnknownWhenNoVisiblePixelsExist() throws {
         let url = try makeFullyTransparentImage()
         let result = try ColorAnalysisService().analyze(imageURL: url)
@@ -63,10 +109,18 @@ final class ColorAnalysisTests: XCTestCase {
         }
     }
 
+    private func makeCenteredGarmentImage(background: ArchiveColor, garment: ArchiveColor) throws -> URL {
+        try makeCustomRGBAImage(size: CGSize(width: 40, height: 40)) { x, y, width in
+            let inset = width / 4
+            let isGarmentPixel = x >= inset && x < width - inset && y >= inset && y < width - inset
+            return isGarmentPixel ? garment : background
+        }
+    }
+
     private func makeCustomRGBAImage(
+        size: CGSize = CGSize(width: 12, height: 12),
         colorAt: (Int, Int, Int) -> ArchiveColor
     ) throws -> URL {
-        let size = CGSize(width: 12, height: 12)
         #if canImport(UIKit)
         let image = UIGraphicsImageRenderer(size: size).image { context in
             for y in 0..<Int(size.height) {

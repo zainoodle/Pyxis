@@ -109,7 +109,7 @@ struct ItemDetailView: View {
                     }
 
                     Picker("SUBTYPE", selection: subtypeBinding) {
-                        ForEach(ClothingSubtype.allCases) { subtype in
+                        ForEach(ClothingSubtype.compatibleSubtypes(for: item.category)) { subtype in
                             Text(subtype.rawValue.uppercased()).tag(subtype)
                         }
                     }
@@ -166,7 +166,12 @@ struct ItemDetailView: View {
     private var categoryBinding: Binding<ClothingCategory> {
         Binding(
             get: { item.category },
-            set: { item.category = $0 }
+            set: { newCategory in
+                item.category = newCategory
+                if !item.subtype.isCompatible(with: newCategory) {
+                    item.subtype = ClothingSubtype.defaultSubtype(for: newCategory)
+                }
+            }
         )
     }
 

@@ -11,14 +11,14 @@ struct MetadataEditorView: View {
             TextField("TAGS", text: $viewModel.tags)
             TextField("NOTES", text: $viewModel.notes, axis: .vertical)
 
-            Picker("CATEGORY", selection: $viewModel.category) {
+            Picker("CATEGORY", selection: categoryBinding) {
                 ForEach(ClothingCategory.allCases) { category in
                     Text(category.rawValue.uppercased()).tag(category)
                 }
             }
 
             Picker("SUBTYPE", selection: $viewModel.subtype) {
-                ForEach(ClothingSubtype.allCases) { subtype in
+                ForEach(ClothingSubtype.compatibleSubtypes(for: viewModel.category)) { subtype in
                     Text(subtype.rawValue.uppercased()).tag(subtype)
                 }
             }
@@ -33,5 +33,12 @@ struct MetadataEditorView: View {
         }
         .font(ArchiveTypography.body)
         .textFieldStyle(.plain)
+    }
+
+    private var categoryBinding: Binding<ClothingCategory> {
+        Binding(
+            get: { viewModel.category },
+            set: { viewModel.updateCategory($0) }
+        )
     }
 }

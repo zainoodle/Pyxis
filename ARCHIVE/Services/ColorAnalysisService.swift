@@ -28,6 +28,41 @@ public struct ColorAnalysisResult: Equatable, Sendable {
 public struct ColorAnalysisService: Sendable {
     public init() {}
 
+    public func colorHint(filename: String?) -> ColorAnalysisResult? {
+        let tokens = normalizedTokens(from: filename)
+
+        let colorRules: [(tokens: [String], color: ClosetColor)] = [
+            (["off white", "offwhite", "ivory", "cream", "ecru"], .cream),
+            (["burgundy", "maroon", "wine"], .burgundy),
+            (["multicolor", "multi color", "multi", "print", "pattern"], .multicolor),
+            (["black"], .black),
+            (["white"], .white),
+            (["grey", "gray", "charcoal", "silver"], .gray),
+            (["brown", "espresso", "chocolate"], .brown),
+            (["tan", "khaki", "beige", "sand", "stone"], .tan),
+            (["navy"], .navy),
+            (["blue"], .blue),
+            (["green"], .green),
+            (["olive", "army"], .olive),
+            (["red"], .red),
+            (["pink"], .pink),
+            (["purple", "violet"], .purple),
+            (["yellow", "gold"], .yellow),
+            (["orange"], .orange)
+        ]
+
+        for rule in colorRules {
+            if rule.tokens.contains(where: { matches($0, in: tokens) }) {
+                return ColorAnalysisResult(
+                    primaryColor: rule.color,
+                    confidence: 0.42
+                )
+            }
+        }
+
+        return nil
+    }
+
     public func analyze(imageURL: URL) throws -> ColorAnalysisResult {
         guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
@@ -77,20 +112,21 @@ public struct ColorAnalysisService: Sendable {
         }
 
         guard visiblePixelCount > 0,
-              let dominant = counts.max(by: { $0.value < $1.value }) else {
+              let dominant = sortedCounts(counts).first else {
             return ColorAnalysisResult(primaryColor: .unknown, confidence: 0)
         }
 
-        let secondary = counts
-            .filter { $0.key != dominant.key }
-            .sorted { $0.value > $1.value }
+        let selected = selectedPrimaryColor(from: counts, dominant: dominant, visiblePixelCount: visiblePixelCount)
+        let secondary = sortedCounts(counts)
+            .filter { $0.key != selected.key }
+            .filter { !isPlainBackgroundColor($0.key) || selected.key == dominant.key }
             .prefix(2)
             .map(\.key)
 
         return ColorAnalysisResult(
-            primaryColor: dominant.key,
+            primaryColor: selected.key,
             secondaryColors: Array(secondary),
-            confidence: Double(dominant.value) / Double(visiblePixelCount)
+            confidence: Double(selected.value) / Double(visiblePixelCount)
         )
     }
 
@@ -141,6 +177,78 @@ public struct ColorAnalysisService: Sendable {
         }
 
         return .multicolor
+    }
+
+    private func selectedPrimaryColor(
+        from counts: [ClosetColor: Int],
+        dominant: (key: ClosetColor, value: Int),
+        visiblePixelCount: Int
+    ) -> (key: ClosetColor, value: Int) {
+        guard isPlainBackgroundColor(dominant.key),
+              let strongestGarmentCandidate = sortedCounts(counts)
+                .first(where: { !isPlainBackgroundColor($0.key) })
+        else {
+            return dominant
+        }
+
+        let garmentShare = Double(strongestGarmentCandidate.value) / Double(visiblePixelCount)
+        return garmentShare >= 0.18 ? strongestGarmentCandidate : dominant
+    }
+
+    private func sortedCounts(_ counts: [ClosetColor: Int]) -> [(key: ClosetColor, value: Int)] {
+        counts.sorted { lhs, rhs in
+            if lhs.value != rhs.value {
+                return lhs.value > rhs.value
+            }
+            return lhs.key.rawValue < rhs.key.rawValue
+        }
+    }
+
+    private func isPlainBackgroundColor(_ color: ClosetColor) -> Bool {
+        switch color {
+        case .white, .cream, .gray:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func normalizedTokens(from filename: String?) -> [String] {
+        let stem = URL(fileURLWithPath: filename ?? "").deletingPathExtension().lastPathComponent
+        let normalized = stem
+            .lowercased()
+            .map { character in
+                character.isLetter || character.isNumber ? character : " "
+            }
+
+        return String(normalized)
+            .split(separator: " ")
+            .map(String.init)
+    }
+
+    private func matches(_ tokenPattern: String, in tokens: [String]) -> Bool {
+        let patternTokens = normalizedTokens(from: tokenPattern)
+
+        guard !patternTokens.isEmpty else {
+            return false
+        }
+
+        if patternTokens.count == 1 {
+            return tokens.contains(patternTokens[0])
+        }
+
+        guard tokens.count >= patternTokens.count else {
+            return false
+        }
+
+        for startIndex in 0...(tokens.count - patternTokens.count) {
+            let endIndex = startIndex + patternTokens.count
+            if Array(tokens[startIndex..<endIndex]) == patternTokens {
+                return true
+            }
+        }
+
+        return false
     }
 }
 

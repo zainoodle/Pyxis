@@ -33,20 +33,30 @@ public enum ItemCodeGenerator {
             return "CN"
         case .sweater:
             return "SW"
+        case .cardigan:
+            return "CG"
         case .pants:
             return "PT"
         case .jeans:
             return "JE"
+        case .leggings:
+            return "LG"
+        case .joggers:
+            return "JG"
         case .sneakers:
             return "SH"
         case .boots:
             return "BT"
         case .slides:
             return "SL"
+        case .mules:
+            return "ML"
         case .jacket:
             return "JK"
         case .coat:
             return "CT"
+        case .vest:
+            return "VT"
         case .bag:
             return "BG"
         case .shirt:
@@ -59,6 +69,12 @@ public enum ItemCodeGenerator {
             return "DR"
         case .sandals:
             return "SH"
+        case .scarf:
+            return "SC"
+        case .sunglasses:
+            return "SG"
+        case .watch:
+            return "WT"
         case .hat, .belt, .jewelry:
             return "AC"
         case .other:

@@ -17,6 +17,8 @@ final class AddItemViewModel: ObservableObject {
     @Published var category: ClothingCategory = .other
     @Published var subtype: ClothingSubtype = .other
     @Published var primaryColor: ClosetColor = .unknown
+    @Published var classificationConfidence: Double = 0
+    @Published var colorConfidence: Double = 0
     @Published var brand = ""
     @Published var size = ""
     @Published var tags = ""
@@ -56,8 +58,21 @@ final class AddItemViewModel: ObservableObject {
         selectedImageURL = url
         stage = .selected
         let classification = classificationService.classify(filename: url.lastPathComponent)
-        category = classification.category
-        subtype = classification.subtype
+        updateCategory(classification.category, preferredSubtype: classification.subtype)
+        classificationConfidence = classification.confidence
+        if let colorHint = colorAnalysisService.colorHint(filename: url.lastPathComponent) {
+            primaryColor = colorHint.primaryColor
+            colorConfidence = colorHint.confidence
+        }
+    }
+
+    func updateCategory(_ newCategory: ClothingCategory, preferredSubtype: ClothingSubtype? = nil) {
+        category = newCategory
+        if let preferredSubtype, preferredSubtype.isCompatible(with: newCategory) {
+            subtype = preferredSubtype
+        } else if !subtype.isCompatible(with: newCategory) {
+            subtype = ClothingSubtype.defaultSubtype(for: newCategory)
+        }
     }
 
     func processSelectedImage(itemID: UUID = UUID()) async {
@@ -74,8 +89,11 @@ final class AddItemViewModel: ObservableObject {
         result = processed
 
         if let analysisURL = analysisURL(from: processed),
-           let analysis = try? colorAnalysisService.analyze(imageURL: analysisURL) {
+           let analysis = try? colorAnalysisService.analyze(imageURL: analysisURL),
+           analysis.primaryColor != .unknown,
+           analysis.confidence > 0 {
             primaryColor = analysis.primaryColor
+            colorConfidence = analysis.confidence
         }
 
         let elapsed = Date().timeIntervalSince(processingStartedAt)
@@ -117,6 +135,8 @@ final class AddItemViewModel: ObservableObject {
             imageOriginalPath: result.originalPath,
             imageCutoutPath: result.cutoutPath,
             thumbnailPath: result.thumbnailPath,
+            classificationConfidence: classificationConfidence,
+            colorConfidence: colorConfidence,
             source: .owned
         )
     }

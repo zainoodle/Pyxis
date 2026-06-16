@@ -9,15 +9,23 @@ final class ItemCodeGeneratorTests: XCTestCase {
             (.hoodie, .tops, "HD-001"),
             (.crewneck, .tops, "CN-001"),
             (.sweater, .tops, "SW-001"),
+            (.cardigan, .tops, "CG-001"),
             (.pants, .bottoms, "PT-001"),
             (.jeans, .bottoms, "JE-001"),
+            (.leggings, .bottoms, "LG-001"),
+            (.joggers, .bottoms, "JG-001"),
             (.sneakers, .footwear, "SH-001"),
             (.boots, .footwear, "BT-001"),
             (.slides, .footwear, "SL-001"),
+            (.mules, .footwear, "ML-001"),
             (.jacket, .outerwear, "JK-001"),
             (.coat, .outerwear, "CT-001"),
+            (.vest, .outerwear, "VT-001"),
             (.bag, .accessories, "BG-001"),
             (.belt, .accessories, "AC-001"),
+            (.scarf, .accessories, "SC-001"),
+            (.sunglasses, .accessories, "SG-001"),
+            (.watch, .accessories, "WT-001"),
             (.other, .other, "OT-001")
         ]
 

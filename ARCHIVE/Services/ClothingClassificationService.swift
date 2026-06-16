@@ -23,39 +23,46 @@ public struct ClothingClassificationService: Sendable {
         rules = [
             (["tshirt", "tee", "t-shirt"], .tops, .tShirt),
             (["longsleeve", "long-sleeve", "long sleeve"], .tops, .longSleeve),
-            (["shirt", "buttondown", "button-down"], .tops, .shirt),
-            (["hoodie"], .tops, .hoodie),
+            (["overshirt", "shacket"], .outerwear, .jacket),
+            (["hoodie", "hoody"], .tops, .hoodie),
             (["crewneck", "crew"], .tops, .crewneck),
+            (["cardigan"], .tops, .cardigan),
             (["sweater", "knit"], .tops, .sweater),
-            (["jacket", "bomber"], .outerwear, .jacket),
-            (["coat", "parka"], .outerwear, .coat),
+            (["vest", "gilet"], .outerwear, .vest),
+            (["jacket", "bomber", "blazer", "puffer"], .outerwear, .jacket),
+            (["coat", "parka", "overcoat", "trench", "raincoat"], .outerwear, .coat),
+            (["shirt", "buttondown", "button-down", "button up", "button-up", "tank", "top"], .tops, .shirt),
             (["jeans", "denim"], .bottoms, .jeans),
-            (["pants", "trouser"], .bottoms, .pants),
+            (["leggings"], .bottoms, .leggings),
+            (["jogger", "joggers"], .bottoms, .joggers),
+            (["pants", "pant", "trouser", "trousers", "cargo", "chino", "chinos", "sweatpants"], .bottoms, .pants),
             (["shorts"], .bottoms, .shorts),
             (["skirt"], .bottoms, .skirt),
             (["dress"], .onePiece, .dress),
-            (["sneaker", "shoe"], .footwear, .sneakers),
-            (["boot"], .footwear, .boots),
-            (["slide"], .footwear, .slides),
-            (["sandal"], .footwear, .sandals),
+            (["sneaker", "sneakers", "shoe", "shoes", "loafer", "loafers", "trainer", "trainers"], .footwear, .sneakers),
+            (["boot", "boots"], .footwear, .boots),
+            (["mule", "mules", "clog", "clogs"], .footwear, .mules),
+            (["slide", "slides"], .footwear, .slides),
+            (["sandal", "sandals"], .footwear, .sandals),
             (["hat", "cap", "beanie"], .accessories, .hat),
-            (["bag", "tote"], .accessories, .bag),
+            (["bag", "tote", "backpack"], .accessories, .bag),
             (["belt"], .accessories, .belt),
-            (["jewelry", "ring", "necklace"], .accessories, .jewelry)
+            (["watch"], .accessories, .watch),
+            (["jewelry", "jewellery", "ring", "necklace", "bracelet", "earring", "earrings"], .accessories, .jewelry),
+            (["scarf"], .accessories, .scarf),
+            (["sunglasses", "glasses"], .accessories, .sunglasses)
         ]
     }
 
     public func classify(filename: String?) -> ClothingClassificationResult {
-        let normalized = (filename ?? "")
-            .lowercased()
-            .replacingOccurrences(of: "_", with: " ")
+        let tokens = normalizedTokens(from: filename)
 
-        guard !normalized.isEmpty else {
+        guard !tokens.isEmpty else {
             return .unknown
         }
 
         for rule in rules {
-            if rule.tokens.contains(where: { normalized.contains($0) }) {
+            if rule.tokens.contains(where: { matches($0, in: tokens) }) {
                 return ClothingClassificationResult(
                     category: rule.category,
                     subtype: rule.subtype,
@@ -65,6 +72,44 @@ public struct ClothingClassificationService: Sendable {
         }
 
         return .unknown
+    }
+
+    private func normalizedTokens(from filename: String?) -> [String] {
+        let stem = URL(fileURLWithPath: filename ?? "").deletingPathExtension().lastPathComponent
+        let normalized = stem
+            .lowercased()
+            .map { character in
+                character.isLetter || character.isNumber ? character : " "
+            }
+
+        return String(normalized)
+            .split(separator: " ")
+            .map(String.init)
+    }
+
+    private func matches(_ tokenPattern: String, in tokens: [String]) -> Bool {
+        let patternTokens = normalizedTokens(from: tokenPattern)
+
+        guard !patternTokens.isEmpty else {
+            return false
+        }
+
+        if patternTokens.count == 1 {
+            return tokens.contains(patternTokens[0])
+        }
+
+        guard tokens.count >= patternTokens.count else {
+            return false
+        }
+
+        for startIndex in 0...(tokens.count - patternTokens.count) {
+            let endIndex = startIndex + patternTokens.count
+            if Array(tokens[startIndex..<endIndex]) == patternTokens {
+                return true
+            }
+        }
+
+        return false
     }
 }
 
