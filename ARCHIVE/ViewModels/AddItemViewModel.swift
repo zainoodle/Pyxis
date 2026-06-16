@@ -28,7 +28,8 @@ final class AddItemViewModel: ObservableObject {
     private let imageStorage: ImageStorageService
     private let backgroundRemovalService: BackgroundRemovalServiceProtocol
     private let colorAnalysisService: ColorAnalysisService
-    private let classificationService: ClothingClassificationService
+    private let classificationService: any ClothingClassificationProviding
+    private var userAdjustedClassification = false
 
     init() {
         do {
@@ -46,7 +47,7 @@ final class AddItemViewModel: ObservableObject {
         imageStorage: ImageStorageService,
         backgroundRemovalService: BackgroundRemovalServiceProtocol,
         colorAnalysisService: ColorAnalysisService = ColorAnalysisService(),
-        classificationService: ClothingClassificationService = ClothingClassificationService()
+        classificationService: any ClothingClassificationProviding = ClothingClassificationService()
     ) {
         self.imageStorage = imageStorage
         self.backgroundRemovalService = backgroundRemovalService
@@ -57,16 +58,25 @@ final class AddItemViewModel: ObservableObject {
     func selectImage(_ url: URL) {
         selectedImageURL = url
         stage = .selected
+        userAdjustedClassification = false
+        primaryColor = .unknown
+        colorConfidence = 0
         let classification = classificationService.classify(filename: url.lastPathComponent)
-        updateCategory(classification.category, preferredSubtype: classification.subtype)
-        classificationConfidence = classification.confidence
+        applyAutomaticClassification(classification)
         if let colorHint = colorAnalysisService.colorHint(filename: url.lastPathComponent) {
             primaryColor = colorHint.primaryColor
             colorConfidence = colorHint.confidence
         }
     }
 
-    func updateCategory(_ newCategory: ClothingCategory, preferredSubtype: ClothingSubtype? = nil) {
+    func updateCategory(
+        _ newCategory: ClothingCategory,
+        preferredSubtype: ClothingSubtype? = nil,
+        markUserEdited: Bool = true
+    ) {
+        if markUserEdited {
+            userAdjustedClassification = true
+        }
         category = newCategory
         if let preferredSubtype, preferredSubtype.isCompatible(with: newCategory) {
             subtype = preferredSubtype
@@ -94,6 +104,16 @@ final class AddItemViewModel: ObservableObject {
            analysis.confidence > 0 {
             primaryColor = analysis.primaryColor
             colorConfidence = analysis.confidence
+        }
+
+        if let analysisURL = analysisURL(from: processed), !userAdjustedClassification {
+            let classification = classificationService.classify(
+                imageURL: analysisURL,
+                filename: selectedImageURL.lastPathComponent
+            )
+            if classification.confidence > classificationConfidence {
+                applyAutomaticClassification(classification)
+            }
         }
 
         let elapsed = Date().timeIntervalSince(processingStartedAt)
@@ -153,6 +173,15 @@ final class AddItemViewModel: ObservableObject {
             return nil
         }
         return imageStorage.url(for: result.originalPath)
+    }
+
+    private func applyAutomaticClassification(_ classification: ClothingClassificationResult) {
+        updateCategory(
+            classification.category,
+            preferredSubtype: classification.subtype,
+            markUserEdited: false
+        )
+        classificationConfidence = classification.confidence
     }
 }
 

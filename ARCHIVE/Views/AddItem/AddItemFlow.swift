@@ -157,8 +157,7 @@ struct AddItemFlow: View {
             return
         }
 
-        viewModel.category = initialCategory
-        viewModel.subtype = initialSubtype ?? viewModel.subtype
+        viewModel.updateCategory(initialCategory, preferredSubtype: initialSubtype)
     }
 }
 

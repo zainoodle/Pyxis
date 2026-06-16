@@ -54,6 +54,51 @@ final class ClothingClassificationTests: XCTestCase {
         }
     }
 
+    func testVisualClassificationOverridesMisleadingFilenameWhenConfident() {
+        let service = ClothingClassificationService()
+
+        let result = service.classify(
+            filename: "black-shirt.jpg",
+            visualObservations: [
+                ClothingVisualObservation(identifier: "blue jean, denim", confidence: 0.86)
+            ]
+        )
+
+        XCTAssertEqual(result.category, .bottoms)
+        XCTAssertEqual(result.subtype, .jeans)
+        XCTAssertGreaterThan(result.confidence, 0.55)
+    }
+
+    func testLowConfidenceVisualClassificationFallsBackToFilename() {
+        let service = ClothingClassificationService()
+
+        let result = service.classify(
+            filename: "black-hoodie.jpg",
+            visualObservations: [
+                ClothingVisualObservation(identifier: "shoe, running shoe", confidence: 0.2)
+            ]
+        )
+
+        XCTAssertEqual(result.category, .tops)
+        XCTAssertEqual(result.subtype, .hoodie)
+        XCTAssertEqual(result.confidence, 0.55)
+    }
+
+    func testNonClothingVisualClassificationIsIgnored() {
+        let service = ClothingClassificationService()
+
+        let result = service.classify(
+            filename: "archive-import.jpg",
+            visualObservations: [
+                ClothingVisualObservation(identifier: "table lamp", confidence: 0.91)
+            ]
+        )
+
+        XCTAssertEqual(result.category, .other)
+        XCTAssertEqual(result.subtype, .other)
+        XCTAssertEqual(result.confidence, 0)
+    }
+
     func testDoesNotMatchTokensInsideUnrelatedWords() {
         let service = ClothingClassificationService()
 

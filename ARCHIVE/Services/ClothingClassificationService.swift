@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Vision)
+import Vision
+#endif
 
 public struct ClothingClassificationResult: Equatable, Sendable {
     public let category: ClothingCategory
@@ -16,8 +19,25 @@ public struct ClothingClassificationResult: Equatable, Sendable {
     }
 }
 
+public struct ClothingVisualObservation: Equatable, Sendable {
+    public let identifier: String
+    public let confidence: Double
+
+    public init(identifier: String, confidence: Double) {
+        self.identifier = identifier
+        self.confidence = confidence
+    }
+}
+
+public protocol ClothingClassificationProviding: Sendable {
+    func classify(filename: String?) -> ClothingClassificationResult
+    func classify(filename: String?, visualObservations: [ClothingVisualObservation]) -> ClothingClassificationResult
+    func classify(imageURL: URL, filename: String?) -> ClothingClassificationResult
+}
+
 public struct ClothingClassificationService: Sendable {
     private let rules: [(tokens: [String], category: ClothingCategory, subtype: ClothingSubtype)]
+    private let minimumVisualObservationConfidence = 0.32
 
     public init() {
         rules = [
@@ -74,6 +94,60 @@ public struct ClothingClassificationService: Sendable {
         return .unknown
     }
 
+    public func classify(
+        filename: String?,
+        visualObservations: [ClothingVisualObservation]
+    ) -> ClothingClassificationResult {
+        let filenameResult = classify(filename: filename)
+        let visualResult = classify(visualObservations: visualObservations)
+
+        guard visualResult.confidence > filenameResult.confidence else {
+            return filenameResult
+        }
+
+        return visualResult
+    }
+
+    public func classify(imageURL: URL, filename: String?) -> ClothingClassificationResult {
+        #if canImport(Vision)
+        do {
+            let request = VNClassifyImageRequest()
+            let handler = VNImageRequestHandler(url: imageURL)
+            try handler.perform([request])
+            let observations = (request.results ?? []).map {
+                ClothingVisualObservation(
+                    identifier: $0.identifier,
+                    confidence: Double($0.confidence)
+                )
+            }
+            return classify(filename: filename, visualObservations: observations)
+        } catch {
+            return classify(filename: filename)
+        }
+        #else
+        return classify(filename: filename)
+        #endif
+    }
+
+    private func classify(
+        visualObservations: [ClothingVisualObservation]
+    ) -> ClothingClassificationResult {
+        for observation in visualObservations
+            .filter({ $0.confidence >= minimumVisualObservationConfidence })
+            .sorted(by: { $0.confidence > $1.confidence }) {
+            let tokens = normalizedTokens(from: observation.identifier)
+            for rule in rules where rule.tokens.contains(where: { matches($0, in: tokens) }) {
+                return ClothingClassificationResult(
+                    category: rule.category,
+                    subtype: rule.subtype,
+                    confidence: visualConfidence(from: observation.confidence)
+                )
+            }
+        }
+
+        return .unknown
+    }
+
     private func normalizedTokens(from filename: String?) -> [String] {
         let stem = URL(fileURLWithPath: filename ?? "").deletingPathExtension().lastPathComponent
         let normalized = stem
@@ -111,7 +185,13 @@ public struct ClothingClassificationService: Sendable {
 
         return false
     }
+
+    private func visualConfidence(from observationConfidence: Double) -> Double {
+        min(0.95, 0.25 + (observationConfidence * 0.75))
+    }
 }
+
+extension ClothingClassificationService: ClothingClassificationProviding {}
 
 public extension ClothingClassificationResult {
     static let unknown = ClothingClassificationResult(
