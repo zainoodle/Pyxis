@@ -1,4 +1,3 @@
-import ArchiveCore
 import SwiftData
 import SwiftUI
 
@@ -17,7 +16,6 @@ struct ItemDetailView: View {
                 ItemCodeLabel(code: item.itemCode)
 
                 Toggle("ORIGINAL", isOn: $viewModel.showOriginal)
-                    .toggleStyle(.checkbox)
                     .font(ArchiveTypography.label)
 
                 Button(viewModel.isRetryingBackgroundRemoval ? "RETRYING" : "RETRY BACKGROUND") {
@@ -44,7 +42,6 @@ struct ItemDetailView: View {
                         dismiss()
                     }
                     .buttonStyle(.plain)
-                    .keyboardShortcut(.escape, modifiers: [])
                 }
 
                 TextField("DISPLAY NAME", text: optionalString($item.displayName))
@@ -71,7 +68,6 @@ struct ItemDetailView: View {
                 }
 
                 Toggle("FAVORITE", isOn: $item.favorite)
-                    .toggleStyle(.checkbox)
 
                 Stepper("WEAR COUNT \(item.wearCount)", value: $item.wearCount, in: 0...999)
 

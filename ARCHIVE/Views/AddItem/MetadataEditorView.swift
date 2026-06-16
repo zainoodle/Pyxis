@@ -1,4 +1,3 @@
-import ArchiveCore
 import SwiftUI
 
 struct MetadataEditorView: View {
@@ -31,7 +30,6 @@ struct MetadataEditorView: View {
             }
 
             Toggle("FAVORITE", isOn: $viewModel.favorite)
-                .toggleStyle(.checkbox)
         }
         .font(ArchiveTypography.body)
         .textFieldStyle(.plain)

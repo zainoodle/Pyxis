@@ -1,5 +1,3 @@
-import ArchiveCore
-import AppKit
 import SwiftData
 import SwiftUI
 
@@ -9,7 +7,6 @@ struct ArchiveApp: App {
 
     init() {
         do {
-            NSApplication.shared.setActivationPolicy(.regular)
             modelContainer = try SwiftDataContainer.makeAppContainer()
         } catch {
             fatalError("Failed to create ARCHIVE model container: \(error)")
@@ -19,9 +16,6 @@ struct ArchiveApp: App {
     var body: some Scene {
         WindowGroup {
             ClosetGridView()
-                .onAppear {
-                    NSApplication.shared.activate(ignoringOtherApps: true)
-                }
         }
         .modelContainer(modelContainer)
     }

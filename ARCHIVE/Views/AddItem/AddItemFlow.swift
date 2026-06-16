@@ -1,4 +1,3 @@
-import ArchiveCore
 import SwiftData
 import SwiftUI
 
@@ -18,7 +17,6 @@ struct AddItemFlow: View {
                     dismiss()
                 }
                 .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
             }
 
             if viewModel.selectedImageURL == nil {

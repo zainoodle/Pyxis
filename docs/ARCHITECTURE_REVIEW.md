@@ -1,5 +1,7 @@
 # ARCHIVE Architecture Review
 
+> Note: This original review described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `ARCHIVE.xcodeproj`.
+
 ## Current Workspace
 
 - Project root: `C:\Users\zaino\OneDrive\Documents\Github\Pyxis`

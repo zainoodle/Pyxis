@@ -1,34 +1,21 @@
-import AppKit
 import CoreImage
 import Foundation
+import UIKit
 
 public enum ImageUtilities {
-    public static func pngData(from image: NSImage) -> Data? {
-        guard let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData) else {
-            return nil
-        }
-
-        return bitmap.representation(using: .png, properties: [:])
+    public static func pngData(from image: UIImage) -> Data? {
+        image.pngData()
     }
 
-    public static func jpegData(from image: NSImage, compression: CGFloat = 0.9) -> Data? {
-        guard let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData) else {
-            return nil
-        }
-
-        return bitmap.representation(
-            using: .jpeg,
-            properties: [.compressionFactor: compression]
-        )
+    public static func jpegData(from image: UIImage, compression: CGFloat = 0.9) -> Data? {
+        image.jpegData(compressionQuality: compression)
     }
 
     public static func thumbnailPNGData(
         from imageURL: URL,
         maxPixelSize: CGFloat = 420
     ) throws -> Data {
-        guard let image = NSImage(contentsOf: imageURL) else {
+        guard let image = UIImage(contentsOfFile: imageURL.path) else {
             throw ImageUtilityError.couldNotLoadImage
         }
 
@@ -39,7 +26,7 @@ public enum ImageUtilities {
         return data
     }
 
-    public static func thumbnail(from image: NSImage, maxPixelSize: CGFloat) -> NSImage {
+    public static func thumbnail(from image: UIImage, maxPixelSize: CGFloat) -> UIImage {
         let originalSize = image.size
         guard originalSize.width > 0, originalSize.height > 0 else {
             return image
@@ -51,16 +38,10 @@ public enum ImageUtilities {
             height: originalSize.height * scale
         )
 
-        let thumbnail = NSImage(size: targetSize)
-        thumbnail.lockFocus()
-        image.draw(
-            in: NSRect(origin: .zero, size: targetSize),
-            from: NSRect(origin: .zero, size: originalSize),
-            operation: .copy,
-            fraction: 1
-        )
-        thumbnail.unlockFocus()
-        return thumbnail
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 }
 

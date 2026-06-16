@@ -1,4 +1,3 @@
-import ArchiveCore
 import SwiftUI
 
 struct SearchAndFilterView: View {
@@ -26,7 +25,6 @@ struct SearchAndFilterView: View {
             .frame(width: 150)
 
             Toggle("FAVORITES", isOn: $filterState.favoritesOnly)
-                .toggleStyle(.checkbox)
                 .font(ArchiveTypography.label)
         }
         .foregroundStyle(ArchiveColors.text)

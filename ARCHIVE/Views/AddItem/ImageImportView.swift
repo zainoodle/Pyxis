@@ -1,13 +1,21 @@
 import SwiftUI
+import PhotosUI
 import UniformTypeIdentifiers
 
 struct ImageImportView: View {
     let onSelect: (URL) -> Void
     @State private var isShowingImporter = false
     @State private var isDropTargeted = false
+    @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         VStack(spacing: ArchiveSpacing.md) {
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Text("PHOTO LIBRARY")
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .accessibilityLabel("Choose clothing image from photo library")
+
             Button("IMPORT IMAGE") {
                 isShowingImporter = true
             }
@@ -22,6 +30,17 @@ struct ImageImportView: View {
         .background(ArchiveColors.background)
         .onDrop(of: [UTType.fileURL.identifier, UTType.image.identifier], isTargeted: $isDropTargeted) { providers in
             loadFirstURL(from: providers)
+        }
+        .task(id: selectedPhoto) {
+            guard let selectedPhoto,
+                  let data = try? await selectedPhoto.loadTransferable(type: Data.self) else {
+                return
+            }
+
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ARCHIVE-photo-\(UUID().uuidString).jpg")
+            try? data.write(to: url, options: .atomic)
+            onSelect(url)
         }
         .fileImporter(
             isPresented: $isShowingImporter,

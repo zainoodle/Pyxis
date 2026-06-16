@@ -1,5 +1,5 @@
-import AppKit
 import SwiftUI
+import UIKit
 
 struct LocalImageView: View {
     let url: URL?
@@ -7,8 +7,8 @@ struct LocalImageView: View {
 
     var body: some View {
         Group {
-            if let url, let image = NSImage(contentsOf: url) {
-                Image(nsImage: image)
+            if let url, let image = UIImage(contentsOfFile: url.path) {
+                Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: contentMode)
             } else {

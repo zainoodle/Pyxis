@@ -1,5 +1,5 @@
-import AppKit
 import Foundation
+import UIKit
 
 public struct ColorAnalysisResult: Equatable, Sendable {
     public let primaryColor: ClosetColor
@@ -21,25 +21,50 @@ public struct ColorAnalysisService: Sendable {
     public init() {}
 
     public func analyze(imageURL: URL) throws -> ColorAnalysisResult {
-        guard let image = NSImage(contentsOf: imageURL),
-              let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData) else {
+        guard let image = UIImage(contentsOfFile: imageURL.path),
+              let cgImage = image.cgImage else {
             throw ColorAnalysisError.couldNotLoadImage
+        }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+        try pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                throw ColorAnalysisError.couldNotLoadImage
+            }
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
         }
 
         var counts: [ClosetColor: Int] = [:]
         var visiblePixelCount = 0
-        let sampleStride = max(1, min(bitmap.pixelsWide, bitmap.pixelsHigh) / 96)
+        let sampleStride = max(1, min(width, height) / 96)
 
-        for y in stride(from: 0, to: bitmap.pixelsHigh, by: sampleStride) {
-            for x in stride(from: 0, to: bitmap.pixelsWide, by: sampleStride) {
-                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
-                      color.alphaComponent > 0.08 else {
+        for y in stride(from: 0, to: height, by: sampleStride) {
+            for x in stride(from: 0, to: width, by: sampleStride) {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                guard bytesPerPixel >= 4 else {
                     continue
                 }
 
+                let red = CGFloat(pixels[offset]) / 255
+                let green = CGFloat(pixels[offset + 1]) / 255
+                let blue = CGFloat(pixels[offset + 2]) / 255
+                let alpha = CGFloat(pixels[offset + 3]) / 255
+                guard alpha > 0.08 else { continue }
+
                 visiblePixelCount += 1
-                counts[mapToClosetColor(color), default: 0] += 1
+                counts[mapToClosetColor(red: red, green: green, blue: blue), default: 0] += 1
             }
         }
 
@@ -61,10 +86,16 @@ public struct ColorAnalysisService: Sendable {
         )
     }
 
-    public func mapToClosetColor(_ color: NSColor) -> ClosetColor {
-        let red = color.redComponent
-        let green = color.greenComponent
-        let blue = color.blueComponent
+    public func mapToClosetColor(_ color: UIColor) -> ClosetColor {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return mapToClosetColor(red: red, green: green, blue: blue)
+    }
+
+    public func mapToClosetColor(red: CGFloat, green: CGFloat, blue: CGFloat) -> ClosetColor {
         let maxChannel = max(red, green, blue)
         let minChannel = min(red, green, blue)
         let brightness = maxChannel

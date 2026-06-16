@@ -17,7 +17,7 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | Add a clothing item by importing an image | `Views/AddItem/AddItemFlow.swift`, `Views/AddItem/ImageImportView.swift`, `ViewModels/AddItemViewModel.swift` | Manual QA import flow; UI test where practical |
 | Support drag-and-drop image import | `ImageImportView.swift` | Manual QA drag/drop into add flow |
 | Prepare for camera or Continuity Camera capture later | `ItemSource`, image import abstractions, placeholder capture entry point | Code review confirms no hard dependency on file picker only |
-| Automatically remove background | `Services/BackgroundRemovalService.swift` | Unit/fallback tests; manual QA with sample image on macOS |
+| Automatically remove background | `Services/BackgroundRemovalService.swift` | Unit/fallback tests; manual QA with sample image on iOS |
 | Save original image locally | `ImageStorageService.saveOriginal` | `ImageStorageTests`; Application Support file exists |
 | Save transparent PNG cutout locally | `BackgroundRemovalService`, `ImageStorageService.saveCutout` | Transparent PNG file exists after successful processing |
 | Save small thumbnail locally | `ImageStorageService.saveThumbnail`, image utility | Thumbnail exists and renders in grid |
@@ -69,12 +69,12 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| Project-local build/run entrypoint | `script/build_and_run.sh` | Script exists and is executable on macOS |
+| Project-local build/run entrypoint | `script/build_and_run.sh` | Script exists and is executable on macOS with Xcode for an iOS Simulator |
 | Codex Run action wired to script | `.codex/environments/environment.toml` | Environment file contains Run command |
 | Script stops existing app before launch | `script/build_and_run.sh` | Script review; process verification |
-| Script builds macOS target | `script/build_and_run.sh` | `swift build` output on macOS |
-| Script launches `.app` bundle, not raw GUI executable | `dist/ARCHIVE.app` staging | macOS launch verification |
-| Optional `--verify`, `--logs`, `--debug` support | `script/build_and_run.sh` | Manual script invocations on macOS |
+| Script builds iOS target | `script/build_and_run.sh` | `xcodebuild` output on macOS with a booted iOS Simulator |
+| Script launches iOS app on Simulator | `script/build_and_run.sh` | Simulator install/launch verification |
+| Optional `--verify`, `--logs`, `--debug` support | `script/build_and_run.sh` | Manual script invocations on macOS with Xcode |
 
 ## Security And Privacy Requirements
 
@@ -110,6 +110,6 @@ The MVP can be considered complete only when evidence exists for all of the foll
 
 ## Current Status
 
-Implementation now spans Phases 2-6: the SwiftPM package, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist exist.
+Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
 
-Verification note: `swift test` and `./script/build_and_run.sh --verify` still need to run on a macOS machine with Swift/Xcode installed. This Windows workspace does not currently have `swift` on PATH, so local verification is limited to static file and security scans.
+Verification note: Xcode build/test and `./script/build_and_run.sh --verify` still need to run on a macOS machine with Xcode installed and a booted iOS Simulator. This Windows workspace does not currently have `xcodebuild` or `swift` on PATH, so local verification is limited to static file and security scans.

@@ -1,29 +1,19 @@
-import AppKit
+import UIKit
 import XCTest
 
-func makeTestImage(color: NSColor = .white, size: NSSize = NSSize(width: 12, height: 12)) -> NSImage {
-    let image = NSImage(size: size)
-    image.lockFocus()
-    color.setFill()
-    NSRect(origin: .zero, size: size).fill()
-    image.unlockFocus()
-    return image
+func makeTestImage(color: UIColor = .white, size: CGSize = CGSize(width: 12, height: 12)) -> UIImage {
+    UIGraphicsImageRenderer(size: size).image { context in
+        color.setFill()
+        context.fill(CGRect(origin: .zero, size: size))
+    }
 }
 
-extension NSImage {
+extension UIImage {
     func pngDataForTests() -> Data? {
-        guard let tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffRepresentation) else {
-            return nil
-        }
-        return bitmap.representation(using: .png, properties: [:])
+        pngData()
     }
 
     func jpegDataForTests() -> Data? {
-        guard let tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffRepresentation) else {
-            return nil
-        }
-        return bitmap.representation(using: .jpeg, properties: [:])
+        jpegData(compressionQuality: 0.9)
     }
 }

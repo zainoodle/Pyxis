@@ -1,6 +1,6 @@
 # ARCHIVE Manual QA
 
-Run this checklist on macOS after `swift test` passes and `./script/build_and_run.sh --verify` launches the app.
+Run this checklist on iPhone or iOS Simulator after Xcode builds the `ARCHIVE` scheme and `./script/build_and_run.sh --verify` launches the app on a booted simulator.
 
 1. Launch ARCHIVE.
 2. Confirm the first screen is the closet grid.

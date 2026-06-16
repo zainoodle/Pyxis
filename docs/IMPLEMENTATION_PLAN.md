@@ -1,5 +1,7 @@
 # ARCHIVE Implementation Plan
 
+> Note: This original plan described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `ARCHIVE.xcodeproj`.
+
 This plan starts after explicit approval of `docs/ARCHITECTURE_REVIEW.md`. It follows the phases in `Instructions.docx` and the macOS build/run guidance from the Build macOS Apps workflow.
 
 ## Pre-Flight

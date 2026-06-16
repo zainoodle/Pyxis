@@ -5,10 +5,9 @@ import PackageDescription
 let package = Package(
     name: "ARCHIVE",
     platforms: [
-        .macOS(.v14)
+        .iOS(.v17)
     ],
     products: [
-        .executable(name: "ARCHIVE", targets: ["ARCHIVE"]),
         .library(name: "ArchiveCore", targets: ["ArchiveCore"])
     ],
     targets: [
@@ -20,17 +19,6 @@ let package = Package(
                 "DesignSystem",
                 "ViewModels",
                 "Views"
-            ]
-        ),
-        .executableTarget(
-            name: "ARCHIVE",
-            dependencies: ["ArchiveCore"],
-            path: "ARCHIVE",
-            exclude: [
-                "Models",
-                "Persistence",
-                "Services",
-                "Utilities"
             ]
         ),
         .testTarget(

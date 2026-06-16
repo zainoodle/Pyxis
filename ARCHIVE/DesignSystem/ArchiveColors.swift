@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ArchiveColors {
-    static let background = Color(nsColor: .windowBackgroundColor)
+    static let background = Color(uiColor: .systemBackground)
     static let surface = Color.white
     static let text = Color.black
     static let secondaryText = Color.black.opacity(0.48)

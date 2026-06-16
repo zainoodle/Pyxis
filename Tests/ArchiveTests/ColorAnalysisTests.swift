@@ -1,10 +1,10 @@
-import AppKit
+import UIKit
 import XCTest
 @testable import ArchiveCore
 
 final class ColorAnalysisTests: XCTestCase {
     func testMapsSolidColorsToClosetColors() throws {
-        let cases: [(NSColor, ClosetColor)] = [
+        let cases: [(UIColor, ClosetColor)] = [
             (.black, .black),
             (.white, .white),
             (.gray, .gray),
@@ -13,8 +13,8 @@ final class ColorAnalysisTests: XCTestCase {
             (.green, .green),
             (.yellow, .yellow),
             (.orange, .orange),
-            (NSColor(calibratedRed: 0.45, green: 0.25, blue: 0.12, alpha: 1), .brown),
-            (NSColor(calibratedRed: 0.02, green: 0.05, blue: 0.22, alpha: 1), .navy)
+            (UIColor(red: 0.45, green: 0.25, blue: 0.12, alpha: 1), .brown),
+            (UIColor(red: 0.02, green: 0.05, blue: 0.22, alpha: 1), .navy)
         ]
 
         for (color, expected) in cases {
@@ -39,7 +39,7 @@ final class ColorAnalysisTests: XCTestCase {
         XCTAssertEqual(result.confidence, 0)
     }
 
-    private func makeImageFile(color: NSColor) throws -> URL {
+    private func makeImageFile(color: UIColor) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ARCHIVE-color-\(UUID().uuidString).png")
         let data = try XCTUnwrap(makeTestImage(color: color).pngDataForTests())
@@ -53,42 +53,30 @@ final class ColorAnalysisTests: XCTestCase {
     private func makeHalfTransparentHalfBlueImage() throws -> URL {
         try makeCustomRGBAImage { x, _, width in
             x < width / 2
-                ? NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 0)
-                : NSColor.blue
+                ? UIColor(red: 1, green: 0, blue: 0, alpha: 0)
+                : UIColor.blue
         }
     }
 
     private func makeFullyTransparentImage() throws -> URL {
         try makeCustomRGBAImage { _, _, _ in
-            NSColor(calibratedRed: 1, green: 1, blue: 1, alpha: 0)
+            UIColor(red: 1, green: 1, blue: 1, alpha: 0)
         }
     }
 
     private func makeCustomRGBAImage(
-        colorAt: (Int, Int, Int) -> NSColor
+        colorAt: (Int, Int, Int) -> UIColor
     ) throws -> URL {
-        let width = 12
-        let height = 12
-        let bitmap = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: width,
-            pixelsHigh: height,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        )!
-
-        for y in 0..<height {
-            for x in 0..<width {
-                bitmap.setColor(colorAt(x, y, width), atX: x, y: y)
+        let size = CGSize(width: 12, height: 12)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            for y in 0..<Int(size.height) {
+                for x in 0..<Int(size.width) {
+                    colorAt(x, y, Int(size.width)).setFill()
+                    context.fill(CGRect(x: x, y: y, width: 1, height: 1))
+                }
             }
         }
-
-        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        let data = try XCTUnwrap(image.pngData())
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ARCHIVE-custom-\(UUID().uuidString).png")
         try data.write(to: url)

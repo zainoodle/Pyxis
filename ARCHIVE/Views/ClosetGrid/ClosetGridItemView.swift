@@ -1,4 +1,3 @@
-import ArchiveCore
 import SwiftUI
 
 struct ClosetGridItemView: View {
