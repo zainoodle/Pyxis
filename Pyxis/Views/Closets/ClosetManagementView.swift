@@ -9,6 +9,7 @@ struct ClosetManagementView: View {
     @Binding var selectedClosetID: UUID?
     @State private var newClosetName = ""
     @State private var message: String?
+    @State private var saveErrorMessage: String?
 
     var body: some View {
         ScrollView {
@@ -31,6 +32,10 @@ struct ClosetManagementView: View {
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
 
+                if let saveErrorMessage {
+                    InlineErrorMessage(message: saveErrorMessage)
+                }
+
                 if closets.isEmpty {
                     Text("NO CUSTOM CLOSETS")
                         .font(PyxisTypography.body)
@@ -43,7 +48,8 @@ struct ClosetManagementView: View {
                             ClosetEditorRow(
                                 closet: closet,
                                 items: items,
-                                selectedClosetID: $selectedClosetID
+                                selectedClosetID: $selectedClosetID,
+                                saveErrorMessage: $saveErrorMessage
                             ) {
                                 delete(closet)
                             }
@@ -109,17 +115,33 @@ struct ClosetManagementView: View {
         modelContext.insert(closet)
         selectedClosetID = closet.id
         newClosetName = ""
-        message = "\(closet.displayName) created"
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            message = "\(closet.displayName) created"
+            saveErrorMessage = nil
+        } catch {
+            selectedClosetID = nil
+            modelContext.rollback()
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private func delete(_ closet: Closet) {
+        let previousSelection = selectedClosetID
+        let deletedName = closet.displayName
         if selectedClosetID == closet.id {
             selectedClosetID = nil
         }
         modelContext.delete(closet)
-        message = "\(closet.displayName) deleted"
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            message = "\(deletedName) deleted"
+            saveErrorMessage = nil
+        } catch {
+            selectedClosetID = previousSelection
+            modelContext.rollback()
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 }
 
@@ -128,6 +150,7 @@ private struct ClosetEditorRow: View {
     @Bindable var closet: Closet
     let items: [ClosetItem]
     @Binding var selectedClosetID: UUID?
+    @Binding var saveErrorMessage: String?
     let deleteAction: () -> Void
 
     var body: some View {
@@ -207,7 +230,7 @@ private struct ClosetEditorRow: View {
             get: { closet.name },
             set: { newName in
                 closet.rename(newName)
-                try? modelContext.save()
+                saveChanges()
             }
         )
     }
@@ -217,9 +240,18 @@ private struct ClosetEditorRow: View {
             get: { closet.contains(item) },
             set: { isIncluded in
                 closet.setContains(isIncluded, item: item)
-                try? modelContext.save()
+                saveChanges()
             }
         )
+    }
+
+    private func saveChanges() {
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private func itemTitle(for item: ClosetItem) -> String {

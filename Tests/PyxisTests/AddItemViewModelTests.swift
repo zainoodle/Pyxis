@@ -14,7 +14,8 @@ final class AddItemViewModelTests: XCTestCase {
         )
 
         viewModel.selectImage(source)
-        await viewModel.processSelectedImage(itemID: UUID(uuidString: "00000000-0000-0000-0000-000000000042")!)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000042"))
+        await viewModel.processSelectedImage(itemID: itemID)
         let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
 
         XCTAssertEqual(item.category, .bottoms)

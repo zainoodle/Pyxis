@@ -14,6 +14,7 @@ struct OutfitBuilderView: View {
     @State private var pendingAddSlot: OutfitSlot?
     @State private var focusedItemID: UUID?
     @State private var savedConfirmationID: UUID?
+    @State private var saveErrorMessage: String?
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
@@ -136,6 +137,10 @@ struct OutfitBuilderView: View {
                     .foregroundStyle(PyxisColors.secondaryText)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
+
+            if let saveErrorMessage {
+                InlineErrorMessage(message: saveErrorMessage)
+            }
         }
     }
 
@@ -204,7 +209,14 @@ struct OutfitBuilderView: View {
             notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
         modelContext.insert(outfit)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+        } catch {
+            modelContext.delete(outfit)
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+            return
+        }
         notes = ""
         withAnimation(.easeOut(duration: 0.24)) {
             savedConfirmationID = outfit.id

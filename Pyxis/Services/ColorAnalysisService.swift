@@ -65,7 +65,16 @@ public struct ColorAnalysisService: Sendable {
 
     public func analyze(imageURL: URL) throws -> ColorAnalysisResult {
         guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(
+                source,
+                0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceShouldCache: false,
+                    kCGImageSourceThumbnailMaxPixelSize: 512
+                ] as CFDictionary
+              ) else {
             throw ColorAnalysisError.couldNotLoadImage
         }
 

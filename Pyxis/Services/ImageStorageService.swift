@@ -45,10 +45,18 @@ public final class ImageStorageService {
     }
 
     public func saveOriginal(from sourceURL: URL, itemID: UUID) throws -> String {
-        let destination = originalsURL.appendingPathComponent("\(itemID.uuidString).\(sourceURL.pathExtensionOrDefault)")
+        let destination = originalsURL.appendingPathComponent("\(itemID.uuidString).\(sourceURL.safeImagePathExtensionOrDefault)")
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
         }
+
+        let didStartSecurityScope = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didStartSecurityScope {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
         try fileManager.copyItem(at: sourceURL, to: destination)
         return relativePath(for: destination)
     }
@@ -71,7 +79,7 @@ public final class ImageStorageService {
     }
 
     public func url(for relativePath: String) -> URL {
-        rootURL.appendingPathComponent(relativePath)
+        safeURL(for: relativePath) ?? invalidImageURL
     }
 
     public func deleteImages(for item: ClosetItem) {
@@ -87,9 +95,9 @@ public final class ImageStorageService {
     }
 
     public func relativePath(for url: URL) -> String {
-        let rootPath = rootURL.standardizedFileURL.path
-        let path = url.standardizedFileURL.path
-        guard path.hasPrefix(rootPath) else {
+        let rootPath = normalizedPath(rootURL)
+        let path = normalizedPath(url)
+        guard isPath(path, nestedIn: rootPath) else {
             return url.lastPathComponent
         }
 
@@ -103,16 +111,66 @@ public final class ImageStorageService {
             return
         }
 
-        let fileURL = url(for: relativePath)
+        guard let fileURL = safeURL(for: relativePath) else {
+            return
+        }
+
         if fileManager.fileExists(atPath: fileURL.path) {
             try? fileManager.removeItem(at: fileURL)
         }
     }
+
+    private var invalidImageURL: URL {
+        imagesURL.appendingPathComponent("__invalid_image_path__")
+    }
+
+    private func safeURL(for relativePath: String) -> URL? {
+        let trimmed = relativePath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              !trimmed.hasPrefix("/"),
+              !trimmed.contains("\\") else {
+            return nil
+        }
+
+        let components = trimmed.split(separator: "/", omittingEmptySubsequences: false)
+        guard !components.isEmpty,
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+            return nil
+        }
+
+        let candidate = components.reduce(rootURL) { partialURL, component in
+            partialURL.appendingPathComponent(String(component))
+        }
+
+        let rootPath = normalizedPath(rootURL)
+        let candidatePath = normalizedPath(candidate)
+        return isPath(candidatePath, nestedIn: rootPath) ? candidate : nil
+    }
+
+    private func normalizedPath(_ url: URL) -> String {
+        url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    private func isPath(_ path: String, nestedIn rootPath: String) -> Bool {
+        path == rootPath || path.hasPrefix(rootPath + "/")
+    }
 }
 
 private extension URL {
-    var pathExtensionOrDefault: String {
-        let value = pathExtension.lowercased()
-        return value.isEmpty ? "jpg" : value
+    var safeImagePathExtensionOrDefault: String {
+        let allowedExtensions: Set<String> = [
+            "jpg",
+            "jpeg",
+            "png",
+            "heic",
+            "heif",
+            "webp",
+            "gif",
+            "tif",
+            "tiff",
+            "bmp"
+        ]
+        let value = pathExtension.lowercased().filter { $0.isLetter || $0.isNumber }
+        return allowedExtensions.contains(value) ? value : "jpg"
     }
 }

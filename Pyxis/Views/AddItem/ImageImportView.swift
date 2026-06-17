@@ -8,6 +8,7 @@ struct ImageImportView: View {
     @State private var isShowingImporter = false
     @State private var isDropTargeted = false
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var importMessage: String?
 
     var body: some View {
         VStack(spacing: PyxisSpacing.md) {
@@ -36,6 +37,12 @@ struct ImageImportView: View {
             Text("DROP IMAGE")
                 .font(PyxisTypography.label)
                 .foregroundStyle(isDropTargeted ? PyxisColors.text : PyxisColors.inactiveText)
+
+            if let importMessage {
+                Text(importMessage.uppercased())
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.error)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PyxisColors.background)
@@ -43,15 +50,23 @@ struct ImageImportView: View {
             loadFirstURL(from: providers)
         }
         .task(id: selectedPhoto) {
-            guard let selectedPhoto,
-                  let data = try? await selectedPhoto.loadTransferable(type: Data.self) else {
+            guard let selectedPhoto else {
                 return
             }
 
-            let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("Pyxis-photo-\(UUID().uuidString).jpg")
-            try? data.write(to: url, options: .atomic)
-            onSelect(url)
+            do {
+                guard let data = try await selectedPhoto.loadTransferable(type: Data.self) else {
+                    reportImportFailure()
+                    return
+                }
+
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("Pyxis-photo-\(UUID().uuidString).jpg")
+                try data.write(to: url, options: .atomic)
+                finishImport(url)
+            } catch {
+                reportImportFailure()
+            }
         }
         .fileImporter(
             isPresented: $isShowingImporter,
@@ -59,7 +74,9 @@ struct ImageImportView: View {
             allowsMultipleSelection: false
         ) { result in
             if case let .success(urls) = result, let url = urls.first {
-                onSelect(url)
+                finishImport(url)
+            } else if case .failure = result {
+                reportImportFailure()
             }
         }
     }
@@ -69,17 +86,24 @@ struct ImageImportView: View {
             return false
         }
 
-        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
-            if let data = item as? Data,
-               let url = URL(dataRepresentation: data, relativeTo: nil) {
-                DispatchQueue.main.async {
-                    onSelect(url)
-                }
-            } else if let url = item as? URL {
-                DispatchQueue.main.async {
-                    onSelect(url)
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                if let data = item as? Data,
+                   let url = URL(dataRepresentation: data, relativeTo: nil) {
+                    DispatchQueue.main.async {
+                        finishImport(url)
+                    }
+                } else if let url = item as? URL {
+                    DispatchQueue.main.async {
+                        finishImport(url)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        reportImportFailure()
+                    }
                 }
             }
+            return true
         }
 
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
@@ -92,13 +116,29 @@ struct ImageImportView: View {
                     .appendingPathComponent("Pyxis-drop-\(UUID().uuidString)")
                     .appendingPathExtension(url.pathExtension.isEmpty ? "png" : url.pathExtension)
 
-                try? FileManager.default.copyItem(at: url, to: temporaryURL)
-                DispatchQueue.main.async {
-                    onSelect(temporaryURL)
+                do {
+                    try FileManager.default.copyItem(at: url, to: temporaryURL)
+                    DispatchQueue.main.async {
+                        finishImport(temporaryURL)
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        reportImportFailure()
+                    }
                 }
             }
+            return true
         }
-        return true
+        return false
+    }
+
+    private func finishImport(_ url: URL) {
+        importMessage = nil
+        onSelect(url)
+    }
+
+    private func reportImportFailure() {
+        importMessage = "Import failed"
     }
 
     #if DEBUG
@@ -136,8 +176,13 @@ struct ImageImportView: View {
 
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Pyxis-black-shirt-demo-\(UUID().uuidString).png")
-        try? data.write(to: url, options: .atomic)
-        return url
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            reportImportFailure()
+            return nil
+        }
     }
     #endif
 }

@@ -9,6 +9,7 @@ struct ItemDetailView: View {
     @Bindable var item: ClosetItem
     @StateObject private var viewModel = ItemDetailViewModel()
     @State private var isEditingDetails = false
+    @State private var saveErrorMessage: String?
     let buildAction: ((ClosetItem) -> Void)?
 
     init(item: ClosetItem, buildAction: ((ClosetItem) -> Void)? = nil) {
@@ -61,7 +62,7 @@ struct ItemDetailView: View {
             Button(viewModel.isRetryingBackgroundRemoval ? "IMPROVING" : "IMPROVE CUTOUT") {
                 Task {
                     await viewModel.retryBackgroundRemoval(for: item)
-                    try? modelContext.save()
+                    saveChanges()
                 }
             }
             .buttonStyle(MinimalButtonStyle())
@@ -70,6 +71,10 @@ struct ItemDetailView: View {
                 Text(retryMessage.uppercased())
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
+            }
+
+            if let saveErrorMessage {
+                InlineErrorMessage(message: saveErrorMessage)
             }
         }
     }
@@ -87,6 +92,10 @@ struct ItemDetailView: View {
             }
 
             utilityBlock
+
+            if let saveErrorMessage {
+                InlineErrorMessage(message: saveErrorMessage)
+            }
 
             if canBuildWithItem, let buildAction {
                 Button("BUILD WITH THIS") {
@@ -139,11 +148,18 @@ struct ItemDetailView: View {
             }
 
             Button("DELETE ITEM") {
-                viewModel.deleteImages(for: item)
+                let imageSet = viewModel.storedImageSet(for: item)
                 closets.forEach { $0.remove(item) }
                 modelContext.delete(item)
-                try? modelContext.save()
-                dismiss()
+                do {
+                    try modelContext.save()
+                    viewModel.deleteImages(imageSet)
+                    saveErrorMessage = nil
+                    dismiss()
+                } catch {
+                    saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+                    modelContext.rollback()
+                }
             }
             .buttonStyle(MinimalButtonStyle())
         }
@@ -207,9 +223,18 @@ struct ItemDetailView: View {
             get: { closet.contains(item) },
             set: { isIncluded in
                 closet.setContains(isIncluded, item: item)
-                try? modelContext.save()
+                saveChanges()
             }
         )
+    }
+
+    private func saveChanges() {
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private func optionalString(_ value: Binding<String?>) -> Binding<String> {

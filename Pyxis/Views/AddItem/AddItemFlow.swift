@@ -9,6 +9,7 @@ struct AddItemFlow: View {
     @StateObject private var viewModel = AddItemViewModel()
     @State private var selectedClosetIDs: Set<UUID> = []
     @State private var didApplyInitialCloset = false
+    @State private var saveErrorMessage: String?
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
     private let initialClosetID: UUID?
@@ -37,6 +38,14 @@ struct AddItemFlow: View {
                         dismiss()
                     }
                     .buttonStyle(.plain)
+                }
+
+                if let setupError = viewModel.setupError {
+                    InlineErrorMessage(message: setupError)
+                }
+
+                if let saveErrorMessage {
+                    InlineErrorMessage(message: saveErrorMessage)
                 }
 
                 if viewModel.selectedImageURL == nil {
@@ -168,9 +177,18 @@ struct AddItemFlow: View {
         for closet in closets where selectedClosetIDs.contains(closet.id) {
             closet.add(item)
         }
-        try? modelContext.save()
-        onSave?(item)
-        dismiss()
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+            onSave?(item)
+            dismiss()
+        } catch {
+            for closet in closets where selectedClosetIDs.contains(closet.id) {
+                closet.remove(item)
+            }
+            modelContext.delete(item)
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private func applyInitialMetadata() {

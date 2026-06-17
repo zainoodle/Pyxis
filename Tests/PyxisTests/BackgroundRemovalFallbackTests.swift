@@ -17,6 +17,20 @@ final class BackgroundRemovalFallbackTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
     }
 
+    func testImportFailureUsesGenericMessage() async throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+        let service = FailingBackgroundRemovalService(imageStorage: storage)
+        let missingSource = root.appendingPathComponent("missing.jpg")
+
+        let result = await service.processImage(at: missingSource, itemID: UUID())
+
+        XCTAssertEqual(result.status, .failed)
+        XCTAssertTrue(result.originalPath.isEmpty)
+        XCTAssertNil(result.cutoutPath)
+        XCTAssertEqual(result.errorMessage, "Image import failed — try another image")
+    }
+
     private func makeTemporaryRoot() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Pyxis-\(UUID().uuidString)", isDirectory: true)

@@ -24,9 +24,10 @@ final class AddItemViewModel: ObservableObject {
     @Published var tags = ""
     @Published var notes = ""
     @Published var favorite = false
+    @Published var setupError: String?
 
-    private let imageStorage: ImageStorageService
-    private let backgroundRemovalService: BackgroundRemovalServiceProtocol
+    private let imageStorage: ImageStorageService?
+    private let backgroundRemovalService: (any BackgroundRemovalServiceProtocol)?
     private let colorAnalysisService: ColorAnalysisService
     private let classificationService: any ClothingClassificationProviding
     private var userAdjustedClassification = false
@@ -39,7 +40,11 @@ final class AddItemViewModel: ObservableObject {
             self.colorAnalysisService = ColorAnalysisService()
             self.classificationService = ClothingClassificationService()
         } catch {
-            fatalError("Failed to create image services: \(error)")
+            self.imageStorage = nil
+            self.backgroundRemovalService = nil
+            self.colorAnalysisService = ColorAnalysisService()
+            self.classificationService = ClothingClassificationService()
+            self.setupError = "Image storage could not be opened."
         }
     }
 
@@ -87,6 +92,10 @@ final class AddItemViewModel: ObservableObject {
 
     func processSelectedImage(itemID: UUID = UUID()) async {
         guard let selectedImageURL else {
+            return
+        }
+        guard let backgroundRemovalService else {
+            stage = .failed(setupError ?? "Image storage could not be opened.")
             return
         }
 
@@ -166,6 +175,9 @@ final class AddItemViewModel: ObservableObject {
     }
 
     private func analysisURL(from result: BackgroundRemovalResult) -> URL? {
+        guard let imageStorage else {
+            return nil
+        }
         if let cutoutPath = result.cutoutPath {
             return imageStorage.url(for: cutoutPath)
         }

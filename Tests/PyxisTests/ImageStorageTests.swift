@@ -15,7 +15,7 @@ final class ImageStorageTests: XCTestCase {
         let root = try makeTemporaryRoot()
         let source = try makeImageFile(named: "source.jpg", root: root)
         let storage = try ImageStorageService(rootURL: root)
-        let itemID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
 
         let path = try storage.saveOriginal(from: source, itemID: itemID)
 
@@ -26,7 +26,7 @@ final class ImageStorageTests: XCTestCase {
     func testSavesCutoutAndThumbnailPNGs() throws {
         let root = try makeTemporaryRoot()
         let storage = try ImageStorageService(rootURL: root)
-        let itemID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
         let data = try XCTUnwrap(makeTestImage().pngDataForTests())
 
         let cutout = try storage.saveCutoutPNG(data, itemID: itemID)
@@ -53,8 +53,45 @@ final class ImageStorageTests: XCTestCase {
         storage.deleteImages(imageSet)
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: imageSet.originalPath).path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: imageSet.cutoutPath!).path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: imageSet.thumbnailPath!).path))
+        let cutoutPath = try XCTUnwrap(imageSet.cutoutPath)
+        let thumbnailPath = try XCTUnwrap(imageSet.thumbnailPath)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: cutoutPath).path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: thumbnailPath).path))
+    }
+
+    func testURLForRelativePathCannotEscapeStorageRoot() throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+
+        let escaped = storage.url(for: "../outside.txt").standardizedFileURL
+        let rootPath = root.standardizedFileURL.path
+
+        XCTAssertTrue(escaped.path == rootPath || escaped.path.hasPrefix(rootPath + "/"))
+    }
+
+    func testDeleteImagesIgnoresPathsOutsideStorageRoot() throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+        let outsideURL = root.deletingLastPathComponent()
+            .appendingPathComponent("pyxis-outside-\(UUID().uuidString).txt")
+        try "keep".write(to: outsideURL, atomically: true, encoding: .utf8)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+
+        storage.deleteImages(StoredImageSet(originalPath: "../\(outsideURL.lastPathComponent)"))
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outsideURL.path))
+    }
+
+    func testRelativePathDoesNotTreatSiblingDirectoryAsNested() throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+        let siblingRoot = root.deletingLastPathComponent()
+            .appendingPathComponent(root.lastPathComponent + "-sibling", isDirectory: true)
+        let siblingFile = siblingRoot.appendingPathComponent("item.jpg")
+
+        XCTAssertEqual(storage.relativePath(for: siblingFile), "item.jpg")
     }
 
     private func makeTemporaryRoot() throws -> URL {

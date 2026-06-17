@@ -7,6 +7,7 @@ struct OutfitDetailView: View {
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Bindable var outfit: Outfit
     @State private var refreshID = UUID()
+    @State private var saveErrorMessage: String?
 
     private var selectedItems: [ClosetItem] {
         outfit.itemIDs.compactMap { itemID in
@@ -28,10 +29,13 @@ struct OutfitDetailView: View {
                 .buttonStyle(MinimalButtonStyle())
 
                 Button("CLOSE") {
-                    try? modelContext.save()
-                    dismiss()
+                    saveAndDismiss()
                 }
                 .buttonStyle(.plain)
+            }
+
+            if let saveErrorMessage {
+                InlineErrorMessage(message: saveErrorMessage)
             }
 
             ScrollView {
@@ -93,8 +97,23 @@ struct OutfitDetailView: View {
 
     private func markWornToday() {
         OutfitWearService().markWorn(outfit: outfit, items: items)
-        try? modelContext.save()
-        refreshID = UUID()
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+            refreshID = UUID()
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func saveAndDismiss() {
+        do {
+            try modelContext.save()
+            saveErrorMessage = nil
+            dismiss()
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private func optionalString(_ value: Binding<String?>) -> Binding<String> {

@@ -114,7 +114,7 @@ final class PersistenceTests: XCTestCase {
     func testInsertsAndFetchesCustomCloset() throws {
         let container = try SwiftDataContainer.makeTestContainer()
         let context = ModelContext(container)
-        let itemID = UUID(uuidString: "00000000-0000-0000-0000-000000000301")!
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000301"))
         let closet = Closet(name: "Dinner Clothes", itemIDs: [itemID])
 
         context.insert(closet)

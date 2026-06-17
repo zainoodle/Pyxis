@@ -34,6 +34,11 @@ public protocol BackgroundRemovalServiceProtocol {
     func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult
 }
 
+private enum BackgroundRemovalCopy {
+    static let importFailed = "Image import failed — try another image"
+    static let removalFailed = "Background removal failed — retry"
+}
+
 public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtocol {
     private let imageStorage: ImageStorageService
     private let ciContext: CIContext
@@ -76,7 +81,7 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                         cutoutPath: nil,
                         thumbnailPath: thumbnailPath,
                         status: .failed,
-                        errorMessage: "Background removal failed — retry"
+                        errorMessage: BackgroundRemovalCopy.removalFailed
                     )
                 }
             } catch {
@@ -85,7 +90,7 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                     cutoutPath: nil,
                     thumbnailPath: nil,
                     status: .failed,
-                    errorMessage: error.localizedDescription
+                    errorMessage: BackgroundRemovalCopy.importFailed
                 )
             }
         }.value
@@ -165,7 +170,7 @@ public final class FailingBackgroundRemovalService: BackgroundRemovalServiceProt
                 cutoutPath: nil,
                 thumbnailPath: nil,
                 status: .failed,
-                errorMessage: error.localizedDescription
+                errorMessage: BackgroundRemovalCopy.importFailed
             )
         }
     }

@@ -50,9 +50,9 @@ final class FilteringTests: XCTestCase {
         XCTAssertEqual(result.map(\.itemCode), ["HD-001"])
     }
 
-    func testFiltersBySelectedCustomCloset() {
+    func testFiltersBySelectedCustomCloset() throws {
         let hoodie = ClosetItem(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000101")!,
+            id: try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000101")),
             itemCode: "HD-001",
             category: .tops,
             subtype: .hoodie,
@@ -60,7 +60,7 @@ final class FilteringTests: XCTestCase {
             imageOriginalPath: "Images/Originals/hoodie.jpg"
         )
         let jeans = ClosetItem(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000102")!,
+            id: try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000102")),
             itemCode: "JE-001",
             category: .bottoms,
             subtype: .jeans,
@@ -68,7 +68,7 @@ final class FilteringTests: XCTestCase {
             imageOriginalPath: "Images/Originals/jeans.jpg"
         )
         let goingOut = Closet(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000201")!,
+            id: try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000201")),
             name: "Going Out",
             itemIDs: [hoodie.id]
         )

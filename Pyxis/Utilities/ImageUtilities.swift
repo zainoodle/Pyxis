@@ -1,5 +1,6 @@
 import CoreImage
 import Foundation
+import ImageIO
 
 #if canImport(UIKit)
 import UIKit
@@ -33,11 +34,26 @@ public enum ImageUtilities {
         from imageURL: URL,
         maxPixelSize: CGFloat = 420
     ) throws -> Data {
-        guard let image = PyxisImage(contentsOfFile: imageURL.path) else {
+        guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(
+                source,
+                0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceShouldCache: false,
+                    kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize)
+                ] as CFDictionary
+              ) else {
             throw ImageUtilityError.couldNotLoadImage
         }
 
-        let thumbnail = thumbnail(from: image, maxPixelSize: maxPixelSize)
+        #if canImport(UIKit)
+        let thumbnail = PyxisImage(cgImage: cgImage)
+        #elseif canImport(AppKit)
+        let thumbnail = PyxisImage(cgImage: cgImage, size: .zero)
+        #endif
+
         guard let data = pngData(from: thumbnail) else {
             throw ImageUtilityError.couldNotEncodePNG
         }

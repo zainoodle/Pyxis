@@ -47,7 +47,15 @@ final class ItemDetailViewModel: ObservableObject {
             : (result.errorMessage ?? "Background removal failed — retry")
     }
 
-    func deleteImages(for item: ClosetItem) {
-        imageStorage?.deleteImages(for: item)
+    func storedImageSet(for item: ClosetItem) -> StoredImageSet {
+        StoredImageSet(
+            originalPath: item.imageOriginalPath,
+            cutoutPath: item.imageCutoutPath,
+            thumbnailPath: item.thumbnailPath
+        )
+    }
+
+    func deleteImages(_ imageSet: StoredImageSet) {
+        imageStorage?.deleteImages(imageSet)
     }
 }

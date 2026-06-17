@@ -73,3 +73,15 @@ struct EmptyPyxisState: View {
             .accessibilityLabel("Add first item")
     }
 }
+
+struct InlineErrorMessage: View {
+    let message: String
+
+    var body: some View {
+        Text(message.uppercased())
+            .font(PyxisTypography.label)
+            .foregroundStyle(PyxisColors.error)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel(message)
+    }
+}

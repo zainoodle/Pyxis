@@ -3,21 +3,56 @@ import SwiftUI
 
 @main
 struct PyxisApp: App {
-    private let modelContainer: ModelContainer
+    private enum StartupState {
+        case ready(ModelContainer)
+        case failed
+    }
+
+    private let startupState: StartupState
 
     init() {
         do {
-            modelContainer = try SwiftDataContainer.makeAppContainer()
+            startupState = .ready(try SwiftDataContainer.makeAppContainer())
         } catch {
-            fatalError("Failed to create Pyxis model container: \(error)")
+            startupState = .failed
         }
     }
 
     var body: some Scene {
         WindowGroup {
-            ClosetGridView()
-                .preferredColorScheme(.light)
+            switch startupState {
+            case .ready(let modelContainer):
+                ClosetGridView()
+                    .modelContainer(modelContainer)
+                    .preferredColorScheme(.light)
+            case .failed:
+                StartupFailureView()
+                    .preferredColorScheme(.light)
+            }
         }
-        .modelContainer(modelContainer)
+    }
+}
+
+private struct StartupFailureView: View {
+    var body: some View {
+        VStack(spacing: PyxisSpacing.md) {
+            Text("PYXIS COULD NOT START")
+                .font(PyxisTypography.title)
+                .foregroundStyle(PyxisColors.text)
+
+            Text("LOCAL CLOSET STORAGE COULD NOT BE OPENED")
+                .font(PyxisTypography.body)
+                .foregroundStyle(PyxisColors.secondaryText)
+                .multilineTextAlignment(.center)
+
+            Text("PLEASE RESTART THE APP AND TRY AGAIN")
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.inactiveText)
+                .multilineTextAlignment(.center)
+                .padding(.top, PyxisSpacing.sm)
+        }
+        .padding(PyxisSpacing.lg)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(PyxisColors.background)
     }
 }
