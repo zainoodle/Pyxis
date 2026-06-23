@@ -22,6 +22,8 @@ struct ClosetManagementView: View {
                         dismiss()
                     }
                     .buttonStyle(.plain)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Close closet management")
                 }
 
                 createRow

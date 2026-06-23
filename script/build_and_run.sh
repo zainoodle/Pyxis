@@ -8,6 +8,7 @@ BUNDLE_ID="com.zainoodle.pyxis"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="$ROOT_DIR/DerivedData"
+LAUNCHED_PID=""
 
 cd "$ROOT_DIR"
 
@@ -30,6 +31,11 @@ app_bundle_path() {
   find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1
 }
 
+terminate_existing_app() {
+  local simulator_id="$1"
+  xcrun simctl terminate "$simulator_id" "$BUNDLE_ID" >/dev/null 2>&1 || true
+}
+
 run_on_booted_simulator() {
   local simulator_id
   simulator_id="$(booted_simulator_id)"
@@ -47,8 +53,26 @@ run_on_booted_simulator() {
     exit 1
   fi
 
+  terminate_existing_app "$simulator_id"
   xcrun simctl install "$simulator_id" "$app_path"
-  xcrun simctl launch "$simulator_id" "$BUNDLE_ID"
+  local launch_output
+  launch_output="$(xcrun simctl launch "$simulator_id" "$BUNDLE_ID")"
+  echo "$launch_output"
+
+  LAUNCHED_PID="${launch_output##*: }"
+  if [[ ! "$LAUNCHED_PID" =~ ^[0-9]+$ ]]; then
+    echo "Could not parse launched app pid from simctl output: $launch_output" >&2
+    exit 1
+  fi
+}
+
+verify_launched_app() {
+  if [[ -z "$LAUNCHED_PID" ]]; then
+    echo "No launched app pid was captured." >&2
+    exit 1
+  fi
+
+  xcrun simctl spawn booted /bin/ps -p "$LAUNCHED_PID" >/dev/null
 }
 
 case "$MODE" in
@@ -58,7 +82,7 @@ case "$MODE" in
   --verify|verify)
     run_on_booted_simulator
     sleep 1
-    xcrun simctl spawn booted launchctl print system >/dev/null
+    verify_launched_app
     ;;
   --logs|logs)
     run_on_booted_simulator

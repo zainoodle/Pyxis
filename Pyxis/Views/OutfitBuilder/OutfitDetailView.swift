@@ -32,6 +32,8 @@ struct OutfitDetailView: View {
                     saveAndDismiss()
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("Close fit detail")
             }
 
             if let saveErrorMessage {
@@ -98,6 +100,7 @@ struct OutfitDetailView: View {
     private func markWornToday() {
         OutfitWearService().markWorn(outfit: outfit, items: items)
         do {
+            try upsertOutfitMemory()
             try modelContext.save()
             saveErrorMessage = nil
             refreshID = UUID()
@@ -108,12 +111,26 @@ struct OutfitDetailView: View {
 
     private func saveAndDismiss() {
         do {
+            try upsertOutfitMemory()
             try modelContext.save()
             saveErrorMessage = nil
             dismiss()
         } catch {
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
+    }
+
+    private func upsertOutfitMemory() throws {
+        let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: selectedItems)
+        try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+            kind: .outfit,
+            subjectID: outfit.id,
+            summary: payload.summary,
+            embedding: payload.embedding,
+            metadataTags: payload.metadataTags,
+            updatedAt: outfit.dateUpdated,
+            saveImmediately: false
+        )
     }
 
     private func optionalString(_ value: Binding<String?>) -> Binding<String> {

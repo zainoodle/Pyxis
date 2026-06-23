@@ -126,4 +126,75 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.first?.name, "Dinner Clothes")
         XCTAssertEqual(fetched.first?.itemIDs, [itemID])
     }
+
+    func testCurrentSchemaOpensStoreCreatedBeforeOnDeviceMemoryModel() throws {
+        let storeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Pyxis-\(UUID().uuidString)")
+            .appendingPathExtension("store")
+        defer {
+            removeStoreFiles(at: storeURL)
+        }
+
+        let legacySchema = Schema([
+            ClosetItem.self,
+            Outfit.self,
+            Closet.self
+        ])
+        let legacyConfiguration = ModelConfiguration(
+            "Pyxis",
+            schema: legacySchema,
+            url: storeURL
+        )
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: [legacyConfiguration]
+        )
+        let legacyContext = ModelContext(legacyContainer)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000501"))
+        legacyContext.insert(
+            ClosetItem(
+                id: itemID,
+                itemCode: "HD-501",
+                displayName: "Legacy hoodie",
+                category: .tops,
+                subtype: .hoodie,
+                primaryColor: .black,
+                imageOriginalPath: "Images/Originals/legacy-hoodie.jpg"
+            )
+        )
+        try legacyContext.save()
+
+        let currentContainer = try SwiftDataContainer.makeContainer(
+            isStoredInMemoryOnly: false,
+            storeURL: storeURL
+        )
+        let currentContext = ModelContext(currentContainer)
+        let fetchedItems = try currentContext.fetch(FetchDescriptor<ClosetItem>())
+
+        XCTAssertEqual(fetchedItems.map(\.itemCode), ["HD-501"])
+
+        let store = OnDeviceMemoryStore(context: currentContext)
+        try store.upsertMemory(
+            kind: .closetItem,
+            subjectID: itemID,
+            summary: "Legacy hoodie memory",
+            embedding: [1, 0, 0],
+            metadataTags: ["legacy"],
+            updatedAt: Date(timeIntervalSince1970: 500)
+        )
+
+        XCTAssertEqual(try store.memories(kind: .closetItem, subjectID: itemID).count, 1)
+    }
+
+    private func removeStoreFiles(at storeURL: URL) {
+        let fileManager = FileManager.default
+        let paths = [
+            storeURL.path,
+            "\(storeURL.path)-shm",
+            "\(storeURL.path)-wal"
+        ]
+        for path in paths {
+            try? fileManager.removeItem(atPath: path)
+        }
+    }
 }

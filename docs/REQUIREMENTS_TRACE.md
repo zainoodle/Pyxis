@@ -27,7 +27,9 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | Filter by category, subtype, and color | `SearchAndFilterView`, `ClosetGridViewModel` | Filtering tests and manual QA |
 | Search by code, category, subtype, color, brand, tags, notes, display name | `ClosetGridViewModel` search predicate | `FilteringTests` |
 | Persist locally and reload after restart | `SwiftDataContainer`, `ClosetItem` | `PersistenceTests`; manual quit/reopen QA |
+| Keep iOS memory on device | `OnDeviceMemoryRecord`, `OnDeviceMemoryStore`, `OnDeviceMemoryPayloadBuilder`, `SwiftDataContainer` | `OnDeviceMemoryStoreTests` cover payload generation, persistence, scoped memories, validation, similarity, cleanup, and rollback-safe upsert/deletion; code search confirms no network APIs |
 | Work offline without network | No networking dependencies or APIs | Code search for network APIs; manual offline launch |
+| Ship only verified device family | iPhone-only Xcode target settings | Build settings and built Info.plist show iPhone device family only |
 
 ## Data Model Requirements
 
@@ -48,7 +50,7 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | Save item even when background removal fails | `AddItemViewModel` failure state | `BackgroundRemovalFallbackTests` |
 | Ignore transparent pixels in color analysis | `ColorAnalysisService` | Synthetic transparent image test |
 | Classification is local heuristic/placeholder only | `ClothingClassificationService` | Code search confirms no remote AI |
-| Future AI features are protocol placeholders only | `FutureAI/*Service.swift` | Compile; code review confirms no implementation/network calls |
+| Future AI services avoid cloud dependencies | `FutureAI/*Service.swift`, `OnDeviceMemoryStore`, `OnDeviceMemoryPayloadBuilder` | Compile; memory tests confirm local SwiftData storage, deterministic on-device embeddings, local retrieval, validation, and cleanup without network calls |
 
 ## UI Requirements
 
@@ -110,6 +112,6 @@ The MVP can be considered complete only when evidence exists for all of the foll
 
 ## Current Status
 
-Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
+Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, on-device memory storage and payload generation, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
 
-Verification note: Xcode build/test and `./script/build_and_run.sh --verify` still need to run on a macOS machine with Xcode installed and a booted iOS Simulator. This Windows workspace does not currently have `xcodebuild` or `swift` on PATH, so local verification is limited to static file and security scans.
+Verification note: `swift test` now passes with 75 XCTest cases, including focused on-device memory tests and the SwiftData schema-upgrade test. iOS simulator build/run, repeated `./script/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight also validates the 1024px icon has no alpha channel, the privacy manifest matches the local-only posture, no currently undeclared required-reason API usage is present, and Release artifacts do not contain debug-only sample import or closet seeding content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, and physical-device signing before App Store/TestFlight distribution.

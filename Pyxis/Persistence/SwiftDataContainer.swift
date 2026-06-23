@@ -10,17 +10,30 @@ public enum SwiftDataContainer {
         try makeContainer(isStoredInMemoryOnly: true)
     }
 
-    public static func makeContainer(isStoredInMemoryOnly: Bool) throws -> ModelContainer {
+    public static func makeContainer(
+        isStoredInMemoryOnly: Bool,
+        storeURL: URL? = nil
+    ) throws -> ModelContainer {
         let schema = Schema([
             ClosetItem.self,
             Outfit.self,
-            Closet.self
+            Closet.self,
+            OnDeviceMemoryRecord.self
         ])
-        let configuration = ModelConfiguration(
-            "Pyxis",
-            schema: schema,
-            isStoredInMemoryOnly: isStoredInMemoryOnly
-        )
+        let configuration: ModelConfiguration
+        if let storeURL {
+            configuration = ModelConfiguration(
+                "Pyxis",
+                schema: schema,
+                url: storeURL
+            )
+        } else {
+            configuration = ModelConfiguration(
+                "Pyxis",
+                schema: schema,
+                isStoredInMemoryOnly: isStoredInMemoryOnly
+            )
+        }
 
         return try ModelContainer(
             for: schema,

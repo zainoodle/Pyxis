@@ -104,29 +104,38 @@ struct TopNavigationView: View {
     }
 
     private func closetButton(_ closetID: UUID?, title: String) -> some View {
-        Button {
+        let isActive = filterState.closetID == closetID
+        return Button {
             filterState.closetID = closetID
         } label: {
-            UppercaseNavLabel(title: title, isActive: filterState.closetID == closetID)
+            UppercaseNavLabel(title: title, isActive: isActive)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(closetID == nil ? "Show all closets" : "Filter closet \(title)")
+        .accessibilityValue(isActive ? "Selected" : "Not selected")
     }
 
     private func categoryButton(_ category: ClothingCategory?, title: String) -> some View {
-        Button {
+        let isActive = filterState.category == category
+        return Button {
             filterState.category = category
         } label: {
-            UppercaseNavLabel(title: title, isActive: filterState.category == category)
+            UppercaseNavLabel(title: title, isActive: isActive)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(category == nil ? "Show all categories" : "Filter category \(title)")
+        .accessibilityValue(isActive ? "Selected" : "Not selected")
     }
 
     private func colorButton(_ color: ClosetColor?, title: String) -> some View {
-        Button {
+        let isActive = filterState.color == color
+        return Button {
             filterState.color = color
         } label: {
-            UppercaseNavLabel(title: title, isActive: filterState.color == color)
+            UppercaseNavLabel(title: title, isActive: isActive)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(color == nil ? "Show all colors" : "Filter color \(title)")
+        .accessibilityValue(isActive ? "Selected" : "Not selected")
     }
 }

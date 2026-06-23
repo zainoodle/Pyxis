@@ -30,6 +30,24 @@ Boot an iPhone simulator, then run:
 ./script/build_and_run.sh --verify
 ```
 
+Deployment readiness notes are tracked in `docs/DEPLOYMENT_READINESS.md`.
+App Store Connect submission notes are tracked in `docs/APP_STORE_SUBMISSION.md`.
+Public support and privacy page drafts are in `docs/SUPPORT.md` and `docs/PRIVACY_POLICY.md`.
+
+## Deployment Preflight
+
+Run the local deployment preflight before handing off a build:
+
+```bash
+./script/deployment_preflight.sh local
+```
+
+Run the distribution preflight after App Store Connect provider access and an App Store distribution profile are configured:
+
+```bash
+./script/deployment_preflight.sh distribution
+```
+
 ## Local-First Scope
 
 - No accounts.
@@ -39,3 +57,4 @@ Boot an iPhone simulator, then run:
 - No remote AI calls.
 
 Images are stored locally in Application Support. Metadata is stored with SwiftData.
+On-device memory records, including item/fit summaries and local embedding vectors, are keyed, validated, stored with SwiftData, and retrieved in-process.

@@ -17,7 +17,9 @@ let package = Package(
             path: "Pyxis",
             exclude: [
                 "App",
+                "Assets.xcassets",
                 "DesignSystem",
+                "PrivacyInfo.xcprivacy",
                 "Services/DebugClosetSeedService.swift",
                 "Views"
             ]

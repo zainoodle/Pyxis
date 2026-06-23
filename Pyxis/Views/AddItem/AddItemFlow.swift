@@ -38,6 +38,8 @@ struct AddItemFlow: View {
                         dismiss()
                     }
                     .buttonStyle(.plain)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Close add item")
                 }
 
                 if let setupError = viewModel.setupError {
@@ -122,12 +124,14 @@ struct AddItemFlow: View {
                     }
                     .buttonStyle(MinimalButtonStyle())
                     .disabled(viewModel.selectedImageURL == nil)
+                    .accessibilityLabel("Retry background removal")
 
                     Button(viewModel.stage.isFailed ? "USE AS IS" : "SAVE") {
                         save()
                     }
                     .buttonStyle(MinimalButtonStyle())
                     .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+                    .accessibilityLabel(viewModel.stage.isFailed ? "Save item with original image" : "Save item")
                 }
             }
         }
@@ -178,17 +182,28 @@ struct AddItemFlow: View {
             closet.add(item)
         }
         do {
+            try upsertMemory(for: item)
             try modelContext.save()
             saveErrorMessage = nil
             onSave?(item)
             dismiss()
         } catch {
-            for closet in closets where selectedClosetIDs.contains(closet.id) {
-                closet.remove(item)
-            }
-            modelContext.delete(item)
+            modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
+    }
+
+    private func upsertMemory(for item: ClosetItem) throws {
+        let payload = OnDeviceMemoryPayloadBuilder.closetItemPayload(for: item)
+        try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+            kind: .closetItem,
+            subjectID: item.id,
+            summary: payload.summary,
+            embedding: payload.embedding,
+            metadataTags: payload.metadataTags,
+            updatedAt: item.dateAdded,
+            saveImmediately: false
+        )
     }
 
     private func applyInitialMetadata() {

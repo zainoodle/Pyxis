@@ -17,6 +17,8 @@ struct SavedFitsGalleryView: View {
                     dismiss()
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("Close saved fits")
             }
 
             if outfits.isEmpty {

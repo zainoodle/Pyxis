@@ -114,6 +114,8 @@ struct OutfitBuilderView: View {
                 dismiss()
             }
             .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
+            .accessibilityLabel("Close outfit builder")
         }
     }
 
@@ -210,10 +212,11 @@ struct OutfitBuilderView: View {
         )
         modelContext.insert(outfit)
         do {
+            try upsertMemory(for: outfit)
             try modelContext.save()
             saveErrorMessage = nil
         } catch {
-            modelContext.delete(outfit)
+            modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
             return
         }
@@ -232,6 +235,19 @@ struct OutfitBuilderView: View {
                 }
             }
         }
+    }
+
+    private func upsertMemory(for outfit: Outfit) throws {
+        let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: items)
+        try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+            kind: .outfit,
+            subjectID: outfit.id,
+            summary: payload.summary,
+            embedding: payload.embedding,
+            metadataTags: payload.metadataTags,
+            updatedAt: outfit.dateUpdated,
+            saveImmediately: false
+        )
     }
 }
 

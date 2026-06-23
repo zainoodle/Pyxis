@@ -66,6 +66,7 @@ struct ItemDetailView: View {
                 }
             }
             .buttonStyle(MinimalButtonStyle())
+            .accessibilityLabel("Retry background removal")
 
             if let retryMessage = viewModel.retryMessage {
                 Text(retryMessage.uppercased())
@@ -86,9 +87,11 @@ struct ItemDetailView: View {
                     .font(PyxisTypography.title)
                 Spacer()
                 Button("CLOSE") {
-                    dismiss()
+                    saveAndDismiss()
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("Close item detail")
             }
 
             utilityBlock
@@ -131,6 +134,7 @@ struct ItemDetailView: View {
                     }
 
                     Toggle("FAVORITE", isOn: $item.favorite)
+                        .accessibilityLabel("Favorite item")
 
                     Stepper("WEAR COUNT \(item.wearCount)", value: $item.wearCount, in: 0...999)
                 }
@@ -149,9 +153,13 @@ struct ItemDetailView: View {
 
             Button("DELETE ITEM") {
                 let imageSet = viewModel.storedImageSet(for: item)
-                closets.forEach { $0.remove(item) }
-                modelContext.delete(item)
                 do {
+                    try OnDeviceMemoryStore(context: modelContext).deleteMemories(
+                        subjectID: item.id,
+                        saveImmediately: false
+                    )
+                    closets.forEach { $0.remove(item) }
+                    modelContext.delete(item)
                     try modelContext.save()
                     viewModel.deleteImages(imageSet)
                     saveErrorMessage = nil
@@ -162,6 +170,7 @@ struct ItemDetailView: View {
                 }
             }
             .buttonStyle(MinimalButtonStyle())
+            .accessibilityLabel("Delete item")
         }
         .font(PyxisTypography.body)
         .textFieldStyle(.plain)
@@ -230,11 +239,36 @@ struct ItemDetailView: View {
 
     private func saveChanges() {
         do {
+            try upsertItemMemory()
             try modelContext.save()
             saveErrorMessage = nil
         } catch {
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
+    }
+
+    private func saveAndDismiss() {
+        do {
+            try upsertItemMemory()
+            try modelContext.save()
+            saveErrorMessage = nil
+            dismiss()
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func upsertItemMemory() throws {
+        let payload = OnDeviceMemoryPayloadBuilder.closetItemPayload(for: item)
+        try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+            kind: .closetItem,
+            subjectID: item.id,
+            summary: payload.summary,
+            embedding: payload.embedding,
+            metadataTags: payload.metadataTags,
+            updatedAt: .now,
+            saveImmediately: false
+        )
     }
 
     private func optionalString(_ value: Binding<String?>) -> Binding<String> {

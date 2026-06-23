@@ -11,5 +11,5 @@ public struct EmbeddingInput: Sendable {
 }
 
 public protocol EmbeddingService {
-    func embedding(for input: EmbeddingInput) async throws -> [Float]
+    func embedding(for input: EmbeddingInput) async throws -> [Double]
 }
