@@ -7,6 +7,7 @@ struct TopNavigationView: View {
     let buildAction: () -> Void
     let fitsAction: () -> Void
     let manageClosetsAction: () -> Void
+    @State private var isShowingFilters = false
 
     init(
         filterState: Binding<ClosetFilterState>,
@@ -25,117 +26,188 @@ struct TopNavigationView: View {
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.sm) {
-            actionRow
-            closetRow
-            categoryRow
+        HStack(spacing: PyxisSpacing.md) {
+            Text("PYXIS")
+                .font(PyxisTypography.title)
+                .foregroundStyle(PyxisColors.text)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PyxisSpacing.md) {
-                    colorButton(nil, title: "Colors")
-                    ForEach([ClosetColor.black, .white, .gray, .brown, .blue, .green, .red], id: \.self) { color in
-                        colorButton(color, title: color.rawValue)
+            Spacer(minLength: PyxisSpacing.sm)
+
+            Button(action: addAction) {
+                UppercaseNavLabel(title: "New", isActive: false)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("n", modifiers: .command)
+            .accessibilityLabel("Add new item")
+
+            Button(action: buildAction) {
+                UppercaseNavLabel(title: "Build", isActive: false)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Build outfit")
+
+            Button {
+                isShowingFilters = true
+            } label: {
+                UppercaseNavLabel(title: "Filters", isActive: hasActiveCollectionFilter)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open closet filters")
+            .accessibilityValue(hasActiveCollectionFilter ? "Filters selected" : "No filters selected")
+
+            Menu {
+                Button("SAVED FITS", action: fitsAction)
+                Button("MANAGE CLOSETS", action: manageClosetsAction)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(PyxisColors.text)
+            }
+            .accessibilityLabel("More closet actions")
+        }
+        .sheet(isPresented: $isShowingFilters) {
+            ClosetFilterSheet(filterState: $filterState, closets: closets)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private var hasActiveCollectionFilter: Bool {
+        filterState.closetID != nil || filterState.category != nil || filterState.color != nil
+    }
+}
+
+private struct ClosetFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var filterState: ClosetFilterState
+    let closets: [Closet]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: PyxisSpacing.sm),
+        GridItem(.flexible(), spacing: PyxisSpacing.sm)
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: PyxisSpacing.xl) {
+                HStack {
+                    VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+                        Text("FILTERS")
+                            .font(PyxisTypography.title)
+                        Text("REFINE YOUR COLLECTION")
+                            .font(PyxisTypography.label)
+                            .foregroundStyle(PyxisColors.secondaryText)
                     }
-                }
-                .padding(.horizontal, PyxisSpacing.xs)
-            }
-        }
-    }
 
-    private var actionRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: PyxisSpacing.lg) {
-                Button(action: addAction) {
-                    UppercaseNavLabel(title: "New", isActive: false)
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut("n", modifiers: .command)
-                .accessibilityLabel("Add new item")
+                    Spacer()
 
-                Button(action: buildAction) {
-                    UppercaseNavLabel(title: "Build", isActive: false)
+                    Button("DONE") {
+                        dismiss()
+                    }
+                    .buttonStyle(.plain)
+                    .font(PyxisTypography.label)
+                    .accessibilityLabel("Close filters")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Build outfit")
 
-                Button(action: fitsAction) {
-                    UppercaseNavLabel(title: "Fits", isActive: false)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Saved fits")
+                filterSection("CLOSET") {
+                    FilterOptionButton(title: "ALL CLOSETS", isSelected: filterState.closetID == nil) {
+                        filterState.closetID = nil
+                    }
 
-                Button(action: manageClosetsAction) {
-                    UppercaseNavLabel(title: "Closets", isActive: filterState.closetID != nil)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Manage closets")
-            }
-            .padding(.horizontal, PyxisSpacing.xs)
-        }
-    }
-
-    @ViewBuilder
-    private var closetRow: some View {
-        if !closets.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PyxisSpacing.lg) {
-                    closetButton(nil, title: "All Closets")
                     ForEach(closets) { closet in
-                        closetButton(closet.id, title: closet.displayName)
+                        FilterOptionButton(
+                            title: closet.displayName,
+                            isSelected: filterState.closetID == closet.id
+                        ) {
+                            filterState.closetID = closet.id
+                        }
                     }
                 }
-                .padding(.horizontal, PyxisSpacing.xs)
+
+                filterSection("CATEGORY") {
+                    FilterOptionButton(title: "ALL ITEMS", isSelected: filterState.category == nil) {
+                        filterState.category = nil
+                    }
+
+                    ForEach(ClothingCategory.allCases) { category in
+                        FilterOptionButton(
+                            title: category.rawValue,
+                            isSelected: filterState.category == category
+                        ) {
+                            filterState.category = category
+                        }
+                    }
+                }
+
+                filterSection("COLOR") {
+                    FilterOptionButton(title: "ALL COLORS", isSelected: filterState.color == nil) {
+                        filterState.color = nil
+                    }
+
+                    ForEach(ClosetColor.allCases.filter { $0 != .unknown }) { color in
+                        FilterOptionButton(
+                            title: color.rawValue,
+                            isSelected: filterState.color == color
+                        ) {
+                            filterState.color = color
+                        }
+                    }
+                }
+
+                if hasActiveCollectionFilter {
+                    Button("CLEAR FILTERS") {
+                        filterState.closetID = nil
+                        filterState.category = nil
+                        filterState.color = nil
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                    .accessibilityLabel("Clear closet, category, and color filters")
+                }
+            }
+            .padding(PyxisSpacing.md)
+        }
+        .background(PyxisColors.background)
+    }
+
+    private func filterSection<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            Text(title)
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.secondaryText)
+
+            LazyVGrid(columns: columns, spacing: PyxisSpacing.sm) {
+                content()
             }
         }
     }
 
-    private var categoryRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: PyxisSpacing.lg) {
-                categoryButton(nil, title: "All")
-                categoryButton(.tops, title: "Tops")
-                categoryButton(.bottoms, title: "Bottoms")
-                categoryButton(.outerwear, title: "Outerwear")
-                categoryButton(.footwear, title: "Footwear")
-                categoryButton(.accessories, title: "Accessories")
-            }
-            .padding(.horizontal, PyxisSpacing.xs)
-        }
+    private var hasActiveCollectionFilter: Bool {
+        filterState.closetID != nil || filterState.category != nil || filterState.color != nil
     }
+}
 
-    private func closetButton(_ closetID: UUID?, title: String) -> some View {
-        let isActive = filterState.closetID == closetID
-        return Button {
-            filterState.closetID = closetID
-        } label: {
-            UppercaseNavLabel(title: title, isActive: isActive)
+private struct FilterOptionButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title.uppercased())
+                .font(PyxisTypography.label)
+                .foregroundStyle(isSelected ? PyxisColors.surface : PyxisColors.secondaryText)
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                .padding(.horizontal, PyxisSpacing.sm)
+                .background(isSelected ? PyxisColors.text : PyxisColors.field)
+                .overlay {
+                    Rectangle()
+                        .stroke(isSelected ? PyxisColors.text : PyxisColors.hairline, lineWidth: 1)
+                }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(closetID == nil ? "Show all closets" : "Filter closet \(title)")
-        .accessibilityValue(isActive ? "Selected" : "Not selected")
-    }
-
-    private func categoryButton(_ category: ClothingCategory?, title: String) -> some View {
-        let isActive = filterState.category == category
-        return Button {
-            filterState.category = category
-        } label: {
-            UppercaseNavLabel(title: title, isActive: isActive)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(category == nil ? "Show all categories" : "Filter category \(title)")
-        .accessibilityValue(isActive ? "Selected" : "Not selected")
-    }
-
-    private func colorButton(_ color: ClosetColor?, title: String) -> some View {
-        let isActive = filterState.color == color
-        return Button {
-            filterState.color = color
-        } label: {
-            UppercaseNavLabel(title: title, isActive: isActive)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(color == nil ? "Show all colors" : "Filter color \(title)")
-        .accessibilityValue(isActive ? "Selected" : "Not selected")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }

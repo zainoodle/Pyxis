@@ -6,12 +6,29 @@ import UniformTypeIdentifiers
 struct ImageImportView: View {
     let onSelect: (URL) -> Void
     @State private var isShowingImporter = false
+    @State private var isShowingCamera = false
     @State private var isDropTargeted = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var importMessage: String?
 
     var body: some View {
         VStack(spacing: PyxisSpacing.md) {
+            Button("TAKE PHOTO") {
+                guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+                    importMessage = "Camera unavailable"
+                    return
+                }
+                isShowingCamera = true
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+            .accessibilityLabel("Take a photo of a clothing item")
+            .accessibilityValue(
+                UIImagePickerController.isSourceTypeAvailable(.camera)
+                    ? "Available"
+                    : "Unavailable on this device"
+            )
+
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                 Text("PHOTO LIBRARY")
             }
@@ -79,6 +96,15 @@ struct ImageImportView: View {
                 reportImportFailure()
             }
         }
+        .fullScreenCover(isPresented: $isShowingCamera) {
+            CameraCaptureView { image in
+                isShowingCamera = false
+                finishCameraCapture(image)
+            } onCancel: {
+                isShowingCamera = false
+            }
+            .ignoresSafeArea()
+        }
     }
 
     private func loadFirstURL(from providers: [NSItemProvider]) -> Bool {
@@ -139,6 +165,22 @@ struct ImageImportView: View {
 
     private func reportImportFailure() {
         importMessage = "Import failed"
+    }
+
+    private func finishCameraCapture(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.92) else {
+            reportImportFailure()
+            return
+        }
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Pyxis-camera-\(UUID().uuidString).jpg")
+        do {
+            try data.write(to: url, options: .atomic)
+            finishImport(url)
+        } catch {
+            reportImportFailure()
+        }
     }
 
     #if DEBUG

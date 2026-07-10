@@ -23,6 +23,21 @@ final class ImageStorageTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: path).path))
     }
 
+    func testResavingStoredOriginalDoesNotDeleteSource() throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "source.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000009"))
+        let path = try storage.saveOriginal(from: source, itemID: itemID)
+        let storedURL = storage.url(for: path)
+        let originalData = try Data(contentsOf: storedURL)
+
+        let resavedPath = try storage.saveOriginal(from: storedURL, itemID: itemID)
+
+        XCTAssertEqual(resavedPath, path)
+        XCTAssertEqual(try Data(contentsOf: storedURL), originalData)
+    }
+
     func testSavesCutoutAndThumbnailPNGs() throws {
         let root = try makeTemporaryRoot()
         let storage = try ImageStorageService(rootURL: root)

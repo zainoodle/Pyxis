@@ -5,6 +5,7 @@ final class ItemDetailViewModel: ObservableObject {
     @Published var showOriginal = false
     @Published var isRetryingBackgroundRemoval = false
     @Published var retryMessage: String?
+    @Published var imageRevision = 0
 
     private let imageStorage: ImageStorageService?
 
@@ -40,11 +41,26 @@ final class ItemDetailViewModel: ObservableObject {
             itemID: item.id
         )
 
-        item.imageCutoutPath = result.cutoutPath
-        item.thumbnailPath = result.thumbnailPath ?? item.thumbnailPath
+        if result.status == .succeeded {
+            Self.applySuccessfulBackgroundRemovalResult(result, to: item)
+            imageRevision += 1
+        }
         retryMessage = result.status == .succeeded
             ? "Background removed"
             : (result.errorMessage ?? "Background removal failed — retry")
+    }
+
+    static func applySuccessfulBackgroundRemovalResult(
+        _ result: BackgroundRemovalResult,
+        to item: ClosetItem
+    ) {
+        guard result.status == .succeeded, let cutoutPath = result.cutoutPath else {
+            return
+        }
+
+        item.imageCutoutPath = cutoutPath
+        item.thumbnailPath = result.thumbnailPath ?? item.thumbnailPath
+        item.touch()
     }
 
     func storedImageSet(for item: ClosetItem) -> StoredImageSet {

@@ -46,6 +46,11 @@ public final class ImageStorageService {
 
     public func saveOriginal(from sourceURL: URL, itemID: UUID) throws -> String {
         let destination = originalsURL.appendingPathComponent("\(itemID.uuidString).\(sourceURL.safeImagePathExtensionOrDefault)")
+        if normalizedPath(sourceURL) == normalizedPath(destination),
+           fileManager.fileExists(atPath: destination.path) {
+            return relativePath(for: destination)
+        }
+
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
         }
@@ -76,6 +81,30 @@ public final class ImageStorageService {
     public func makeThumbnail(from imageURL: URL, itemID: UUID) throws -> String {
         let data = try ImageUtilities.thumbnailPNGData(from: imageURL)
         return try saveThumbnailPNG(data, itemID: itemID)
+    }
+
+    public func rotateImages(
+        _ imageSet: StoredImageSet,
+        direction: ImageUtilities.RotationDirection
+    ) throws -> StoredImageSet {
+        let originalURL = url(for: imageSet.originalPath)
+        try rotateImage(at: originalURL, direction: direction)
+
+        if let cutoutPath = imageSet.cutoutPath {
+            try rotateImage(at: url(for: cutoutPath), direction: direction)
+        }
+
+        let thumbnailSourcePath = imageSet.cutoutPath ?? imageSet.originalPath
+        let thumbnailPath = try makeThumbnail(
+            from: url(for: thumbnailSourcePath),
+            itemID: imageSet.itemID
+        )
+
+        return StoredImageSet(
+            originalPath: imageSet.originalPath,
+            cutoutPath: imageSet.cutoutPath,
+            thumbnailPath: thumbnailPath
+        )
     }
 
     public func url(for relativePath: String) -> URL {
@@ -120,6 +149,14 @@ public final class ImageStorageService {
         }
     }
 
+    private func rotateImage(
+        at imageURL: URL,
+        direction: ImageUtilities.RotationDirection
+    ) throws {
+        let data = try ImageUtilities.rotatedImageData(from: imageURL, direction: direction)
+        try data.write(to: imageURL, options: .atomic)
+    }
+
     private var invalidImageURL: URL {
         imagesURL.appendingPathComponent("__invalid_image_path__")
     }
@@ -153,6 +190,13 @@ public final class ImageStorageService {
 
     private func isPath(_ path: String, nestedIn rootPath: String) -> Bool {
         path == rootPath || path.hasPrefix(rootPath + "/")
+    }
+}
+
+private extension StoredImageSet {
+    var itemID: UUID {
+        let fileName = URL(fileURLWithPath: originalPath).deletingPathExtension().lastPathComponent
+        return UUID(uuidString: fileName) ?? UUID()
     }
 }
 

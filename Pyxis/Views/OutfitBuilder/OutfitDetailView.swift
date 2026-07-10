@@ -111,6 +111,7 @@ struct OutfitDetailView: View {
 
     private func saveAndDismiss() {
         do {
+            outfit.touch()
             try upsertOutfitMemory()
             try modelContext.save()
             saveErrorMessage = nil

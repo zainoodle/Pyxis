@@ -16,6 +16,8 @@ public final class ClosetItem: Identifiable {
     public var size: String?
     public var seasonRawValues: [String]
     public var dateAdded: Date
+    public var dateUpdated: Date?
+    public var dateDeleted: Date?
     public var lastWornDate: Date?
     public var wearCount: Int
     public var favorite: Bool
@@ -40,6 +42,8 @@ public final class ClosetItem: Identifiable {
         size: String? = nil,
         season: [Season] = [],
         dateAdded: Date = .now,
+        dateUpdated: Date? = nil,
+        dateDeleted: Date? = nil,
         lastWornDate: Date? = nil,
         wearCount: Int = 0,
         favorite: Bool = false,
@@ -63,6 +67,8 @@ public final class ClosetItem: Identifiable {
         self.size = size
         self.seasonRawValues = season.map(\.rawValue)
         self.dateAdded = dateAdded
+        self.dateUpdated = dateUpdated ?? dateAdded
+        self.dateDeleted = dateDeleted
         self.lastWornDate = lastWornDate
         self.wearCount = wearCount
         self.favorite = favorite
@@ -102,5 +108,28 @@ public final class ClosetItem: Identifiable {
     public var source: ItemSource {
         get { ItemSource(rawValue: sourceRawValue) ?? .owned }
         set { sourceRawValue = newValue.rawValue }
+    }
+
+    public var isDeleted: Bool {
+        dateDeleted != nil
+    }
+
+    public var effectiveDateUpdated: Date {
+        dateUpdated ?? dateAdded
+    }
+
+    public func touch(date: Date = .now) {
+        dateUpdated = date
+    }
+
+    public func markWorn(on date: Date = .now) {
+        wearCount += 1
+        lastWornDate = date
+        touch(date: date)
+    }
+
+    public func markDeleted(date: Date = .now) {
+        dateDeleted = date
+        touch(date: date)
     }
 }

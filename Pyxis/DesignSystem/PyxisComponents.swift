@@ -7,7 +7,7 @@ struct UppercaseNavLabel: View {
     var body: some View {
         Text(title.uppercased())
             .font(PyxisTypography.nav)
-            .foregroundStyle(isActive ? PyxisColors.text : PyxisColors.inactiveText)
+            .foregroundStyle(isActive ? PyxisColors.text : PyxisColors.secondaryText)
             .lineLimit(1)
     }
 }
@@ -61,6 +61,18 @@ struct PremiumCardBackground: ViewModifier {
 extension View {
     func premiumCardBackground() -> some View {
         modifier(PremiumCardBackground())
+    }
+
+    func catalogTileBackground() -> some View {
+        background {
+            Rectangle()
+                .fill(PyxisColors.surface)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(PyxisColors.hairline)
+                .frame(height: 1)
+        }
     }
 }
 

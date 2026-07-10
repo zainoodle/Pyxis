@@ -36,11 +36,22 @@ struct OutfitBuilderView: View {
         service.draft(from: rows, selections: selections)
     }
 
+    private var selectedPieces: [(slot: OutfitSlot, item: ClosetItem)] {
+        rows.compactMap { row in
+            guard let selectedIndex = selections[row.slot], row.items.indices.contains(selectedIndex) else {
+                return nil
+            }
+            return (slot: row.slot, item: row.items[selectedIndex])
+        }
+    }
+
     var body: some View {
         VStack(spacing: PyxisSpacing.lg) {
             header
 
             ClosetReadinessView(rows: requiredRows)
+
+            OutfitAssemblyPreview(selectedPieces: selectedPieces)
 
             ScrollView {
                 VStack(spacing: PyxisSpacing.lg) {
@@ -248,6 +259,65 @@ struct OutfitBuilderView: View {
             updatedAt: outfit.dateUpdated,
             saveImmediately: false
         )
+    }
+}
+
+private struct OutfitAssemblyPreview: View {
+    let selectedPieces: [(slot: OutfitSlot, item: ClosetItem)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            HStack {
+                Text("CURRENT FIT")
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+
+                Spacer()
+
+                Text("\(selectedPieces.count) PIECES")
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.inactiveText)
+            }
+
+            ZStack {
+                PyxisColors.field
+
+                VStack(spacing: -18) {
+                    assemblyPiece(.outerwear, height: 58)
+                    assemblyPiece(.top, height: 82)
+                    assemblyPiece(.bottom, height: 104)
+                    assemblyPiece(.footwear, height: 58)
+                }
+                .padding(.vertical, PyxisSpacing.sm)
+            }
+            .frame(height: 274)
+            .overlay {
+                Rectangle()
+                    .stroke(PyxisColors.hairline, lineWidth: 1)
+            }
+        }
+        .animation(.snappy(duration: 0.28), value: selectedPieces.map { $0.item.id })
+    }
+
+    @ViewBuilder
+    private func assemblyPiece(_ slot: OutfitSlot, height: CGFloat) -> some View {
+        if let item = selectedPieces.first(where: { $0.slot == slot })?.item {
+            LocalImageView(url: imageURL(for: item))
+                .frame(width: 176, height: height)
+                .accessibilityLabel("Selected \(slot.title.lowercased()) \(item.itemCode)")
+        } else if [.top, .bottom, .footwear].contains(slot) {
+            Text("SELECT \(slot.title)")
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.inactiveText)
+                .frame(width: 176, height: height)
+        }
+    }
+
+    private func imageURL(for item: ClosetItem) -> URL? {
+        guard let storage = try? ImageStorageService() else {
+            return nil
+        }
+        return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
     }
 }
 

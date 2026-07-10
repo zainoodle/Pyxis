@@ -8,19 +8,22 @@ public final class Closet: Identifiable {
     public var itemIDs: [UUID]
     public var dateCreated: Date
     public var dateUpdated: Date
+    public var dateDeleted: Date?
 
     public init(
         id: UUID = UUID(),
         name: String,
         itemIDs: [UUID] = [],
         dateCreated: Date = .now,
-        dateUpdated: Date = .now
+        dateUpdated: Date = .now,
+        dateDeleted: Date? = nil
     ) {
         self.id = id
         self.name = Self.cleanedName(name) ?? "Untitled Closet"
         self.itemIDs = Self.deduplicated(itemIDs)
         self.dateCreated = dateCreated
         self.dateUpdated = dateUpdated
+        self.dateDeleted = dateDeleted
     }
 
     public var displayName: String {
@@ -29,6 +32,10 @@ public final class Closet: Identifiable {
 
     public var itemCount: Int {
         itemIDs.count
+    }
+
+    public var isDeleted: Bool {
+        dateDeleted != nil
     }
 
     public func contains(_ item: ClosetItem) -> Bool {
@@ -40,14 +47,14 @@ public final class Closet: Identifiable {
             return
         }
         itemIDs.append(item.id)
-        dateUpdated = date
+        touch(date: date)
     }
 
     public func remove(_ item: ClosetItem, date: Date = .now) {
         let originalCount = itemIDs.count
         itemIDs.removeAll { $0 == item.id }
         if itemIDs.count != originalCount {
-            dateUpdated = date
+            touch(date: date)
         }
     }
 
@@ -61,7 +68,16 @@ public final class Closet: Identifiable {
 
     public func rename(_ newName: String, date: Date = .now) {
         name = newName
+        touch(date: date)
+    }
+
+    public func touch(date: Date = .now) {
         dateUpdated = date
+    }
+
+    public func markDeleted(date: Date = .now) {
+        dateDeleted = date
+        touch(date: date)
     }
 
     public static func cleanedName(_ name: String) -> String? {

@@ -11,6 +11,11 @@ public typealias PyxisImage = NSImage
 #endif
 
 public enum ImageUtilities {
+    public enum RotationDirection: Sendable {
+        case counterclockwise
+        case clockwise
+    }
+
     public static func pngData(from image: PyxisImage) -> Data? {
         #if canImport(UIKit)
         image.pngData()
@@ -27,6 +32,74 @@ public enum ImageUtilities {
             using: .jpeg,
             properties: [.compressionFactor: compression]
         )
+        #endif
+    }
+
+    public static func rotatedImageData(
+        from imageURL: URL,
+        direction: RotationDirection
+    ) throws -> Data {
+        guard let image = PyxisImage(contentsOfFile: imageURL.path) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+
+        #if canImport(UIKit)
+        let radians: CGFloat = direction == .clockwise ? .pi / 2 : -.pi / 2
+        let originalSize = image.size
+        let targetSize = CGSize(width: originalSize.height, height: originalSize.width)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = false
+
+        let rotated = UIGraphicsImageRenderer(size: targetSize, format: format).image { context in
+            let cgContext = context.cgContext
+            cgContext.translateBy(x: targetSize.width / 2, y: targetSize.height / 2)
+            cgContext.rotate(by: radians)
+            image.draw(
+                in: CGRect(
+                    x: -originalSize.width / 2,
+                    y: -originalSize.height / 2,
+                    width: originalSize.width,
+                    height: originalSize.height
+                )
+            )
+        }
+
+        if imageURL.prefersJPEGEncoding, let data = jpegData(from: rotated) {
+            return data
+        }
+        guard let data = pngData(from: rotated) else {
+            throw ImageUtilityError.couldNotEncodePNG
+        }
+        return data
+        #elseif canImport(AppKit)
+        let originalSize = image.size
+        let targetSize = CGSize(width: originalSize.height, height: originalSize.width)
+        let rotated = NSImage(size: targetSize)
+        rotated.lockFocus()
+        guard let context = NSGraphicsContext.current?.cgContext else {
+            rotated.unlockFocus()
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        context.translateBy(x: targetSize.width / 2, y: targetSize.height / 2)
+        context.rotate(by: direction == .clockwise ? .pi / 2 : -.pi / 2)
+        image.draw(
+            in: CGRect(
+                x: -originalSize.width / 2,
+                y: -originalSize.height / 2,
+                width: originalSize.width,
+                height: originalSize.height
+            )
+        )
+        rotated.unlockFocus()
+
+        if imageURL.prefersJPEGEncoding, let data = jpegData(from: rotated) {
+            return data
+        }
+        guard let data = pngData(from: rotated) else {
+            throw ImageUtilityError.couldNotEncodePNG
+        }
+        return data
         #endif
     }
 
@@ -106,6 +179,13 @@ public enum ImageUtilities {
         return bitmap
     }
     #endif
+}
+
+private extension URL {
+    var prefersJPEGEncoding: Bool {
+        let jpegExtensions: Set<String> = ["jpg", "jpeg"]
+        return jpegExtensions.contains(pathExtension.lowercased())
+    }
 }
 
 public enum ImageUtilityError: LocalizedError {

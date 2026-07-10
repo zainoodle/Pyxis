@@ -27,6 +27,8 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.first?.category, .tops)
         XCTAssertEqual(fetched.first?.subtype, .tShirt)
         XCTAssertEqual(fetched.first?.primaryColor, .white)
+        XCTAssertEqual(fetched.first?.effectiveDateUpdated, fetched.first?.dateAdded)
+        XCTAssertNil(fetched.first?.dateDeleted)
     }
 
     func testUpdatesAndRefetchesClosetItemMetadata() throws {
@@ -50,6 +52,8 @@ final class PersistenceTests: XCTestCase {
         item.size = "M"
         item.favorite = true
         item.wearCount = 3
+        let updatedAt = Date(timeIntervalSince1970: 1_000)
+        item.touch(date: updatedAt)
         try context.save()
 
         let fetched = try context.fetch(FetchDescriptor<ClosetItem>())
@@ -61,6 +65,34 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(fetched.first?.size, "M")
         XCTAssertEqual(fetched.first?.favorite, true)
         XCTAssertEqual(fetched.first?.wearCount, 3)
+        XCTAssertEqual(fetched.first?.effectiveDateUpdated, updatedAt)
+    }
+
+    func testMarksPersistedModelsDeletedWithoutRemovingThem() throws {
+        let container = try SwiftDataContainer.makeTestContainer()
+        let context = ModelContext(container)
+        let deletedAt = Date(timeIntervalSince1970: 2_000)
+        let item = ClosetItem(
+            itemCode: "BT-001",
+            category: .footwear,
+            subtype: .boots,
+            primaryColor: .black,
+            imageOriginalPath: "Images/Originals/boots.jpg"
+        )
+        let closet = Closet(name: "Archive")
+        let outfit = Outfit(name: "Rain day", footwearItemID: item.id)
+
+        context.insert(item)
+        context.insert(closet)
+        context.insert(outfit)
+        item.markDeleted(date: deletedAt)
+        closet.markDeleted(date: deletedAt)
+        outfit.markDeleted(date: deletedAt)
+        try context.save()
+
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ClosetItem>()).first?.dateDeleted, deletedAt)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Closet>()).first?.dateDeleted, deletedAt)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Outfit>()).first?.dateDeleted, deletedAt)
     }
 
     func testDeletesClosetItem() throws {

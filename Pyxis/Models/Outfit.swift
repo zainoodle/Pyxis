@@ -85,6 +85,7 @@ public final class Outfit: Identifiable {
     public var accessoryItemIDs: [UUID]
     public var dateCreated: Date
     public var dateUpdated: Date
+    public var dateDeleted: Date?
     public var favorite: Bool
     public var notes: String?
     public var lastWornDate: Date?
@@ -100,6 +101,7 @@ public final class Outfit: Identifiable {
         accessoryItemIDs: [UUID] = [],
         dateCreated: Date = .now,
         dateUpdated: Date = .now,
+        dateDeleted: Date? = nil,
         favorite: Bool = false,
         notes: String? = nil,
         lastWornDate: Date? = nil,
@@ -114,6 +116,7 @@ public final class Outfit: Identifiable {
         self.accessoryItemIDs = accessoryItemIDs
         self.dateCreated = dateCreated
         self.dateUpdated = dateUpdated
+        self.dateDeleted = dateDeleted
         self.favorite = favorite
         self.notes = notes
         self.lastWornDate = lastWornDate
@@ -124,9 +127,22 @@ public final class Outfit: Identifiable {
         [topItemID, bottomItemID, footwearItemID, outerwearItemID].compactMap { $0 } + accessoryItemIDs
     }
 
+    public var isDeleted: Bool {
+        dateDeleted != nil
+    }
+
     public func markWorn(on date: Date = .now) {
         wearCount += 1
         lastWornDate = date
+        touch(date: date)
+    }
+
+    public func touch(date: Date = .now) {
         dateUpdated = date
+    }
+
+    public func markDeleted(date: Date = .now) {
+        dateDeleted = date
+        touch(date: date)
     }
 }

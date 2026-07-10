@@ -25,6 +25,7 @@ final class AddItemViewModel: ObservableObject {
     @Published var notes = ""
     @Published var favorite = false
     @Published var setupError: String?
+    @Published var imageRevision = 0
 
     private let imageStorage: ImageStorageService?
     private let backgroundRemovalService: (any BackgroundRemovalServiceProtocol)?
@@ -139,16 +140,27 @@ final class AddItemViewModel: ObservableObject {
         }
     }
 
-    func makeClosetItem(existingCodes: Set<String>) -> ClosetItem? {
+    func makeClosetItem(
+        existingCodes: Set<String>,
+        preferredItemCode: String? = nil
+    ) -> ClosetItem? {
         guard let result, !result.originalPath.isEmpty else {
             return nil
         }
 
-        let code = ItemCodeGenerator.generate(
-            for: subtype,
-            category: category,
-            existingCodes: existingCodes
-        )
+        let expectedPrefix = ItemCodeGenerator.prefix(for: subtype, category: category)
+        let code: String
+        if let preferredItemCode,
+           preferredItemCode.hasPrefix("\(expectedPrefix)-"),
+           !existingCodes.contains(preferredItemCode) {
+            code = preferredItemCode
+        } else {
+            code = ItemCodeGenerator.generate(
+                for: subtype,
+                category: category,
+                existingCodes: existingCodes
+            )
+        }
 
         return ClosetItem(
             itemCode: code,
@@ -174,6 +186,34 @@ final class AddItemViewModel: ObservableObject {
         await processSelectedImage()
     }
 
+    func rotateProcessedImage(_ direction: ImageUtilities.RotationDirection) throws {
+        guard let imageStorage else {
+            throw AddItemImageEditingError.storageUnavailable
+        }
+        guard let result, !result.originalPath.isEmpty else {
+            throw AddItemImageEditingError.noProcessedImage
+        }
+
+        let rotatedImageSet = try imageStorage.rotateImages(
+            StoredImageSet(
+                originalPath: result.originalPath,
+                cutoutPath: result.cutoutPath,
+                thumbnailPath: result.thumbnailPath
+            ),
+            direction: direction
+        )
+
+        self.result = BackgroundRemovalResult(
+            originalPath: rotatedImageSet.originalPath,
+            cutoutPath: rotatedImageSet.cutoutPath,
+            thumbnailPath: rotatedImageSet.thumbnailPath,
+            status: result.status,
+            errorMessage: result.errorMessage
+        )
+        selectedImageURL = imageStorage.url(for: rotatedImageSet.originalPath)
+        imageRevision += 1
+    }
+
     private func analysisURL(from result: BackgroundRemovalResult) -> URL? {
         guard let imageStorage else {
             return nil
@@ -194,6 +234,20 @@ final class AddItemViewModel: ObservableObject {
             markUserEdited: false
         )
         classificationConfidence = classification.confidence
+    }
+}
+
+private enum AddItemImageEditingError: LocalizedError {
+    case storageUnavailable
+    case noProcessedImage
+
+    var errorDescription: String? {
+        switch self {
+        case .storageUnavailable:
+            return "Image storage could not be opened."
+        case .noProcessedImage:
+            return "Rotate after the image finishes importing."
+        }
     }
 }
 

@@ -46,7 +46,10 @@ struct ItemDetailView: View {
 
     private var imagePanel: some View {
         VStack(spacing: PyxisSpacing.md) {
-            LocalImageView(url: viewModel.displayURL(for: item))
+            LocalImageView(
+                url: viewModel.displayURL(for: item),
+                revision: viewModel.imageRevision
+            )
                 .frame(maxWidth: 330)
                 .frame(height: 420)
 
@@ -239,6 +242,7 @@ struct ItemDetailView: View {
 
     private func saveChanges() {
         do {
+            item.touch()
             try upsertItemMemory()
             try modelContext.save()
             saveErrorMessage = nil
@@ -249,6 +253,7 @@ struct ItemDetailView: View {
 
     private func saveAndDismiss() {
         do {
+            item.touch()
             try upsertItemMemory()
             try modelContext.save()
             saveErrorMessage = nil
@@ -266,7 +271,7 @@ struct ItemDetailView: View {
             summary: payload.summary,
             embedding: payload.embedding,
             metadataTags: payload.metadataTags,
-            updatedAt: .now,
+            updatedAt: item.effectiveDateUpdated,
             saveImmediately: false
         )
     }

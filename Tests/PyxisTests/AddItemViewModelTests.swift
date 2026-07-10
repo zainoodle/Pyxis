@@ -150,6 +150,81 @@ final class AddItemViewModelTests: XCTestCase {
         XCTAssertEqual(item.classificationConfidence, 0.55)
     }
 
+    func testRotatingProcessedImageUpdatesStoredOriginalAndThumbnail() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(
+            named: "wide-shirt.jpg",
+            root: root,
+            size: CGSize(width: 24, height: 12)
+        )
+        let storage = try ImageStorageService(rootURL: root)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000077"))
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: itemID)
+
+        try viewModel.rotateProcessedImage(.clockwise)
+
+        let result = try XCTUnwrap(viewModel.result)
+        let originalImage = try XCTUnwrap(PyxisImage(contentsOfFile: storage.url(for: result.originalPath).path))
+        let thumbnailPath = try XCTUnwrap(result.thumbnailPath)
+        let thumbnailImage = try XCTUnwrap(PyxisImage(contentsOfFile: storage.url(for: thumbnailPath).path))
+        XCTAssertLessThan(originalImage.size.width, originalImage.size.height)
+        XCTAssertLessThan(thumbnailImage.size.width, thumbnailImage.size.height)
+        XCTAssertEqual(
+            originalImage.size.width / originalImage.size.height,
+            thumbnailImage.size.width / thumbnailImage.size.height,
+            accuracy: 0.001
+        )
+        XCTAssertLessThanOrEqual(max(thumbnailImage.size.width, thumbnailImage.size.height), 420)
+    }
+
+    func testUsesDisplayedCandidateCodeWhenItIsStillAvailable() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(
+            viewModel.makeClosetItem(
+                existingCodes: ["SH-001"],
+                preferredItemCode: "SH-009"
+            )
+        )
+
+        XCTAssertEqual(item.itemCode, "SH-009")
+    }
+
+    func testRegeneratesDisplayedCandidateCodeAfterCollision() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(
+            viewModel.makeClosetItem(
+                existingCodes: ["SH-001", "SH-009"],
+                preferredItemCode: "SH-009"
+            )
+        )
+
+        XCTAssertEqual(item.itemCode, "SH-002")
+    }
+
     func testChangingCategoryResetsIncompatibleSubtype() throws {
         let root = try makeTemporaryRoot()
         let storage = try ImageStorageService(rootURL: root)
@@ -185,10 +260,11 @@ final class AddItemViewModelTests: XCTestCase {
         named name: String,
         root: URL,
         color: PyxisColor = PyxisColor(red: 0.02, green: 0.05, blue: 0.22, alpha: 1),
-        format: TestImageFormat = .jpeg
+        format: TestImageFormat = .jpeg,
+        size: CGSize = CGSize(width: 12, height: 12)
     ) throws -> URL {
         let url = root.appendingPathComponent(name)
-        let image = makeTestImage(color: color)
+        let image = makeTestImage(color: color, size: size)
         let data = try XCTUnwrap(format == .jpeg ? image.jpegDataForTests() : image.pngDataForTests())
         try data.write(to: url)
         return url

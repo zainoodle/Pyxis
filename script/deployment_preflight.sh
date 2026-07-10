@@ -174,6 +174,7 @@ assert_app_metadata() {
   assert_plist_value "$info_plist" ":CFBundleShortVersionString" "$VERSION"
   assert_plist_value "$info_plist" ":CFBundleVersion" "$BUILD_NUMBER"
   assert_plist_value "$info_plist" ":LSApplicationCategoryType" "public.app-category.lifestyle"
+  assert_plist_value "$info_plist" ":NSCameraUsageDescription" "Take photos of clothing items to save locally in Pyxis."
   assert_plist_value "$info_plist" ":NSPhotoLibraryUsageDescription" "Select clothing photos to save locally in Pyxis."
   assert_plist_value "$info_plist" ":CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "AppIcon"
   assert_plist_value "$info_plist" ":UIDeviceFamily:0" "1"

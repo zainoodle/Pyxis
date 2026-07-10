@@ -8,8 +8,7 @@ public struct OutfitWearService {
         let itemIDs = Set(outfit.itemIDs)
 
         for item in items where itemIDs.contains(item.id) {
-            item.wearCount += 1
-            item.lastWornDate = date
+            item.markWorn(on: date)
         }
     }
 }

@@ -14,9 +14,9 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| Add a clothing item by importing an image | `Views/AddItem/AddItemFlow.swift`, `Views/AddItem/ImageImportView.swift`, `ViewModels/AddItemViewModel.swift` | Manual QA import flow; UI test where practical |
+| Add a clothing item by camera capture or image import | `Views/AddItem/AddItemFlow.swift`, `Views/AddItem/ImageImportView.swift`, `Views/AddItem/CameraCaptureView.swift`, `ViewModels/AddItemViewModel.swift` | Physical-iPhone camera QA plus Photos/Files import QA; UI test where practical |
 | Support drag-and-drop image import | `ImageImportView.swift` | Manual QA drag/drop into add flow |
-| Prepare for camera or Continuity Camera capture later | `ItemSource`, image import abstractions, placeholder capture entry point | Code review confirms no hard dependency on file picker only |
+| Capture a clothing photo in app | `CameraCaptureView.swift`, `ImageImportView.swift`, `NSCameraUsageDescription` | Physical-iPhone camera permission and capture QA; built Info.plist validation |
 | Automatically remove background | `Services/BackgroundRemovalService.swift` | Unit/fallback tests; manual QA with sample image on iOS |
 | Save original image locally | `ImageStorageService.saveOriginal` | `ImageStorageTests`; Application Support file exists |
 | Save transparent PNG cutout locally | `BackgroundRemovalService`, `ImageStorageService.saveCutout` | Transparent PNG file exists after successful processing |

@@ -108,16 +108,22 @@ struct AddItemFlow: View {
 
     private var previewAndActions: some View {
         VStack(spacing: PyxisSpacing.md) {
-            ProcessingRevealImageView(
+            StudioCutoutProcessingView(
                 url: previewURL,
-                isProcessing: viewModel.stage.isProcessing
+                isProcessing: viewModel.stage.isProcessing,
+                subtypeLabel: viewModel.subtype.rawValue,
+                candidateItemCode: candidateItemCode,
+                imageRevision: viewModel.imageRevision
             )
+            .id(viewModel.imageRevision)
             .frame(maxWidth: 300)
             .frame(height: 360)
 
             statusView
 
             if !viewModel.stage.isProcessing {
+                rotationControls
+
                 HStack {
                     Button("IMPROVE CUTOUT") {
                         Task { await viewModel.retry() }
@@ -137,6 +143,30 @@ struct AddItemFlow: View {
         }
     }
 
+    private var rotationControls: some View {
+        HStack(spacing: PyxisSpacing.sm) {
+            Button {
+                rotateImage(.counterclockwise)
+            } label: {
+                Image(systemName: "rotate.left")
+                    .frame(width: 36, height: 32)
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+            .accessibilityLabel("Rotate image left")
+
+            Button {
+                rotateImage(.clockwise)
+            } label: {
+                Image(systemName: "rotate.right")
+                    .frame(width: 36, height: 32)
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+            .accessibilityLabel("Rotate image right")
+        }
+    }
+
     @ViewBuilder
     private var statusView: some View {
         switch viewModel.stage {
@@ -145,7 +175,7 @@ struct AddItemFlow: View {
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
         case .processing:
-            Text("PREPARING")
+            Text("SAVING CLEAN ITEM")
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
         case .processed:
@@ -172,9 +202,24 @@ struct AddItemFlow: View {
         return viewModel.selectedImageURL
     }
 
+    private var candidateItemCode: String? {
+        guard viewModel.selectedImageURL != nil else {
+            return nil
+        }
+
+        return ItemCodeGenerator.generate(
+            for: viewModel.subtype,
+            category: viewModel.category,
+            existingCodes: Set(existingItems.map(\.itemCode))
+        )
+    }
+
     private func save() {
         let existingCodes = Set(existingItems.map(\.itemCode))
-        guard let item = viewModel.makeClosetItem(existingCodes: existingCodes) else {
+        guard let item = viewModel.makeClosetItem(
+            existingCodes: existingCodes,
+            preferredItemCode: candidateItemCode
+        ) else {
             return
         }
         modelContext.insert(item)
@@ -190,6 +235,15 @@ struct AddItemFlow: View {
         } catch {
             modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func rotateImage(_ direction: ImageUtilities.RotationDirection) {
+        do {
+            try viewModel.rotateProcessedImage(direction)
+            saveErrorMessage = nil
+        } catch {
+            saveErrorMessage = error.localizedDescription
         }
     }
 
@@ -226,91 +280,130 @@ struct AddItemFlow: View {
     }
 }
 
-private struct ProcessingRevealImageView: View {
+private struct StudioCutoutProcessingView: View {
     let url: URL?
     let isProcessing: Bool
-    @State private var isClosed = false
+    let subtypeLabel: String?
+    let candidateItemCode: String?
+    let imageRevision: Int
+    @Environment(\.accessibilityReduceMotion) private var prefersReducedMotion
+    @State private var sweepOffset: CGFloat = -1
+    @State private var isLifted = false
+    @State private var isFinishVisible = false
 
     var body: some View {
-        ZStack {
-            LocalImageView(url: isProcessing ? nil : url)
-                .opacity(isProcessing ? 0 : 1)
-                .animation(.easeOut(duration: 0.24), value: isProcessing)
+        GeometryReader { proxy in
+            ZStack {
+                LocalImageView(url: url, revision: imageRevision)
+                    .saturation(isProcessing ? 0.15 : 1)
+                    .opacity(isProcessing ? 0.42 : 1)
+                    .scaleEffect(isProcessing && isLifted ? 1.025 : 1)
+                    .animation(.easeOut(duration: 0.28), value: isProcessing)
+                    .animation(.easeOut(duration: 0.34), value: isLifted)
 
-            if isProcessing {
-                ShutterProcessingView(isClosed: isClosed)
-                    .transition(.opacity)
+                if isProcessing {
+                    PyxisColors.field
+                        .opacity(0.56)
+
+                    Ellipse()
+                        .fill(PyxisColors.shadow.opacity(prefersReducedMotion ? 0.12 : 0.2))
+                        .frame(
+                            width: min(proxy.size.width * 0.34, 104),
+                            height: prefersReducedMotion ? 8 : 10
+                        )
+                        .blur(radius: prefersReducedMotion ? 4 : 6)
+                        .scaleEffect(x: isLifted ? 1 : 0.64, y: 1)
+                        .opacity(isLifted ? 1 : 0)
+                        .offset(y: proxy.size.height * 0.23)
+                        .animation(.easeOut(duration: 0.28), value: isLifted)
+
+                    if !prefersReducedMotion {
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.clear, PyxisColors.surface.opacity(0.88), .clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: proxy.size.width * 0.62, height: proxy.size.height * 1.6)
+                            .rotationEffect(.degrees(-18))
+                            .offset(x: sweepOffset * proxy.size.width * 1.35)
+                            .blendMode(.screen)
+                    }
+
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 12, weight: .light))
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .opacity(
+                            isFinishVisible
+                                ? (prefersReducedMotion ? 0.22 : 0.62)
+                                : 0
+                        )
+                        .padding(PyxisSpacing.md)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .animation(.easeOut(duration: 0.22), value: isFinishVisible)
+                        .accessibilityHidden(true)
+
+                    VStack {
+                        Spacer()
+
+                        HStack {
+                            Text((subtypeLabel ?? "ITEM").uppercased())
+                            Spacer()
+                            if let candidateItemCode {
+                                Text(candidateItemCode.uppercased())
+                            }
+                        }
+                        .font(PyxisTypography.code)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .padding(PyxisSpacing.md)
+                    }
+                }
             }
+            .clipShape(Rectangle())
         }
         .background(PyxisColors.field)
-        .clipShape(Rectangle())
         .onAppear {
             updateAnimation()
         }
         .onChange(of: isProcessing) { _, _ in
             updateAnimation()
         }
+        .onChange(of: prefersReducedMotion) { _, _ in
+            updateAnimation()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isProcessing ? "Saving clean item" : "Clothing image preview")
     }
 
     private func updateAnimation() {
         guard isProcessing else {
+            sweepOffset = -1
+            isFinishVisible = false
             withAnimation(.easeOut(duration: 0.2)) {
-                isClosed = false
+                isLifted = false
             }
             return
         }
 
-        withAnimation(.easeInOut(duration: 0.72).repeatForever(autoreverses: true)) {
-            isClosed = true
+        guard !prefersReducedMotion else {
+            sweepOffset = -1
+            isLifted = true
+            isFinishVisible = true
+            return
         }
-    }
-}
 
-private struct ShutterProcessingView: View {
-    let isClosed: Bool
-
-    var body: some View {
-        GeometryReader { proxy in
-            let bladeCount = 7
-            let bladeWidth = proxy.size.width / CGFloat(bladeCount)
-
-            ZStack {
-                ForEach(0..<bladeCount, id: \.self) { index in
-                    shutterBlade(index: index, width: bladeWidth, height: proxy.size.height)
-                }
-
-                VStack(spacing: PyxisSpacing.sm) {
-                    Text("Pyxis")
-                        .font(PyxisTypography.label)
-                        .foregroundStyle(PyxisColors.secondaryText)
-
-                    Text("CUTOUT")
-                        .font(PyxisTypography.body)
-                        .foregroundStyle(PyxisColors.text)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
+        isFinishVisible = false
+        withAnimation(.easeOut(duration: 0.34)) {
+            isLifted = true
         }
-        .accessibilityLabel("Preparing clothing image")
-    }
-
-    private func shutterBlade(index: Int, width: CGFloat, height: CGFloat) -> some View {
-        Rectangle()
-            .fill(index.isMultiple(of: 2) ? PyxisColors.surface : PyxisColors.field)
-            .overlay(alignment: .trailing) {
-                Rectangle()
-                    .fill(PyxisColors.hairline)
-                    .frame(width: 1)
-            }
-            .frame(width: width + 2, height: height)
-            .rotation3DEffect(
-                .degrees(isClosed ? 0 : (index.isMultiple(of: 2) ? 68 : -68)),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.7
-            )
-            .opacity(isClosed ? 0.98 : 0.42)
-            .offset(x: (CGFloat(index) * width) - ((width * 3) + width / 2))
+        withAnimation(.easeOut(duration: 0.22).delay(0.65)) {
+            isFinishVisible = true
+        }
+        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+            sweepOffset = 1
+        }
     }
 }
 

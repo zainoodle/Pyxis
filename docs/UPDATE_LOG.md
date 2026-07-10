@@ -1,5 +1,30 @@
 # Update Log
 
+## 2026-07-10 - In-App Camera Capture
+
+- Added a `TAKE PHOTO` option to the add-item flow using the system camera, with captured images routed through the existing local classification, background-removal, and storage pipeline.
+- Added the camera permission description and release-preflight validation for the built app metadata.
+- Kept camera capture unavailable on devices without a camera while preserving Photo Library, Files, drag-and-drop, and debug demo imports.
+
+## 2026-07-09 - Wardrobe Studio Polish
+
+### Visual System
+
+- Simplified the closet header into direct `NEW`, `BUILD`, and `FILTERS` actions, with closet, category, and color selection collected in one accessible filter sheet.
+- Flattened closet tiles so cutout garments and their item codes read as a collection rather than a dashboard of elevated cards.
+- Added a live `CURRENT FIT` canvas above the outfit carousels so the selected pieces read as one assembled look.
+- Replaced the shutter-style import animation with the Studio Snap processing surface, including local subtype and candidate-code metadata plus a reduced-motion treatment.
+- Improved multi-subject cutouts by selecting the dominant garment mask while dropping small detached side fragments, without removing valid paired pieces such as shoes.
+- Kept the item code shown during Studio Snap when saving, regenerating it only if the code is no longer available.
+
+### QA
+
+- Expanded manual QA coverage for the filter sheet, current-fit canvas, Studio Snap metadata, and Reduce Motion behavior.
+- Corrected the rotation regression test to compare orientation and aspect ratio across JPEG/PNG backing-scale differences.
+- Added regression coverage for grayscale foreground-mask sampling, detached-fragment filtering, paired garments, and Studio Snap candidate-code reuse.
+- Hardened `IMPROVE CUTOUT` retries so reprocessing cannot delete the stored original or discard an existing successful cutout after a failure.
+- Moved local image file loading off the SwiftUI render path and added a bounded in-memory cache for smoother closet and outfit browsing.
+
 ## 2026-06-18 - Deployment Readiness Pass
 
 ### On-Device Memory

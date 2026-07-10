@@ -15,7 +15,7 @@ Last audited: 2026-06-23
 - Generic Release iOS build passes with `CODE_SIGNING_ALLOWED=NO`.
 - Unsigned Release archive creation passes with `CODE_SIGNING_ALLOWED=NO`.
 - The built app and archive include compiled app icon files, `CFBundleIconName = AppIcon`, and `PrivacyInfo.xcprivacy`.
-- The built app and archive assert `CFBundleDisplayName = Pyxis`, `NSPhotoLibraryUsageDescription = Select clothing photos to save locally in Pyxis.`, `LSApplicationCategoryType = public.app-category.lifestyle`, minimum iOS `17.0`, and iPhone-only `UIDeviceFamily = [1]`.
+- The built app and archive assert `CFBundleDisplayName = Pyxis`, camera and photo-library usage descriptions, `LSApplicationCategoryType = public.app-category.lifestyle`, minimum iOS `17.0`, and iPhone-only `UIDeviceFamily = [1]`.
 - The App Store icon source is a 1024 x 1024 opaque RGB PNG with no alpha channel.
 - The Release build and unsigned archive scan clean for debug-only sample import, closet seeding strings, and sample item codes.
 - Static scan found no `URLSession`, networking, analytics, telemetry, cloud upload, remote image processing, or remote AI code in `Pyxis` or `Package.swift`.

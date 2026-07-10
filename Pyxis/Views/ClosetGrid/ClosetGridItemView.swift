@@ -35,7 +35,7 @@ struct ClosetGridItemView: View {
             .frame(minWidth: 150, minHeight: 230)
             .padding(.vertical, PyxisSpacing.md)
             .padding(.horizontal, PyxisSpacing.sm)
-            .premiumCardBackground()
+            .catalogTileBackground()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
