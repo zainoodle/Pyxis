@@ -1,10 +1,10 @@
 # Pyxis Deployment Readiness
 
-Last audited: 2026-06-23
+Last audited: 2026-07-12
 
 ## Verified
 
-- `swift test` passes with 75 XCTest cases.
+- `swift test` passes with 86 XCTest cases.
 - Focused on-device memory tests pass with 13 XCTest cases.
 - SwiftData can open a store created before `OnDeviceMemoryRecord` existed and then persist a memory record.
 - Closet item and saved-fit save paths populate local memory records with deterministic on-device embeddings.
@@ -35,6 +35,9 @@ Last audited: 2026-06-23
 
 ## Fixed During Audit
 
+- Downsampled local wardrobe images before decoding and caching them for display, capping memory use during grid and carousel browsing.
+- Added one-tap single-item wear logging and automated coverage for wear count and last-worn date updates.
+- Added a destructive confirmation before item and local-image deletion.
 - Added SwiftData-backed on-device memory records and local memory retrieval.
 - Added stable local memory keys, optional scopes for global preference memory, summary/tag sanitization, finite-vector validation, and transactional memory cleanup on item deletion.
 - Added local memory payload generation for closet items and saved fits, then wired item add/edit and fit save/edit/wear paths to upsert records in the same SwiftData transaction.

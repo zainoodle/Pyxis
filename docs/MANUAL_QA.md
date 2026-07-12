@@ -34,8 +34,9 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 30. Open closet management, outfit builder, saved fits, and fit detail when available; press `Escape` in each and confirm the sheet closes.
 31. In the outfit builder, change a shirt, pants, or shoes selection and confirm the `CURRENT FIT` preview updates before saving.
 32. During background removal, confirm the Studio Snap surface shows `SAVING CLEAN ITEM`, the item subtype, candidate item code, a small settling contact shadow, and a restrained finish sparkle; turn on Reduce Motion and confirm no sweep animation plays.
-33. Delete the item.
-34. Confirm the item disappears from the grid.
-35. Inspect `Application Support/Pyxis/Images` and confirm related original, cutout, and thumbnail files are cleaned up.
-36. Run `./script/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
-37. Disconnect network and repeat launch/import/save/search to confirm local-only behavior.
+33. Tap `WORE TODAY`; confirm the wear count increments and the last-worn date becomes today after closing and reopening the item.
+34. Tap `DELETE ITEM`, cancel the confirmation, and confirm the item remains.
+35. Tap `DELETE ITEM` again, confirm deletion, and confirm the item disappears from the grid.
+36. Inspect `Application Support/Pyxis/Images` and confirm related original, cutout, and thumbnail files are cleaned up.
+37. Run `./script/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
+38. Disconnect network and repeat launch/import/save/search to confirm local-only behavior.

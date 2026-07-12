@@ -2,6 +2,16 @@ import XCTest
 @testable import PyxisCore
 
 final class OutfitWearServiceTests: XCTestCase {
+    func testMarkWornIncrementsSingleItemAndUpdatesDate() {
+        let item = makeItem(id: UUID(), code: "TS-001")
+        let wornDate = Date(timeIntervalSince1970: 200)
+
+        OutfitWearService().markWorn(item: item, on: wornDate)
+
+        XCTAssertEqual(item.wearCount, 1)
+        XCTAssertEqual(item.lastWornDate, wornDate)
+    }
+
     func testMarkWornIncrementsOutfitAndSelectedItemsOnly() {
         let top = makeItem(id: UUID(), code: "TS-001")
         let bottom = makeItem(id: UUID(), code: "PA-001")

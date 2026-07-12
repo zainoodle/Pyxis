@@ -1,5 +1,12 @@
 # Update Log
 
+## 2026-07-12 - Production Readiness Audit
+
+- Downsampled local wardrobe images before display and caching to cap decode memory while preserving detail at current UI sizes.
+- Added a one-tap `WORE TODAY` action for individual items, backed by the existing wear-count and last-worn model behavior.
+- Added a destructive confirmation before deleting an item and its local image files.
+- Expanded automated wear-tracking coverage and manual QA for quick wear logging and deletion cancellation.
+
 ## 2026-07-10 - In-App Camera Capture
 
 - Added a `TAKE PHOTO` option to the add-item flow using the system camera, with captured images routed through the existing local classification, background-removal, and storage pipeline.

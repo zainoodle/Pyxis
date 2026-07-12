@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ImageIO
 
 struct LocalImageView: View {
     let url: URL?
@@ -59,7 +60,7 @@ struct LocalImageView: View {
         }
 
         let loaded = await Task.detached(priority: .userInitiated) {
-            SendableImage(UIImage(contentsOfFile: url.path))
+            SendableImage(Self.downsampledImage(at: url, maxPixelSize: 1_200))
         }.value
 
         guard !Task.isCancelled else {
@@ -73,6 +74,26 @@ struct LocalImageView: View {
 
         LocalImageCache.shared.insert(loadedImage, forKey: loadIdentity)
         image = loadedImage
+    }
+
+    private static func downsampledImage(at url: URL, maxPixelSize: CGFloat) -> UIImage? {
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, options) else {
+            return nil
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize)
+        ] as CFDictionary
+
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return nil
+        }
+
+        return UIImage(cgImage: image)
     }
 }
 

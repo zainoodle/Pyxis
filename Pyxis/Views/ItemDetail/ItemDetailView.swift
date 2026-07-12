@@ -10,6 +10,7 @@ struct ItemDetailView: View {
     @StateObject private var viewModel = ItemDetailViewModel()
     @State private var isEditingDetails = false
     @State private var saveErrorMessage: String?
+    @State private var isConfirmingDeletion = false
     let buildAction: ((ClosetItem) -> Void)?
 
     init(item: ClosetItem, buildAction: ((ClosetItem) -> Void)? = nil) {
@@ -42,6 +43,16 @@ struct ItemDetailView: View {
             .padding(PyxisSpacing.md)
         }
         .background(PyxisColors.background)
+        .confirmationDialog(
+            "DELETE \(item.itemCode)?",
+            isPresented: $isConfirmingDeletion,
+            titleVisibility: .visible
+        ) {
+            Button("DELETE ITEM", role: .destructive, action: deleteItem)
+            Button("CANCEL", role: .cancel) {}
+        } message: {
+            Text("This removes the item and its stored images from this device. This cannot be undone.")
+        }
     }
 
     private var imagePanel: some View {
@@ -111,6 +122,13 @@ struct ItemDetailView: View {
                 .buttonStyle(MinimalButtonStyle())
             }
 
+            Button("WORE TODAY") {
+                OutfitWearService().markWorn(item: item)
+                saveChanges()
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .accessibilityLabel("Mark item worn today")
+
             DisclosureGroup("EDIT DETAILS", isExpanded: $isEditingDetails) {
                 VStack(alignment: .leading, spacing: PyxisSpacing.md) {
                     TextField("DISPLAY NAME", text: optionalString($item.displayName))
@@ -155,22 +173,7 @@ struct ItemDetailView: View {
             }
 
             Button("DELETE ITEM") {
-                let imageSet = viewModel.storedImageSet(for: item)
-                do {
-                    try OnDeviceMemoryStore(context: modelContext).deleteMemories(
-                        subjectID: item.id,
-                        saveImmediately: false
-                    )
-                    closets.forEach { $0.remove(item) }
-                    modelContext.delete(item)
-                    try modelContext.save()
-                    viewModel.deleteImages(imageSet)
-                    saveErrorMessage = nil
-                    dismiss()
-                } catch {
-                    saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
-                    modelContext.rollback()
-                }
+                isConfirmingDeletion = true
             }
             .buttonStyle(MinimalButtonStyle())
             .accessibilityLabel("Delete item")
@@ -248,6 +251,25 @@ struct ItemDetailView: View {
             saveErrorMessage = nil
         } catch {
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func deleteItem() {
+        let imageSet = viewModel.storedImageSet(for: item)
+        do {
+            try OnDeviceMemoryStore(context: modelContext).deleteMemories(
+                subjectID: item.id,
+                saveImmediately: false
+            )
+            closets.forEach { $0.remove(item) }
+            modelContext.delete(item)
+            try modelContext.save()
+            viewModel.deleteImages(imageSet)
+            saveErrorMessage = nil
+            dismiss()
+        } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+            modelContext.rollback()
         }
     }
 
