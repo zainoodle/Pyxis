@@ -18,6 +18,7 @@ final class AddItemViewModelTests: XCTestCase {
         await viewModel.processSelectedImage(itemID: itemID)
         let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
 
+        XCTAssertEqual(item.id, itemID)
         XCTAssertEqual(item.category, .bottoms)
         XCTAssertEqual(item.subtype, .pants)
         XCTAssertGreaterThan(item.classificationConfidence ?? 0, 0)
@@ -239,6 +240,30 @@ final class AddItemViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.category, .bottoms)
         XCTAssertEqual(viewModel.subtype, .pants)
+    }
+
+    func testDiscardDraftDeletesProcessedImages() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "draft-shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let result = try XCTUnwrap(viewModel.result)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
+
+        viewModel.discardDraft()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
+        if let thumbnailPath = result.thumbnailPath {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: thumbnailPath).path))
+        }
+        XCTAssertNil(viewModel.result)
+        XCTAssertNil(viewModel.selectedImageURL)
     }
 
     private func makeTemporaryRoot() throws -> URL {

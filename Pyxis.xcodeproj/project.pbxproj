@@ -252,6 +252,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of clothing items to save locally in Pyxis.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select clothing photos to save locally in Pyxis.";
+				INFOPLIST_KEY_PYXIS_AI_BASE_URL = "$(PYXIS_AI_BASE_URL)";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
@@ -263,6 +264,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zainoodle.pyxis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PYXIS_AI_BASE_URL = "";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -284,6 +286,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take photos of clothing items to save locally in Pyxis.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select clothing photos to save locally in Pyxis.";
+				INFOPLIST_KEY_PYXIS_AI_BASE_URL = "$(PYXIS_AI_BASE_URL)";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
@@ -295,6 +298,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zainoodle.pyxis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PYXIS_AI_BASE_URL = "";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;

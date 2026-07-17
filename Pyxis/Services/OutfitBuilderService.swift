@@ -9,13 +9,15 @@ public struct OutfitBuilderService {
             return .top
         case .bottoms:
             return .bottom
+        case .onePiece:
+            return .onePiece
         case .footwear:
             return .footwear
         case .outerwear:
             return .outerwear
         case .accessories:
             return .accessory
-        case .onePiece, .other:
+        case .other:
             return nil
         }
     }
@@ -26,6 +28,8 @@ public struct OutfitBuilderService {
             return .tShirt
         case .bottom:
             return .pants
+        case .onePiece:
+            return .dress
         case .footwear:
             return .sneakers
         case .outerwear:
@@ -52,7 +56,7 @@ public struct OutfitBuilderService {
     }
 
     public func optionalRows(from items: [ClosetItem]) -> [OutfitRow] {
-        [.outerwear, .accessory].map { slot in
+        [.onePiece, .outerwear, .accessory].map { slot in
             OutfitRow(
                 slot: slot,
                 items: items
@@ -63,9 +67,17 @@ public struct OutfitBuilderService {
     }
 
     public func defaultSelections(for rows: [OutfitRow]) -> [OutfitSlot: Int] {
-        Dictionary(uniqueKeysWithValues: rows.compactMap { row in
+        var selections = Dictionary(uniqueKeysWithValues: rows.compactMap { row in
             row.items.isEmpty ? nil : (row.slot, 0)
         })
+        let hasSeparates = selections[.top] != nil && selections[.bottom] != nil
+        if hasSeparates {
+            selections[.onePiece] = nil
+        } else if selections[.onePiece] != nil {
+            selections[.top] = nil
+            selections[.bottom] = nil
+        }
+        return selections
     }
 
     public func selectionTarget(for itemID: UUID, in rows: [OutfitRow]) -> (slot: OutfitSlot, index: Int)? {
@@ -103,6 +115,8 @@ public struct OutfitBuilderService {
                 draft.topItemID = itemID
             case .bottom:
                 draft.bottomItemID = itemID
+            case .onePiece:
+                draft.onePieceItemID = itemID
             case .footwear:
                 draft.footwearItemID = itemID
             case .outerwear:
@@ -116,7 +130,8 @@ public struct OutfitBuilderService {
     }
 
     public func canSave(_ draft: OutfitDraft) -> Bool {
-        draft.topItemID != nil && draft.bottomItemID != nil && draft.footwearItemID != nil
+        let hasBody = draft.onePieceItemID != nil || (draft.topItemID != nil && draft.bottomItemID != nil)
+        return hasBody && draft.footwearItemID != nil
     }
 
     public func outfit(from draft: OutfitDraft, name: String? = nil, notes: String? = nil) -> Outfit {
@@ -124,6 +139,7 @@ public struct OutfitBuilderService {
             name: name,
             topItemID: draft.topItemID,
             bottomItemID: draft.bottomItemID,
+            onePieceItemID: draft.onePieceItemID,
             footwearItemID: draft.footwearItemID,
             outerwearItemID: draft.outerwearItemID,
             accessoryItemIDs: draft.accessoryItemIDs,

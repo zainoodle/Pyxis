@@ -1,5 +1,13 @@
 # Update Log
 
+- Hardened local image storage with iOS file protection and cleanup for canceled add-item drafts.
+- Added one-piece outfit building plus saved-fit duplicate, share, confirmed delete, missing-item, and empty-state workflows.
+- Made retailer sizing fail closed when measurements fall outside every chart range and added footwear size charts.
+- Improved accessibility with Dynamic Type, stronger contrast, selected-state announcements, field labels, and larger tap targets.
+- Added a macOS CI quality job that runs the package tests and an unsigned iOS Simulator build.
+- Added opt-in AI garment de-wrinkling and person-photo virtual try-on flows through a configurable Pyxis backend, with upload disclosures, local originals, retryable errors, and fit-accuracy guidance.
+- Added a private local Fit Passport with optional body measurements, metric/imperial conversion, fit preference, deletion, and an explained retailer size-chart comparison that refuses to guess without relevant chart data.
+
 ## 2026-07-12 - Production Readiness Audit
 
 - Downsampled local wardrobe images before display and caching to cap decode memory while preserving detail at current UI sizes.

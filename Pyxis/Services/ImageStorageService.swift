@@ -12,7 +12,8 @@ public struct StoredImageSet: Equatable, Sendable {
     }
 }
 
-public final class ImageStorageService {
+public final class ImageStorageService: @unchecked Sendable {
+    public static let shared: ImageStorageService? = try? ImageStorageService()
     public let rootURL: URL
     private let fileManager: FileManager
 
@@ -42,6 +43,10 @@ public final class ImageStorageService {
         try fileManager.ensureDirectoryExists(at: originalsURL)
         try fileManager.ensureDirectoryExists(at: cutoutsURL)
         try fileManager.ensureDirectoryExists(at: thumbnailsURL)
+        try protect(imagesURL)
+        try protect(originalsURL)
+        try protect(cutoutsURL)
+        try protect(thumbnailsURL)
     }
 
     public func saveOriginal(from sourceURL: URL, itemID: UUID) throws -> String {
@@ -63,18 +68,21 @@ public final class ImageStorageService {
         }
 
         try fileManager.copyItem(at: sourceURL, to: destination)
+        try protect(destination)
         return relativePath(for: destination)
     }
 
     public func saveCutoutPNG(_ data: Data, itemID: UUID) throws -> String {
         let destination = cutoutsURL.appendingPathComponent("\(itemID.uuidString).png")
         try data.write(to: destination, options: .atomic)
+        try protect(destination)
         return relativePath(for: destination)
     }
 
     public func saveThumbnailPNG(_ data: Data, itemID: UUID) throws -> String {
         let destination = thumbnailsURL.appendingPathComponent("\(itemID.uuidString).png")
         try data.write(to: destination, options: .atomic)
+        try protect(destination)
         return relativePath(for: destination)
     }
 
@@ -155,6 +163,16 @@ public final class ImageStorageService {
     ) throws {
         let data = try ImageUtilities.rotatedImageData(from: imageURL, direction: direction)
         try data.write(to: imageURL, options: .atomic)
+        try protect(imageURL)
+    }
+
+    private func protect(_ url: URL) throws {
+        #if os(iOS)
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: url.path
+        )
+        #endif
     }
 
     private var invalidImageURL: URL {
@@ -193,11 +211,13 @@ public final class ImageStorageService {
     }
 }
 
-private extension StoredImageSet {
+extension StoredImageSet {
     var itemID: UUID {
         let fileName = URL(fileURLWithPath: originalPath).deletingPathExtension().lastPathComponent
         return UUID(uuidString: fileName) ?? UUID()
     }
+
+    var stableItemID: UUID { itemID }
 }
 
 private extension URL {

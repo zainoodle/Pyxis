@@ -8,6 +8,8 @@ struct OutfitDetailView: View {
     @Bindable var outfit: Outfit
     @State private var refreshID = UUID()
     @State private var saveErrorMessage: String?
+    @State private var isConfirmingDeletion = false
+    @State private var duplicateConfirmation: String?
 
     private var selectedItems: [ClosetItem] {
         outfit.itemIDs.compactMap { itemID in
@@ -40,6 +42,12 @@ struct OutfitDetailView: View {
                 InlineErrorMessage(message: saveErrorMessage)
             }
 
+            if let duplicateConfirmation {
+                Text(duplicateConfirmation)
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+            }
+
             ScrollView {
                 VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
                     VStack(spacing: PyxisSpacing.sm) {
@@ -62,6 +70,13 @@ struct OutfitDetailView: View {
                                 Spacer()
                             }
                         }
+                    }
+
+                    if selectedItems.count < outfit.itemIDs.count {
+                        Text("SOME ITEMS IN THIS FIT ARE NO LONGER IN YOUR CLOSET")
+                            .font(PyxisTypography.label)
+                            .foregroundStyle(PyxisColors.error)
+                            .accessibilityLabel("Some items in this fit are no longer in your closet")
                     }
 
                     TextField("FIT NAME", text: optionalString($outfit.name))
@@ -89,12 +104,41 @@ struct OutfitDetailView: View {
                             .font(PyxisTypography.label)
                             .foregroundStyle(PyxisColors.secondaryText)
                     }
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: PyxisSpacing.md) { lifecycleActions }
+                        VStack(alignment: .leading, spacing: PyxisSpacing.sm) { lifecycleActions }
+                    }
                 }
             }
         }
         .padding(PyxisSpacing.md)
         .background(PyxisColors.background)
         .id(refreshID)
+        .confirmationDialog("Delete this saved fit?", isPresented: $isConfirmingDeletion, titleVisibility: .visible) {
+            Button("DELETE FIT", role: .destructive, action: deleteFit)
+            Button("CANCEL", role: .cancel) {}
+        } message: {
+            Text("This permanently removes the fit from this device. Closet items are not deleted.")
+        }
+    }
+
+    @ViewBuilder
+    private var lifecycleActions: some View {
+        Button("DUPLICATE FIT", action: duplicateFit)
+            .buttonStyle(MinimalButtonStyle())
+        ShareLink(item: shareText) {
+            Text("SHARE FIT")
+        }
+        .buttonStyle(MinimalButtonStyle())
+        Button("DELETE FIT", role: .destructive) { isConfirmingDeletion = true }
+            .buttonStyle(MinimalButtonStyle())
+    }
+
+    private var shareText: String {
+        let title = outfit.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let itemList = selectedItems.map { $0.displayName ?? $0.itemCode }.joined(separator: ", ")
+        return "\((title?.isEmpty == false ? title : nil) ?? "Pyxis fit"): \(itemList)"
     }
 
     private func markWornToday() {
@@ -117,6 +161,51 @@ struct OutfitDetailView: View {
             saveErrorMessage = nil
             dismiss()
         } catch {
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func duplicateFit() {
+        let copy = Outfit(
+            name: outfit.name.map { "\($0) Copy" },
+            topItemID: outfit.topItemID,
+            bottomItemID: outfit.bottomItemID,
+            onePieceItemID: outfit.onePieceItemID,
+            footwearItemID: outfit.footwearItemID,
+            outerwearItemID: outfit.outerwearItemID,
+            accessoryItemIDs: outfit.accessoryItemIDs,
+            favorite: outfit.favorite,
+            notes: outfit.notes
+        )
+        modelContext.insert(copy)
+        do {
+            let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: copy, items: selectedItems)
+            try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+                kind: .outfit,
+                subjectID: copy.id,
+                summary: payload.summary,
+                embedding: payload.embedding,
+                metadataTags: payload.metadataTags,
+                updatedAt: copy.dateUpdated,
+                saveImmediately: false
+            )
+            try modelContext.save()
+            duplicateConfirmation = "FIT DUPLICATED"
+            saveErrorMessage = nil
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+
+    private func deleteFit() {
+        do {
+            try OnDeviceMemoryStore(context: modelContext).deleteMemories(subjectID: outfit.id, saveImmediately: false)
+            modelContext.delete(outfit)
+            try modelContext.save()
+            dismiss()
+        } catch {
+            modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
     }

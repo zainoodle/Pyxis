@@ -1,8 +1,64 @@
 import CoreImage
+import ImageIO
 import XCTest
 @testable import PyxisCore
 
 final class BackgroundRemovalFallbackTests: XCTestCase {
+    func testBackgroundRemovalAppliesEXIFOrientationBeforeVisionAnalysis() throws {
+        let root = try makeTemporaryRoot()
+        let url = root.appendingPathComponent("oriented.jpg")
+        let sourceImage = try XCTUnwrap(makeTestImage(size: CGSize(width: 12, height: 8)).cgImageForTests)
+        let destination = try XCTUnwrap(
+            CGImageDestinationCreateWithURL(
+                url as CFURL,
+                "public.jpeg" as CFString,
+                1,
+                nil
+            )
+        )
+        CGImageDestinationAddImage(
+            destination,
+            sourceImage,
+            [kCGImagePropertyOrientation: 6] as CFDictionary
+        )
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+        let corrected = try LocalBackgroundRemovalService.orientationCorrectedImage(from: url)
+
+        XCTAssertEqual(corrected.extent.origin, .zero)
+        XCTAssertEqual(corrected.extent.width, CGFloat(sourceImage.height), accuracy: 0.001)
+        XCTAssertEqual(corrected.extent.height, CGFloat(sourceImage.width), accuracy: 0.001)
+    }
+
+    func testCandidateSelectorPrefersCenteredHighCoverageGarmentMask() {
+        let fragmentedUprightMask = BackgroundMaskInstanceStats(
+            instance: 0,
+            areaFraction: 0.14,
+            centroidX: 0.52,
+            centroidY: 0.46,
+            minX: 0.30,
+            maxX: 0.72,
+            minY: 0.24,
+            maxY: 0.64
+        )
+        let recoveredRotatedMask = BackgroundMaskInstanceStats(
+            instance: 1,
+            areaFraction: 0.46,
+            centroidX: 0.51,
+            centroidY: 0.50,
+            minX: 0.14,
+            maxX: 0.86,
+            minY: 0.10,
+            maxY: 0.90
+        )
+
+        let preferred = BackgroundMaskCandidateSelector.preferredCandidateIndex(
+            from: [fragmentedUprightMask, recoveredRotatedMask]
+        )
+
+        XCTAssertEqual(preferred, 1)
+    }
+
     func testMaskStatsReadGrayscaleInsteadOfOpaqueOutputAlpha() throws {
         let width = 4
         let height = 4

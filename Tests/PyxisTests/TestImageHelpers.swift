@@ -18,6 +18,15 @@ func makeTestImage(color: PyxisColor = .white, size: CGSize = CGSize(width: 12, 
 }
 
 extension PyxisImage {
+    var cgImageForTests: CGImage? {
+        #if canImport(UIKit)
+        cgImage
+        #elseif canImport(AppKit)
+        var proposedRect = CGRect(origin: .zero, size: size)
+        return cgImage(forProposedRect: &proposedRect, context: nil, hints: nil)
+        #endif
+    }
+
     func pngDataForTests() -> Data? {
         ImageUtilities.pngData(from: self)
     }

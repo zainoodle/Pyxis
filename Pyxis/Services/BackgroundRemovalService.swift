@@ -1,6 +1,7 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import Foundation
+import ImageIO
 import Vision
 
 public enum BackgroundRemovalStatus: Equatable, Sendable {
@@ -30,7 +31,7 @@ public struct BackgroundRemovalResult: Equatable, Sendable {
     }
 }
 
-public protocol BackgroundRemovalServiceProtocol {
+public protocol BackgroundRemovalServiceProtocol: Sendable {
     func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult
 }
 
@@ -39,7 +40,7 @@ private enum BackgroundRemovalCopy {
     static let removalFailed = "Background removal failed — retry"
 }
 
-public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtocol {
+public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtocol, @unchecked Sendable {
     private let imageStorage: ImageStorageService
     private let ciContext: CIContext
 
@@ -100,28 +101,8 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         from imageURL: URL,
         ciContext: CIContext
     ) throws -> Data {
-        guard let inputImage = CIImage(contentsOf: imageURL) else {
-            throw BackgroundRemovalError.couldNotLoadImage
-        }
-
-        let request = VNGenerateForegroundInstanceMaskRequest()
-        let handler = VNImageRequestHandler(ciImage: inputImage)
-        try handler.perform([request])
-
-        guard let observation = request.results?.first else {
-            throw BackgroundRemovalError.noForegroundMask
-        }
-
-        let selectedInstances = try Self.selectedForegroundInstances(
-            from: observation,
-            handler: handler,
-            ciContext: ciContext
-        )
-        let maskBuffer = try observation.generateScaledMaskForImage(
-            forInstances: selectedInstances,
-            from: handler
-        )
-        let maskImage = CIImage(cvPixelBuffer: maskBuffer)
+        let inputImage = try orientationCorrectedImage(from: imageURL)
+        let maskImage = try bestForegroundMask(for: inputImage, ciContext: ciContext)
         let transparentBackground = CIImage(color: .clear).cropped(to: inputImage.extent)
 
         let filter = CIFilter.blendWithMask()
@@ -140,6 +121,84 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         }
 
         return data
+    }
+
+    private static func bestForegroundMask(
+        for inputImage: CIImage,
+        ciContext: CIContext
+    ) throws -> CIImage {
+        let orientations: [(image: CGImagePropertyOrientation, inverse: CGImagePropertyOrientation)] = [
+            (.up, .up),
+            (.down, .down)
+        ]
+
+        let candidates = try orientations.map { orientation in
+            let visionImage = inputImage.oriented(orientation.image)
+            let request = VNGenerateForegroundInstanceMaskRequest()
+            let handler = VNImageRequestHandler(ciImage: visionImage)
+            try handler.perform([request])
+
+            guard let observation = request.results?.first else {
+                throw BackgroundRemovalError.noForegroundMask
+            }
+
+            let selectedInstances = try selectedForegroundInstances(
+                from: observation,
+                handler: handler,
+                ciContext: ciContext
+            )
+            let maskBuffer = try observation.generateScaledMaskForImage(
+                forInstances: selectedInstances,
+                from: handler
+            )
+            let restoredMask = CIImage(cvPixelBuffer: maskBuffer).oriented(orientation.inverse)
+            let normalizedMask = restoredMask
+                .transformed(
+                    by: CGAffineTransform(
+                        translationX: -restoredMask.extent.origin.x,
+                        y: -restoredMask.extent.origin.y
+                    )
+                )
+                .cropped(to: inputImage.extent)
+            guard let stats = BackgroundMaskInstanceStats(
+                instance: candidatesIndex(for: orientation.image),
+                maskImage: normalizedMask,
+                ciContext: ciContext
+            ) else {
+                throw BackgroundRemovalError.noForegroundMask
+            }
+            return BackgroundMaskCandidate(maskImage: normalizedMask, stats: stats)
+        }
+
+        guard let bestIndex = BackgroundMaskCandidateSelector.preferredCandidateIndex(
+            from: candidates.map(\.stats)
+        ) else {
+            throw BackgroundRemovalError.noForegroundMask
+        }
+        let best = candidates[bestIndex]
+        return best.maskImage
+    }
+
+    private static func candidatesIndex(for orientation: CGImagePropertyOrientation) -> Int {
+        orientation == .up ? 0 : 1
+    }
+
+    static func orientationCorrectedImage(from imageURL: URL) throws -> CIImage {
+        guard let image = CIImage(
+            contentsOf: imageURL,
+            options: [.applyOrientationProperty: true]
+        ) else {
+            throw BackgroundRemovalError.couldNotLoadImage
+        }
+
+        // Orientation transforms can leave a non-zero origin. Normalizing the
+        // extent keeps the Vision mask and the image in the same coordinate space.
+        return image.transformed(
+            by: CGAffineTransform(
+                translationX: -image.extent.origin.x,
+                y: -image.extent.origin.y
+            )
+        )
     }
 
     private static func selectedForegroundInstances(
@@ -167,6 +226,11 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         let selected = BackgroundMaskInstanceSelector.selectedInstances(from: stats)
         return selected.isEmpty ? allInstances : selected
     }
+}
+
+private struct BackgroundMaskCandidate {
+    let maskImage: CIImage
+    let stats: BackgroundMaskInstanceStats
 }
 
 struct BackgroundMaskInstanceStats: Equatable {
@@ -280,6 +344,35 @@ struct BackgroundMaskInstanceStats: Equatable {
         let overlapY = max(0, min(maxY, other.maxY) - max(minY, other.minY))
         let smallerArea = max(0.0001, min(width * height, other.width * other.height))
         return (overlapX * overlapY) / smallerArea
+    }
+}
+
+enum BackgroundMaskCandidateSelector {
+    static func preferredCandidateIndex(from stats: [BackgroundMaskInstanceStats]) -> Int? {
+        stats.indices
+            .map { (index: $0, score: score(stats[$0])) }
+            .filter { $0.score > 0 }
+            .max { $0.score < $1.score }?
+            .index
+    }
+
+    private static func score(_ stats: BackgroundMaskInstanceStats) -> Double {
+        guard stats.areaFraction >= 0.005, stats.areaFraction <= 0.82 else {
+            return 0
+        }
+
+        let centerDistance = abs(stats.centroidX - 0.5)
+        let centerWeight = max(0.45, 1 - centerDistance)
+        let usefulArea = min(stats.areaFraction, 0.65)
+        let usefulHeight = min(1, max(0.35, stats.height))
+        let touchesMultipleEdges = [
+            stats.minX < 0.01,
+            stats.maxX > 0.99,
+            stats.minY < 0.01,
+            stats.maxY > 0.99
+        ].filter { $0 }.count >= 2
+        let edgeWeight = touchesMultipleEdges ? 0.45 : 1
+        return usefulArea * centerWeight * (0.7 + usefulHeight * 0.3) * edgeWeight
     }
 }
 

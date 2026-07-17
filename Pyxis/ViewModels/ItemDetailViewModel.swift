@@ -38,7 +38,7 @@ final class ItemDetailViewModel: ObservableObject {
         let service = LocalBackgroundRemovalService(imageStorage: imageStorage)
         let result = await service.processImage(
             at: imageStorage.url(for: item.imageOriginalPath),
-            itemID: item.id
+            itemID: Self.backgroundRemovalItemID(for: item)
         )
 
         if result.status == .succeeded {
@@ -61,6 +61,14 @@ final class ItemDetailViewModel: ObservableObject {
         item.imageCutoutPath = cutoutPath
         item.thumbnailPath = result.thumbnailPath ?? item.thumbnailPath
         item.touch()
+    }
+
+    static func backgroundRemovalItemID(for item: ClosetItem) -> UUID {
+        StoredImageSet(
+            originalPath: item.imageOriginalPath,
+            cutoutPath: item.imageCutoutPath,
+            thumbnailPath: item.thumbnailPath
+        ).stableItemID
     }
 
     func storedImageSet(for item: ClosetItem) -> StoredImageSet {

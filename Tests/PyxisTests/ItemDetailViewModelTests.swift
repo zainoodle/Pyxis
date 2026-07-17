@@ -34,6 +34,20 @@ final class ItemDetailViewModelTests: XCTestCase {
         XCTAssertEqual(item.thumbnailPath, "Images/Thumbnails/retry.png")
     }
 
+    func testRetryReusesOriginalImageSetIDWhenModelIDDiffers() {
+        let imageID = UUID()
+        let item = ClosetItem(
+            id: UUID(),
+            itemCode: "OT-001",
+            category: .other,
+            subtype: .other,
+            primaryColor: .black,
+            imageOriginalPath: "Images/Originals/\(imageID.uuidString).jpg"
+        )
+
+        XCTAssertEqual(ItemDetailViewModel.backgroundRemovalItemID(for: item), imageID)
+    }
+
     private func makeItem() -> ClosetItem {
         ClosetItem(
             itemCode: "TS-001",

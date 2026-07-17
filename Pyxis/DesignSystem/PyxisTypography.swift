@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum PyxisTypography {
-    static let nav = Font.system(size: 12, weight: .medium, design: .monospaced)
-    static let code = Font.system(size: 11, weight: .regular, design: .monospaced)
-    static let body = Font.system(size: 12, weight: .regular, design: .monospaced)
-    static let label = Font.system(size: 10, weight: .regular, design: .monospaced)
-    static let title = Font.system(size: 18, weight: .medium, design: .monospaced)
+    static let nav = Font.system(.caption, design: .monospaced, weight: .medium)
+    static let code = Font.system(.caption2, design: .monospaced)
+    static let body = Font.system(.body, design: .monospaced)
+    static let label = Font.system(.caption, design: .monospaced)
+    static let title = Font.system(.title3, design: .monospaced, weight: .medium)
 }

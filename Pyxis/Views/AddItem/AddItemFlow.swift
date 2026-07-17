@@ -10,6 +10,7 @@ struct AddItemFlow: View {
     @State private var selectedClosetIDs: Set<UUID> = []
     @State private var didApplyInitialCloset = false
     @State private var saveErrorMessage: String?
+    @State private var didSave = false
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
     private let initialClosetID: UUID?
@@ -70,6 +71,11 @@ struct AddItemFlow: View {
         .onChange(of: closets.map(\.id)) { _, _ in
             applyInitialCloset()
         }
+        .onDisappear {
+            if !didSave {
+                viewModel.discardDraft()
+            }
+        }
     }
 
     @ViewBuilder
@@ -121,10 +127,21 @@ struct AddItemFlow: View {
 
             statusView
 
+            if let aiError = viewModel.aiEnhancementError {
+                InlineErrorMessage(message: aiError)
+            }
+
             if !viewModel.stage.isProcessing {
                 rotationControls
 
                 HStack {
+                    Button(viewModel.isAIEnhancing ? "GENERATING" : "AI DE-WRINKLE") {
+                        Task { await viewModel.makePristineWithAI() }
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                    .disabled(viewModel.isAIEnhancing || (viewModel.result?.originalPath.isEmpty ?? true))
+                    .accessibilityLabel("Generate a pristine AI garment image")
+
                     Button("IMPROVE CUTOUT") {
                         Task { await viewModel.retry() }
                     }
@@ -139,6 +156,11 @@ struct AddItemFlow: View {
                     .disabled(viewModel.result?.originalPath.isEmpty ?? true)
                     .accessibilityLabel(viewModel.stage.isFailed ? "Save item with original image" : "Save item")
                 }
+
+                Text("AI DE-WRINKLE UPLOADS THIS PHOTO FOR GENERATION. VERIFY FABRIC, LOGOS, AND CONDITION BEFORE SAVING.")
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.inactiveText)
+                    .multilineTextAlignment(.center)
             }
         }
     }
@@ -190,7 +212,7 @@ struct AddItemFlow: View {
 
     private var previewURL: URL? {
         if let result = viewModel.result {
-            if let storage = try? ImageStorageService() {
+            if let storage = ImageStorageService.shared {
                 if let cutoutPath = result.cutoutPath {
                     return storage.url(for: cutoutPath)
                 }
@@ -230,6 +252,7 @@ struct AddItemFlow: View {
             try upsertMemory(for: item)
             try modelContext.save()
             saveErrorMessage = nil
+            didSave = true
             onSave?(item)
             dismiss()
         } catch {

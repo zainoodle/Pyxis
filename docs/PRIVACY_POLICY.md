@@ -4,7 +4,7 @@ Effective date: 2026-06-18
 
 ## Summary
 
-Pyxis is a local-first closet organization app. Pyxis does not create accounts, run ads, use analytics, upload clothing photos, sell data, share data with data brokers, or call remote AI services.
+Pyxis is a local-first closet organization app with optional, user-triggered AI image features. Pyxis does not create accounts, run ads, use analytics, sell data, or share data with data brokers.
 
 ## Information Pyxis Stores On Device
 
@@ -19,7 +19,7 @@ This information stays in the app's local container on your device. It is not tr
 
 ## Photo Library Access
 
-Pyxis asks for photo library access only so you can select clothing photos to save locally in the app. Pyxis stores copies of selected images in its local app storage and does not upload those images.
+Pyxis asks for photo library access so you can save clothing photos locally and choose a person photo for AI try-on. Photos are uploaded only after you explicitly tap `AI DE-WRINKLE` or `GENERATE AI TRY-ON`; the app identifies the uploaded content before generation.
 
 ## Data Collection
 
@@ -27,7 +27,9 @@ Pyxis does not collect data as Apple defines collection for App Store privacy la
 
 ## Third Parties
 
-Pyxis does not include advertising SDKs, analytics SDKs, telemetry SDKs, cloud storage SDKs, remote image-processing services, or remote AI services.
+Pyxis does not include advertising, analytics, telemetry, or cloud-storage SDKs. Optional AI image actions use a Pyxis-owned image-processing backend. The backend provider, retention period, deletion process, and production contact must be finalized here before releasing these actions publicly.
+
+Body measurements entered in the Fit Passport are optional and stored in the app's local database. They are not included in AI image requests, used for medical assessment, or transmitted to retailers. Users can delete the Fit Passport from the sizing screen.
 
 ## Deleting Data
 

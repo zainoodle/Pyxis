@@ -6,7 +6,7 @@ struct OutfitCarouselItemView: View {
     let action: () -> Void
 
     private var imageURL: URL? {
-        guard let storage = try? ImageStorageService() else {
+        guard let storage = ImageStorageService.shared else {
             return nil
         }
         return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
@@ -15,7 +15,7 @@ struct OutfitCarouselItemView: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: PyxisSpacing.sm) {
-                LocalImageView(url: imageURL)
+                LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
                     .padding(.horizontal, PyxisSpacing.sm)
 
@@ -31,5 +31,11 @@ struct OutfitCarouselItemView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(item.itemCode) \(item.displayName ?? item.subtype.rawValue)")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var imageRevision: Int {
+        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
     }
 }

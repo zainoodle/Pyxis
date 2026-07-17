@@ -4,6 +4,7 @@ import SwiftData
 public enum OutfitSlot: String, CaseIterable, Codable, Identifiable, Sendable {
     case top
     case bottom
+    case onePiece
     case footwear
     case outerwear
     case accessory
@@ -16,6 +17,8 @@ public enum OutfitSlot: String, CaseIterable, Codable, Identifiable, Sendable {
             return "SHIRT"
         case .bottom:
             return "PANTS"
+        case .onePiece:
+            return "ONE PIECE"
         case .footwear:
             return "SHOES"
         case .outerwear:
@@ -31,6 +34,8 @@ public enum OutfitSlot: String, CaseIterable, Codable, Identifiable, Sendable {
             return .tops
         case .bottom:
             return .bottoms
+        case .onePiece:
+            return .onePiece
         case .footwear:
             return .footwear
         case .outerwear:
@@ -44,6 +49,7 @@ public enum OutfitSlot: String, CaseIterable, Codable, Identifiable, Sendable {
 public struct OutfitDraft: Equatable, Sendable {
     public var topItemID: UUID?
     public var bottomItemID: UUID?
+    public var onePieceItemID: UUID?
     public var footwearItemID: UUID?
     public var outerwearItemID: UUID?
     public var accessoryItemIDs: [UUID]
@@ -51,12 +57,14 @@ public struct OutfitDraft: Equatable, Sendable {
     public init(
         topItemID: UUID? = nil,
         bottomItemID: UUID? = nil,
+        onePieceItemID: UUID? = nil,
         footwearItemID: UUID? = nil,
         outerwearItemID: UUID? = nil,
         accessoryItemIDs: [UUID] = []
     ) {
         self.topItemID = topItemID
         self.bottomItemID = bottomItemID
+        self.onePieceItemID = onePieceItemID
         self.footwearItemID = footwearItemID
         self.outerwearItemID = outerwearItemID
         self.accessoryItemIDs = accessoryItemIDs
@@ -80,6 +88,7 @@ public final class Outfit: Identifiable {
     public var name: String?
     public var topItemID: UUID?
     public var bottomItemID: UUID?
+    public var onePieceItemID: UUID?
     public var footwearItemID: UUID?
     public var outerwearItemID: UUID?
     public var accessoryItemIDs: [UUID]
@@ -96,6 +105,7 @@ public final class Outfit: Identifiable {
         name: String? = nil,
         topItemID: UUID? = nil,
         bottomItemID: UUID? = nil,
+        onePieceItemID: UUID? = nil,
         footwearItemID: UUID? = nil,
         outerwearItemID: UUID? = nil,
         accessoryItemIDs: [UUID] = [],
@@ -111,6 +121,7 @@ public final class Outfit: Identifiable {
         self.name = name
         self.topItemID = topItemID
         self.bottomItemID = bottomItemID
+        self.onePieceItemID = onePieceItemID
         self.footwearItemID = footwearItemID
         self.outerwearItemID = outerwearItemID
         self.accessoryItemIDs = accessoryItemIDs
@@ -124,7 +135,7 @@ public final class Outfit: Identifiable {
     }
 
     public var itemIDs: [UUID] {
-        [topItemID, bottomItemID, footwearItemID, outerwearItemID].compactMap { $0 } + accessoryItemIDs
+        [topItemID, bottomItemID, onePieceItemID, footwearItemID, outerwearItemID].compactMap { $0 } + accessoryItemIDs
     }
 
     public var isDeleted: Bool {

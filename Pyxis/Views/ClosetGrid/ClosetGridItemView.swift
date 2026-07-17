@@ -10,7 +10,7 @@ struct ClosetGridItemView: View {
     }
 
     private var imageURL: URL? {
-        guard let storage = try? ImageStorageService() else {
+        guard let storage = ImageStorageService.shared else {
             return nil
         }
         return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
@@ -19,7 +19,7 @@ struct ClosetGridItemView: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: PyxisSpacing.sm) {
-                LocalImageView(url: imageURL)
+                LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 178)
                     .padding(.horizontal, PyxisSpacing.sm)
 
@@ -40,5 +40,9 @@ struct ClosetGridItemView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(item.itemCode) \(item.displayName ?? item.subtype.rawValue)")
+    }
+
+    private var imageRevision: Int {
+        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
     }
 }

@@ -4,7 +4,7 @@ Last audited: 2026-07-12
 
 ## Verified
 
-- `swift test` passes with 86 XCTest cases.
+- `swift test` passes with 97 XCTest cases.
 - Focused on-device memory tests pass with 13 XCTest cases.
 - SwiftData can open a store created before `OnDeviceMemoryRecord` existed and then persist a memory record.
 - Closet item and saved-fit save paths populate local memory records with deterministic on-device embeddings.
@@ -48,6 +48,9 @@ Last audited: 2026-07-12
 - Added Escape close shortcuts to modal/detail surfaces.
 - Made item detail close explicitly save pending edits.
 - Added clearer accessibility labels and selected-state values for filters and key item actions.
+- Added Dynamic Type-backed typography, stronger inactive/border contrast, and 44-point minimum targets for shared and filtering controls.
+- Added protected local image storage and cleanup for abandoned add-item drafts.
+- Added one-piece outfit support, complete saved-fit lifecycle actions, and boundary-safe sizing including footwear charts.
 - Added an asset catalog with app icon and accent color assets.
 - Added an app privacy manifest declaring no tracking, no collected data, no tracking domains, and no required-reason API declarations.
 - Aligned the Xcode target to iPhone-only deployment and opted out of unverified Mac/Vision "Designed for iPhone/iPad" compatibility.

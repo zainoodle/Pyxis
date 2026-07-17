@@ -18,7 +18,8 @@ public enum SwiftDataContainer {
             ClosetItem.self,
             Outfit.self,
             Closet.self,
-            OnDeviceMemoryRecord.self
+            OnDeviceMemoryRecord.self,
+            BodyProfile.self
         ])
         let configuration: ModelConfiguration
         if let storeURL {

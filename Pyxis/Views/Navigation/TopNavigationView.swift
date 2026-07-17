@@ -7,6 +7,7 @@ struct TopNavigationView: View {
     let buildAction: () -> Void
     let fitsAction: () -> Void
     let manageClosetsAction: () -> Void
+    let sizingAction: () -> Void
     @State private var isShowingFilters = false
 
     init(
@@ -15,7 +16,8 @@ struct TopNavigationView: View {
         addAction: @escaping () -> Void,
         buildAction: @escaping () -> Void = {},
         fitsAction: @escaping () -> Void = {},
-        manageClosetsAction: @escaping () -> Void = {}
+        manageClosetsAction: @escaping () -> Void = {},
+        sizingAction: @escaping () -> Void = {}
     ) {
         self._filterState = filterState
         self.closets = closets
@@ -23,6 +25,7 @@ struct TopNavigationView: View {
         self.buildAction = buildAction
         self.fitsAction = fitsAction
         self.manageClosetsAction = manageClosetsAction
+        self.sizingAction = sizingAction
     }
 
     var body: some View {
@@ -58,10 +61,11 @@ struct TopNavigationView: View {
             Menu {
                 Button("SAVED FITS", action: fitsAction)
                 Button("MANAGE CLOSETS", action: manageClosetsAction)
+                Button("MY SIZE", action: sizingAction)
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 15, weight: .medium))
-                    .frame(width: 28, height: 28)
+                    .frame(width: 44, height: 44)
                     .foregroundStyle(PyxisColors.text)
             }
             .accessibilityLabel("More closet actions")
@@ -199,7 +203,7 @@ private struct FilterOptionButton: View {
             Text(title.uppercased())
                 .font(PyxisTypography.label)
                 .foregroundStyle(isSelected ? PyxisColors.surface : PyxisColors.secondaryText)
-                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, PyxisSpacing.sm)
                 .background(isSelected ? PyxisColors.text : PyxisColors.field)
                 .overlay {

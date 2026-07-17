@@ -23,7 +23,7 @@ This checklist translates the current Xcode project and local-first product scop
 ## App Store Connect Metadata Draft
 
 - Name: `Pyxis`
-- Subtitle: `Closet organizer, local only`
+- Subtitle: `Closet organizer & AI try-on`
 - SKU: `pyxis-ios-1`
 - Keywords: `closet,wardrobe,outfits,clothing,style,organization,local-first`
 - Promotional text: `A quiet, local-first closet log for saving clothes, cutouts, and fits on your iPhone.`
@@ -32,7 +32,7 @@ This checklist translates the current Xcode project and local-first product scop
 ```text
 Pyxis is a local-first closet organizer for iPhone.
 
-Save clothing photos, remove backgrounds, organize pieces into closets, search by details, and build saved fits from the wardrobe already on your device. Pyxis keeps images, metadata, and on-device memory records in local storage. There are no accounts, analytics, cloud uploads, ads, or remote AI calls.
+Save clothing photos, remove backgrounds, generate cleaner garment presentations, organize pieces into closets, and preview saved fits on your photo. Core closet data and on-device memory remain local; optional AI image actions upload only the disclosed photos after you request generation. There are no accounts, analytics, or ads.
 ```
 
 - Support URL: publish `docs/SUPPORT.md` at a stable public URL before submission

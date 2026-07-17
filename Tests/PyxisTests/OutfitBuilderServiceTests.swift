@@ -73,6 +73,17 @@ final class OutfitBuilderServiceTests: XCTestCase {
         XCTAssertFalse(OutfitBuilderService().canSave(draft))
     }
 
+    func testOnePieceAndFootwearCanBeSavedWithoutSeparates() {
+        let dress = makeItem(code: "DR-001", category: .onePiece, subtype: .dress)
+        let shoes = makeItem(code: "SN-001", category: .footwear, subtype: .sneakers)
+        let service = OutfitBuilderService()
+        let rows = service.requiredRows(from: [shoes]) + service.optionalRows(from: [dress])
+        let draft = service.draft(from: rows, selections: [.onePiece: 0, .footwear: 0])
+
+        XCTAssertTrue(service.canSave(draft))
+        XCTAssertEqual(draft.onePieceItemID, dress.id)
+    }
+
     func testCountsOutfitUsageForItems() {
         let topID = UUID()
         let bottomID = UUID()
@@ -95,7 +106,7 @@ final class OutfitBuilderServiceTests: XCTestCase {
         XCTAssertEqual(service.slot(for: .footwear), .footwear)
         XCTAssertEqual(service.slot(for: .outerwear), .outerwear)
         XCTAssertEqual(service.slot(for: .accessories), .accessory)
-        XCTAssertNil(service.slot(for: .onePiece))
+        XCTAssertEqual(service.slot(for: .onePiece), .onePiece)
         XCTAssertNil(service.slot(for: .other))
     }
 
@@ -104,6 +115,7 @@ final class OutfitBuilderServiceTests: XCTestCase {
 
         XCTAssertEqual(service.defaultSubtype(for: .top), .tShirt)
         XCTAssertEqual(service.defaultSubtype(for: .bottom), .pants)
+        XCTAssertEqual(service.defaultSubtype(for: .onePiece), .dress)
         XCTAssertEqual(service.defaultSubtype(for: .footwear), .sneakers)
         XCTAssertEqual(service.defaultSubtype(for: .outerwear), .jacket)
         XCTAssertEqual(service.defaultSubtype(for: .accessory), .bag)

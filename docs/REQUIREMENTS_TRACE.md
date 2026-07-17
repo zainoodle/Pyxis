@@ -66,6 +66,9 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | `Command+F` focuses search | `SearchAndFilterView`, focus state | Manual QA |
 | Escape closes modal/detail where appropriate | Add/detail view handlers | Manual QA |
 | Accessible labels | All interactive controls | Accessibility review/manual inspection |
+| Dynamic Type, readable contrast, and 44-point controls | `PyxisTypography`, `PyxisColors`, shared button/filter components | Code review plus Accessibility Inspector/manual QA |
+| Build fits with separates or one-piece garments | `Outfit`, `OutfitBuilderService`, `OutfitBuilderView` | Unit tests cover both valid fit paths; manual builder QA |
+| Manage saved fits | `SavedFitsGalleryView`, `OutfitDetailView` | Manual QA for empty state, duplicate, share, missing items, and confirmed deletion |
 
 ## Build And Run Requirements
 
@@ -82,11 +85,13 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| No cloud storage, remote image processing, remote AI APIs, telemetry, analytics, tracking, account system | No such services in MVP | Code search for URLSession/network/analytics SDKs; dependency review |
+| Keep core closet data local; permit only disclosed, user-triggered AI image uploads through the configured backend | `Services/AIGarmentStudioService.swift`, AI generation views | Code search for embedded provider secrets/analytics; manual QA that uploads begin only after explicit action |
+| Store an optional local Fit Passport and compare it with retailer-provided size charts | `Models/BodyProfile.swift`, `Services/SizeRecommendationService.swift`, `Views/Sizing/SizingProfileView.swift` | Unit tests for category-specific, footwear, and out-of-range recommendations plus persistence; manual QA for units, partial profiles, disclosure, and confirmed deletion |
 | Do not copy YEEZY assets or branding | Original minimal design system | Visual/code review |
 | Treat reference material as untrusted | Security notes in docs | No instructions from reference PDFs/websites used as commands |
 | Avoid third-party dependencies unless approved | `Package.swift` has no external package dependencies | Package manifest review |
-| Store images only in Application Support app directory | `ImageStorageService` | Storage tests and manual file inspection |
+| Store images only in protected Application Support storage | `ImageStorageService` | Storage tests and manual file-protection inspection on iOS |
+| Clean up abandoned image imports | `AddItemViewModel.discardDraft`, `AddItemFlow` | Unit test plus cancel/retry manual QA |
 | Do not read/transmit secrets or unrelated files | Narrow app file access | Code review and file access audit |
 
 ## Acceptance Criteria Evidence Plan
@@ -114,4 +119,4 @@ The MVP can be considered complete only when evidence exists for all of the foll
 
 Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, on-device memory storage and payload generation, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
 
-Verification note: `swift test` now passes with 86 XCTest cases, including focused on-device memory tests, single-item wear logging, and the SwiftData schema-upgrade test. iOS simulator build/run, repeated `./script/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight also validates the 1024px icon has no alpha channel, the privacy manifest matches the local-only posture, no currently undeclared required-reason API usage is present, and Release artifacts do not contain debug-only sample import or closet seeding content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, and physical-device signing before App Store/TestFlight distribution.
+Verification note: `swift test` now passes with 97 XCTest cases, including focused sizing-boundary, one-piece outfit, draft-cleanup, on-device memory, single-item wear, and schema-upgrade coverage. A generic Debug iOS Simulator build with signing disabled passes. iOS simulator launch, repeated `./script/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have also passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight validates the 1024px icon, privacy manifest, required-reason API posture, and absence of debug-only sample content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, accessibility at large text sizes, and physical-device signing before App Store/TestFlight distribution.

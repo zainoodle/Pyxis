@@ -47,6 +47,7 @@ struct SearchAndFilterView: View {
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
             .frame(maxWidth: 180)
+            .frame(minHeight: 44)
             .accessibilityLabel("Search closet")
     }
 
@@ -59,6 +60,7 @@ struct SearchAndFilterView: View {
         .labelsHidden()
         .tint(PyxisColors.text)
         .frame(width: 128)
+        .frame(minHeight: 44)
     }
 
     private var favoritesToggle: some View {
@@ -88,5 +90,6 @@ struct SearchAndFilterView: View {
             .fixedSize(horizontal: true, vertical: false)
             .accessibilityLabel("Show favorites only")
             .accessibilityValue(filterState.favoritesOnly ? "On" : "Off")
+            .frame(minHeight: 44)
     }
 }

@@ -26,12 +26,16 @@ final class AddItemViewModel: ObservableObject {
     @Published var favorite = false
     @Published var setupError: String?
     @Published var imageRevision = 0
+    @Published var isAIEnhancing = false
+    @Published var aiEnhancementError: String?
 
     private let imageStorage: ImageStorageService?
     private let backgroundRemovalService: (any BackgroundRemovalServiceProtocol)?
     private let colorAnalysisService: ColorAnalysisService
     private let classificationService: any ClothingClassificationProviding
+    private let aiStudioService: any AIGarmentStudioProviding
     private var userAdjustedClassification = false
+    private var draftItemID = UUID()
 
     init() {
         do {
@@ -40,11 +44,13 @@ final class AddItemViewModel: ObservableObject {
             self.backgroundRemovalService = LocalBackgroundRemovalService(imageStorage: storage)
             self.colorAnalysisService = ColorAnalysisService()
             self.classificationService = ClothingClassificationService()
+            self.aiStudioService = AIGarmentStudioService()
         } catch {
             self.imageStorage = nil
             self.backgroundRemovalService = nil
             self.colorAnalysisService = ColorAnalysisService()
             self.classificationService = ClothingClassificationService()
+            self.aiStudioService = AIGarmentStudioService()
             self.setupError = "Image storage could not be opened."
         }
     }
@@ -53,15 +59,20 @@ final class AddItemViewModel: ObservableObject {
         imageStorage: ImageStorageService,
         backgroundRemovalService: BackgroundRemovalServiceProtocol,
         colorAnalysisService: ColorAnalysisService = ColorAnalysisService(),
-        classificationService: any ClothingClassificationProviding = ClothingClassificationService()
+        classificationService: any ClothingClassificationProviding = ClothingClassificationService(),
+        aiStudioService: any AIGarmentStudioProviding = AIGarmentStudioService()
     ) {
         self.imageStorage = imageStorage
         self.backgroundRemovalService = backgroundRemovalService
         self.colorAnalysisService = colorAnalysisService
         self.classificationService = classificationService
+        self.aiStudioService = aiStudioService
     }
 
     func selectImage(_ url: URL) {
+        discardProcessedImages()
+        discardTemporaryImport()
+        draftItemID = UUID()
         selectedImageURL = url
         stage = .selected
         userAdjustedClassification = false
@@ -91,7 +102,7 @@ final class AddItemViewModel: ObservableObject {
         }
     }
 
-    func processSelectedImage(itemID: UUID = UUID()) async {
+    func processSelectedImage(itemID: UUID? = nil) async {
         guard let selectedImageURL else {
             return
         }
@@ -104,7 +115,7 @@ final class AddItemViewModel: ObservableObject {
         let processingStartedAt = Date()
         let processed = await backgroundRemovalService.processImage(
             at: selectedImageURL,
-            itemID: itemID
+            itemID: itemID ?? draftItemID
         )
         result = processed
 
@@ -162,7 +173,14 @@ final class AddItemViewModel: ObservableObject {
             )
         }
 
+        let imageSet = StoredImageSet(
+            originalPath: result.originalPath,
+            cutoutPath: result.cutoutPath,
+            thumbnailPath: result.thumbnailPath
+        )
+
         return ClosetItem(
+            id: imageSet.stableItemID,
             itemCode: code,
             displayName: displayName.nilIfBlank,
             category: category,
@@ -184,6 +202,43 @@ final class AddItemViewModel: ObservableObject {
 
     func retry() async {
         await processSelectedImage()
+    }
+
+    func discardDraft() {
+        discardProcessedImages()
+        discardTemporaryImport()
+        result = nil
+        selectedImageURL = nil
+    }
+
+    func makePristineWithAI() async {
+        guard let imageStorage, let result, !result.originalPath.isEmpty else { return }
+        isAIEnhancing = true
+        aiEnhancementError = nil
+        defer { isAIEnhancing = false }
+        do {
+            let data = try await aiStudioService.makePristineGarment(
+                from: imageStorage.url(for: result.originalPath)
+            )
+            let itemID = StoredImageSet(
+                originalPath: result.originalPath,
+                cutoutPath: result.cutoutPath,
+                thumbnailPath: result.thumbnailPath
+            ).stableItemID
+            let cutoutPath = try imageStorage.saveCutoutPNG(data, itemID: itemID)
+            let thumbnailPath = try? imageStorage.makeThumbnail(
+                from: imageStorage.url(for: cutoutPath), itemID: itemID
+            )
+            self.result = BackgroundRemovalResult(
+                originalPath: result.originalPath,
+                cutoutPath: cutoutPath,
+                thumbnailPath: thumbnailPath ?? result.thumbnailPath,
+                status: .succeeded
+            )
+            imageRevision += 1
+        } catch {
+            aiEnhancementError = error.localizedDescription
+        }
     }
 
     func rotateProcessedImage(_ direction: ImageUtilities.RotationDirection) throws {
@@ -234,6 +289,31 @@ final class AddItemViewModel: ObservableObject {
             markUserEdited: false
         )
         classificationConfidence = classification.confidence
+    }
+
+    private func discardProcessedImages() {
+        guard let imageStorage, let result, !result.originalPath.isEmpty else { return }
+        imageStorage.deleteImages(
+            StoredImageSet(
+                originalPath: result.originalPath,
+                cutoutPath: result.cutoutPath,
+                thumbnailPath: result.thumbnailPath
+            )
+        )
+        self.result = nil
+    }
+
+    private func discardTemporaryImport() {
+        guard let selectedImageURL else { return }
+        let temporaryRoot = FileManager.default.temporaryDirectory.standardizedFileURL.path
+        let candidate = selectedImageURL.standardizedFileURL
+        var prefixes = ["Pyxis-photo-", "Pyxis-camera-", "Pyxis-drop-"]
+        #if DEBUG
+        prefixes.append("Pyxis-black-shirt-demo-")
+        #endif
+        guard candidate.path.hasPrefix(temporaryRoot + "/"),
+              prefixes.contains(where: { candidate.lastPathComponent.hasPrefix($0) }) else { return }
+        try? FileManager.default.removeItem(at: candidate)
     }
 }
 

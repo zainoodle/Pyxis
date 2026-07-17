@@ -39,9 +39,7 @@ struct LocalImageView: View {
             return "no-image"
         }
 
-        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
-        let size = values?.fileSize ?? 0
-        return "\(url.path)|\(size)|\(revision)"
+        return "\(url.path)|\(revision)"
     }
 
     @MainActor
@@ -76,7 +74,7 @@ struct LocalImageView: View {
         image = loadedImage
     }
 
-    private static func downsampledImage(at url: URL, maxPixelSize: CGFloat) -> UIImage? {
+    nonisolated private static func downsampledImage(at url: URL, maxPixelSize: CGFloat) -> UIImage? {
         let options = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithURL(url as CFURL, options) else {
             return nil

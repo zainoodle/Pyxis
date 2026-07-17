@@ -9,6 +9,7 @@ struct UppercaseNavLabel: View {
             .font(PyxisTypography.nav)
             .foregroundStyle(isActive ? PyxisColors.text : PyxisColors.secondaryText)
             .lineLimit(1)
+            .frame(minHeight: 44)
     }
 }
 
@@ -31,6 +32,7 @@ struct MinimalButtonStyle: ButtonStyle {
             .foregroundStyle(PyxisColors.text)
             .padding(.horizontal, PyxisSpacing.md)
             .padding(.vertical, PyxisSpacing.sm)
+            .frame(minHeight: 44)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(PyxisColors.field)
@@ -40,6 +42,7 @@ struct MinimalButtonStyle: ButtonStyle {
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
             .opacity(configuration.isPressed ? 0.55 : 1)
+            .contentShape(Rectangle())
     }
 }
 

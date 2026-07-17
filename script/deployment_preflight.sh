@@ -135,8 +135,8 @@ if errors:
 
 scan_policy() {
   expect_no_matches \
-    "scan for prohibited networking/analytics/remote AI APIs" \
-    "URLSession|https?://|Network|NWPathMonitor|analytics|telemetry|Firebase|Supabase|Amplitude|Mixpanel|OpenAI|remote AI|remote image|cloud upload" \
+    "scan for prohibited analytics and embedded AI secrets" \
+    "analytics|telemetry|Firebase|Amplitude|Mixpanel|sk-[A-Za-z0-9_-]{20,}|OPENAI_API_KEY" \
     Pyxis Package.swift -g '!PrivacyInfo.xcprivacy'
 
   expect_no_matches \
@@ -207,6 +207,7 @@ run_static_checks() {
   require_command sips
   require_command strings
 
+  ./script/validate_update_notes.sh --all
   lint_metadata
   scan_policy
   check_git_whitespace

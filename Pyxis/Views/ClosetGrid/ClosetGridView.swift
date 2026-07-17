@@ -8,7 +8,9 @@ struct ClosetGridView: View {
     @State private var isShowingAddFlow = false
     @State private var isShowingBuilder = false
     @State private var isShowingSavedFits = false
+    @State private var shouldOpenBuilderAfterSavedFitsDismiss = false
     @State private var isShowingClosets = false
+    @State private var isShowingSizing = false
     @State private var selectedItem: ClosetItem?
     @State private var builderFocusItem: ClosetItem?
     @State private var savedItemPrompt: ClosetItem?
@@ -31,7 +33,8 @@ struct ClosetGridView: View {
                     isShowingBuilder = true
                 },
                 fitsAction: { isShowingSavedFits = true },
-                manageClosetsAction: { isShowingClosets = true }
+                manageClosetsAction: { isShowingClosets = true },
+                sizingAction: { isShowingSizing = true }
             )
             .padding(.top, PyxisSpacing.lg)
 
@@ -77,11 +80,21 @@ struct ClosetGridView: View {
         .sheet(isPresented: $isShowingClosets) {
             ClosetManagementView(selectedClosetID: $viewModel.filterState.closetID)
         }
+        .sheet(isPresented: $isShowingSizing) {
+            SizingProfileView()
+        }
         .sheet(isPresented: $isShowingBuilder) {
             OutfitBuilderView(initialItem: builderFocusItem)
         }
-        .sheet(isPresented: $isShowingSavedFits) {
-            SavedFitsGalleryView()
+        .sheet(isPresented: $isShowingSavedFits, onDismiss: {
+            guard shouldOpenBuilderAfterSavedFitsDismiss else { return }
+            shouldOpenBuilderAfterSavedFitsDismiss = false
+            builderFocusItem = nil
+            isShowingBuilder = true
+        }) {
+            SavedFitsGalleryView {
+                shouldOpenBuilderAfterSavedFitsDismiss = true
+            }
         }
         .sheet(item: $selectedItem) { item in
             ItemDetailView(item: item) { buildItem in

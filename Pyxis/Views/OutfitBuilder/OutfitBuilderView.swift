@@ -15,6 +15,7 @@ struct OutfitBuilderView: View {
     @State private var focusedItemID: UUID?
     @State private var savedConfirmationID: UUID?
     @State private var saveErrorMessage: String?
+    @State private var isShowingAITryOn = false
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
@@ -26,10 +27,6 @@ struct OutfitBuilderView: View {
 
     private var rows: [OutfitRow] {
         service.requiredRows(from: items) + service.optionalRows(from: items).filter { !$0.items.isEmpty }
-    }
-
-    private var requiredRows: [OutfitRow] {
-        service.requiredRows(from: items)
     }
 
     private var draft: OutfitDraft {
@@ -49,9 +46,16 @@ struct OutfitBuilderView: View {
         VStack(spacing: PyxisSpacing.lg) {
             header
 
-            ClosetReadinessView(rows: requiredRows)
+            ClosetReadinessView(rows: rows, draft: draft)
 
             OutfitAssemblyPreview(selectedPieces: selectedPieces)
+
+            Button("TRY THIS FIT ON YOU") {
+                isShowingAITryOn = true
+            }
+            .buttonStyle(MinimalButtonStyle())
+            .disabled(selectedPieces.isEmpty)
+            .accessibilityLabel("Open AI try-on with the selected clothing")
 
             ScrollView {
                 VStack(spacing: PyxisSpacing.lg) {
@@ -65,7 +69,7 @@ struct OutfitBuilderView: View {
                             OutfitCarouselRow(
                                 row: row,
                                 selectedIndex: selections[row.slot],
-                                selectIndex: { selections[row.slot] = $0 },
+                                selectIndex: { select(row.slot, index: $0) },
                                 advance: { offset in advance(row.slot, by: offset) },
                                 openItem: { selectedItem = $0 }
                             )
@@ -105,6 +109,9 @@ struct OutfitBuilderView: View {
         }
         .sheet(item: $selectedOutfit) { outfit in
             OutfitDetailView(outfit: outfit)
+        }
+        .sheet(isPresented: $isShowingAITryOn) {
+            AITryOnView(items: selectedPieces.map(\.item))
         }
     }
 
@@ -190,10 +197,15 @@ struct OutfitBuilderView: View {
             selections[row.slot] = defaults[row.slot]
         }
 
+        if selections[.onePiece] != nil {
+            selections[.top] = nil
+            selections[.bottom] = nil
+        }
+
         if let focusedItemID,
            let target = service.selectionTarget(for: focusedItemID, in: rows) {
             withAnimation(.easeInOut(duration: 0.24)) {
-                selections[target.slot] = target.index
+                select(target.slot, index: target.index)
             }
             self.focusedItemID = nil
         }
@@ -203,11 +215,22 @@ struct OutfitBuilderView: View {
         guard let row = rows.first(where: { $0.slot == slot }) else {
             return
         }
-        selections[slot] = service.advancedIndex(
+        guard let index = service.advancedIndex(
             from: selections[slot],
             offset: offset,
             itemCount: row.items.count
-        )
+        ) else { return }
+        select(slot, index: index)
+    }
+
+    private func select(_ slot: OutfitSlot, index: Int) {
+        selections[slot] = index
+        if slot == .onePiece {
+            selections[.top] = nil
+            selections[.bottom] = nil
+        } else if slot == .top || slot == .bottom {
+            selections[.onePiece] = nil
+        }
     }
 
     private func saveFit() {
@@ -284,8 +307,12 @@ private struct OutfitAssemblyPreview: View {
 
                 VStack(spacing: -18) {
                     assemblyPiece(.outerwear, height: 58)
-                    assemblyPiece(.top, height: 82)
-                    assemblyPiece(.bottom, height: 104)
+                    if selectedPieces.contains(where: { $0.slot == .onePiece }) {
+                        assemblyPiece(.onePiece, height: 186)
+                    } else {
+                        assemblyPiece(.top, height: 82)
+                        assemblyPiece(.bottom, height: 104)
+                    }
                     assemblyPiece(.footwear, height: 58)
                 }
                 .padding(.vertical, PyxisSpacing.sm)
@@ -302,7 +329,7 @@ private struct OutfitAssemblyPreview: View {
     @ViewBuilder
     private func assemblyPiece(_ slot: OutfitSlot, height: CGFloat) -> some View {
         if let item = selectedPieces.first(where: { $0.slot == slot })?.item {
-            LocalImageView(url: imageURL(for: item))
+            LocalImageView(url: imageURL(for: item), revision: imageRevision(for: item))
                 .frame(width: 176, height: height)
                 .accessibilityLabel("Selected \(slot.title.lowercased()) \(item.itemCode)")
         } else if [.top, .bottom, .footwear].contains(slot) {
@@ -314,18 +341,28 @@ private struct OutfitAssemblyPreview: View {
     }
 
     private func imageURL(for item: ClosetItem) -> URL? {
-        guard let storage = try? ImageStorageService() else {
+        guard let storage = ImageStorageService.shared else {
             return nil
         }
         return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
+    }
+
+    private func imageRevision(for item: ClosetItem) -> Int {
+        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
     }
 }
 
 private struct ClosetReadinessView: View {
     let rows: [OutfitRow]
+    let draft: OutfitDraft
 
     private var missingSlots: [OutfitSlot] {
-        rows.filter(\.items.isEmpty).map(\.slot)
+        var missing: [OutfitSlot] = []
+        if draft.onePieceItemID == nil && (draft.topItemID == nil || draft.bottomItemID == nil) {
+            missing.append(draft.topItemID == nil ? .top : .bottom)
+        }
+        if draft.footwearItemID == nil { missing.append(.footwear) }
+        return missing
     }
 
     var body: some View {

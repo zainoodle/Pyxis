@@ -4,6 +4,28 @@ import XCTest
 
 @MainActor
 final class PersistenceTests: XCTestCase {
+    func testInsertsAndFetchesBodyProfile() throws {
+        let container = try SwiftDataContainer.makeTestContainer()
+        let context = ModelContext(container)
+        let profile = BodyProfile(
+            measurementSystem: .metric,
+            fitPreference: .relaxed,
+            heightCentimeters: 180,
+            weightKilograms: 78,
+            chestCentimeters: 102,
+            waistCentimeters: 84
+        )
+
+        context.insert(profile)
+        try context.save()
+
+        let fetched = try XCTUnwrap(context.fetch(FetchDescriptor<BodyProfile>()).first)
+        XCTAssertEqual(fetched.measurementSystem, .metric)
+        XCTAssertEqual(fetched.fitPreference, .relaxed)
+        XCTAssertEqual(fetched.heightCentimeters, 180)
+        XCTAssertEqual(fetched.chestCentimeters, 102)
+    }
+
     func testInsertsAndFetchesClosetItem() throws {
         let container = try SwiftDataContainer.makeTestContainer()
         let context = ModelContext(container)

@@ -6,6 +6,11 @@ struct SavedFitsGalleryView: View {
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
     @State private var selectedOutfit: Outfit?
+    let buildAction: (() -> Void)?
+
+    init(buildAction: (() -> Void)? = nil) {
+        self.buildAction = buildAction
+    }
 
     var body: some View {
         VStack(spacing: PyxisSpacing.lg) {
@@ -26,6 +31,13 @@ struct SavedFitsGalleryView: View {
                 Text("NO SAVED FITS")
                     .font(PyxisTypography.body)
                     .foregroundStyle(PyxisColors.inactiveText)
+                if let buildAction {
+                    Button("BUILD A FIT") {
+                        dismiss()
+                        buildAction()
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                }
                 Spacer()
             } else {
                 ScrollView {
