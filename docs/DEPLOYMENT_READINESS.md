@@ -1,6 +1,6 @@
 # Pyxis Deployment Readiness
 
-Last audited: 2026-07-12
+Last audited: 2026-07-16
 
 ## Verified
 
@@ -18,9 +18,9 @@ Last audited: 2026-07-12
 - The built app and archive assert `CFBundleDisplayName = Pyxis`, camera and photo-library usage descriptions, `LSApplicationCategoryType = public.app-category.lifestyle`, minimum iOS `17.0`, and iPhone-only `UIDeviceFamily = [1]`.
 - The App Store icon source is a 1024 x 1024 opaque RGB PNG with no alpha channel.
 - The Release build and unsigned archive scan clean for debug-only sample import, closet seeding strings, and sample item codes.
-- Static scan found no `URLSession`, networking, analytics, telemetry, cloud upload, remote image processing, or remote AI code in `Pyxis` or `Package.swift`.
+- Static scan confirms the only app networking surface is the opt-in `AIGarmentStudioService`; provider credentials are absent from the app, while analytics and telemetry remain absent.
 - Static scan found no currently undeclared required-reason API usage in `Pyxis` or `Package.swift`.
-- Static manifest validation confirms `PrivacyInfo.xcprivacy` declares no tracking, no collected data, no tracking domains, and no accessed API categories.
+- Static manifest validation confirms `PrivacyInfo.xcprivacy` declares optional photos/videos for app functionality as unlinked and non-tracking, with no tracking domains or required-reason API categories.
 - Static support-page validation confirms the support and privacy drafts use the same concrete support contact.
 - Screenshot inspection confirmed the launched simulator app presents the Pyxis closet grid and empty state.
 - The app is configured and Release-built as iPhone-only (`UIDeviceFamily = [1]`) so App Store submission does not require unverified iPad screenshots or iPad manual QA.
@@ -52,7 +52,7 @@ Last audited: 2026-07-12
 - Added protected local image storage and cleanup for abandoned add-item drafts.
 - Added one-piece outfit support, complete saved-fit lifecycle actions, and boundary-safe sizing including footwear charts.
 - Added an asset catalog with app icon and accent color assets.
-- Added an app privacy manifest declaring no tracking, no collected data, no tracking domains, and no required-reason API declarations.
+- Added an app privacy manifest declaring no tracking or tracking domains and no required-reason API declarations; it now truthfully declares photos/videos used for optional AI app functionality as unlinked and non-tracking.
 - Aligned the Xcode target to iPhone-only deployment and opted out of unverified Mac/Vision "Designed for iPhone/iPad" compatibility.
 - Added App Store submission notes and a publishable privacy-policy draft.
 - Added a publishable support-page draft with a concrete support contact.
@@ -63,7 +63,7 @@ Last audited: 2026-07-12
 - Flattened the 1024px App Store icon source to an opaque RGB PNG and added preflight validation for icon pixel size and alpha.
 - Added a preflight scan for required-reason API usage while the privacy manifest declares no accessed API categories.
 - Added Release artifact scans to prevent debug-only sample import, closet seeding UI, messages, and sample item codes from shipping.
-- Added explicit preflight validation that the privacy manifest still matches the local-only privacy posture.
+- Added explicit preflight validation that the privacy manifest still matches the local-core and opt-in AI privacy posture.
 - Added preflight validation for user-visible app metadata, the photo-library purpose string, app category, and absence of iPad device-family metadata in built Release artifacts.
 - Added preflight validation that the support-page and privacy-policy drafts use the same support contact.
 - Expanded the git ignore rule to cover generated `DerivedData*` build directories.
@@ -71,6 +71,9 @@ Last audited: 2026-07-12
 
 ## Remaining Manual Gates
 
+- Deploy `backend/pyxis-ai-worker`, configure its secrets, and complete the real xAI checks in `docs/AI_GATEWAY.md`.
+- Replace the initial shared gateway token with App Attest or short-lived server-issued tokens before a broad public release.
+- Update App Store privacy answers to disclose photos sent for optional xAI image generation and xAI's current temporary retention.
 - Publish `docs/SUPPORT.md` and `docs/PRIVACY_POLICY.md` at stable public URLs before App Store submission.
 - Confirm both public pages use the same support contact configured in App Store Connect.
 - Run the full checklist in `docs/MANUAL_QA.md` with real clothing images.

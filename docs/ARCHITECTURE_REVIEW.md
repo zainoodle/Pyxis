@@ -239,9 +239,9 @@ Create protocols only:
 - `PurchaseCompatibilityService`
 - `EmbeddingService`
 
-Do not implement network AI, cloud model calls, shopping integrations, accounts, or outfit generation in the MVP.
+Do not add network-backed recommendations, shopping integrations, accounts, telemetry, or cloud memory in the MVP. The separately approved AI Studio image actions are the only remote-AI exception.
 
-Current iOS note: future AI behavior remains local-first. The app may persist on-device memory records and embedding vectors through SwiftData, but must not add remote AI, cloud model calls, telemetry, accounts, or network-backed memory without explicit approval.
+Current iOS note: future recommendation and memory behavior remains local-first. The app may persist on-device memory records and embedding vectors through SwiftData. User-triggered AI garment cleanup and try-on may call only the configured Pyxis gateway after an explicit upload disclosure; provider keys remain server-side.
 
 ## UI Architecture
 

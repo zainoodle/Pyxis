@@ -35,6 +35,45 @@ public enum ImageUtilities {
         #endif
     }
 
+    /// Produces a bounded, metadata-free JPEG for an explicitly requested AI upload.
+    public static func aiUploadJPEGData(
+        from imageURL: URL,
+        maxPixelSize: CGFloat = 2048,
+        compression: CGFloat = 0.86
+    ) throws -> Data {
+        guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(
+                source,
+                0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceShouldCache: false,
+                    kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize)
+                ] as CFDictionary
+              ) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            data,
+            "public.jpeg" as CFString,
+            1,
+            nil
+        ) else {
+            throw ImageUtilityError.couldNotEncodeImage
+        }
+        CGImageDestinationAddImage(
+            destination,
+            image,
+            [kCGImageDestinationLossyCompressionQuality: compression] as CFDictionary
+        )
+        guard CGImageDestinationFinalize(destination), data.length > 0 else {
+            throw ImageUtilityError.couldNotEncodeImage
+        }
+        return data as Data
+    }
+
     public static func rotatedImageData(
         from imageURL: URL,
         direction: RotationDirection
@@ -191,6 +230,7 @@ private extension URL {
 public enum ImageUtilityError: LocalizedError {
     case couldNotLoadImage
     case couldNotEncodePNG
+    case couldNotEncodeImage
 
     public var errorDescription: String? {
         switch self {
@@ -198,6 +238,8 @@ public enum ImageUtilityError: LocalizedError {
             return "The image could not be loaded."
         case .couldNotEncodePNG:
             return "The image could not be encoded as PNG."
+        case .couldNotEncodeImage:
+            return "The image could not be prepared for upload."
         }
     }
 }

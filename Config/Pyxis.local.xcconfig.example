@@ -1,0 +1,4 @@
+// Copy this file to Pyxis.local.xcconfig and keep the real values out of Git.
+// $() prevents xcconfig from treating the URL's double slash as a comment.
+PYXIS_AI_BASE_URL = https:/$()/YOUR-WORKER.workers.dev
+PYXIS_AI_ACCESS_TOKEN = replace-with-the-worker-access-token

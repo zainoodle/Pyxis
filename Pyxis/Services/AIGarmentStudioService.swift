@@ -28,17 +28,21 @@ public protocol AIGarmentStudioProviding: Sendable {
     func makeTryOn(personURL: URL, garmentURLs: [URL]) async throws -> Data
 }
 
-/// Talks only to the app owner's authenticated backend. The OpenAI API key must
-/// never be included in the iOS app. Set `PYXIS_AI_BASE_URL` in Info.plist.
+/// Talks only to the app owner's authenticated backend. Provider API keys must
+/// never be included in the iOS app. Set the Pyxis endpoint and scoped access
+/// token through build settings rather than hard-coding either value.
 public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked Sendable {
     private let baseURL: URL?
+    private let accessToken: String?
     private let session: URLSession
 
     public init(
         baseURL: URL? = AIGarmentStudioService.configuredBaseURL,
+        accessToken: String? = AIGarmentStudioService.configuredAccessToken,
         session: URLSession = .shared
     ) {
         self.baseURL = baseURL
+        self.accessToken = accessToken
         self.session = session
     }
 
@@ -68,13 +72,22 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         return url
     }
 
+    public static var configuredAccessToken: String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "PYXIS_AI_ACCESS_TOKEN") as? String else {
+            return nil
+        }
+        let token = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return token.isEmpty ? nil : token
+    }
+
     private func generate(path: String, images: [(String, URL)]) async throws -> Data {
-        guard let baseURL else { throw AIGarmentStudioError.notConfigured }
+        guard let baseURL, let accessToken else { throw AIGarmentStudioError.notConfigured }
         let boundary = "Pyxis-\(UUID().uuidString)"
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = "POST"
         request.timeoutInterval = 120
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "Idempotency-Key")
         request.httpBody = try Self.multipartBody(images: images, boundary: boundary)
 
@@ -101,7 +114,7 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
     private static func multipartBody(images: [(String, URL)], boundary: String) throws -> Data {
         var body = Data()
         for (name, url) in images {
-            guard let data = try? Data(contentsOf: url), !data.isEmpty else {
+            guard let data = try? ImageUtilities.aiUploadJPEGData(from: url), !data.isEmpty else {
                 throw AIGarmentStudioError.invalidImage
             }
             body.append("--\(boundary)\r\n")

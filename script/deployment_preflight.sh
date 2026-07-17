@@ -105,18 +105,25 @@ with open(path, "rb") as handle:
     manifest = plistlib.load(handle)
 expected_empty_arrays = [
     "NSPrivacyAccessedAPITypes",
-    "NSPrivacyCollectedDataTypes",
     "NSPrivacyTrackingDomains",
 ]
+expected_collection = [{
+    "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotosorVideos",
+    "NSPrivacyCollectedDataTypeLinked": False,
+    "NSPrivacyCollectedDataTypeTracking": False,
+    "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+}]
 errors = []
 if manifest.get("NSPrivacyTracking") is not False:
     errors.append("NSPrivacyTracking must be false")
 for key in expected_empty_arrays:
     if manifest.get(key) != []:
         errors.append(f"{key} must be an empty array")
+if manifest.get("NSPrivacyCollectedDataTypes") != expected_collection:
+    errors.append("NSPrivacyCollectedDataTypes must declare unlinked, non-tracking photos for app functionality")
 if errors:
     print("; ".join(errors), file=sys.stderr)
-    sys.exit(1)' || fail "privacy manifest does not match local-only privacy posture"
+    sys.exit(1)' || fail "privacy manifest does not match the local-core and opt-in AI posture"
   while IFS= read -r -d '' json_file; do
     python3 -m json.tool "$json_file" >/dev/null || fail "invalid asset catalog JSON: $json_file"
   done < <(find Pyxis/Assets.xcassets -name Contents.json -print0)
@@ -136,7 +143,7 @@ if errors:
 scan_policy() {
   expect_no_matches \
     "scan for prohibited analytics and embedded AI secrets" \
-    "analytics|telemetry|Firebase|Amplitude|Mixpanel|sk-[A-Za-z0-9_-]{20,}|OPENAI_API_KEY" \
+    "analytics|telemetry|Firebase|Amplitude|Mixpanel|sk-[A-Za-z0-9_-]{20,}|OPENAI_API_KEY|XAI_API_KEY" \
     Pyxis Package.swift -g '!PrivacyInfo.xcprivacy'
 
   expect_no_matches \

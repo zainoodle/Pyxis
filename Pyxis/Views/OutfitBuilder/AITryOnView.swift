@@ -53,7 +53,7 @@ struct AITryOnView: View {
                     .buttonStyle(MinimalButtonStyle())
                     .disabled(personURL == nil || items.isEmpty || isGenerating)
 
-                    Text("YOUR PHOTO AND THE SELECTED CLOTHING ARE UPLOADED FOR AI GENERATION. THIS IS A VISUAL PREVIEW, NOT A SIZE OR FIT GUARANTEE.")
+                    Text("YOUR PHOTO AND SELECTED CLOTHING ARE SENT TO XAI FOR GENERATION. XAI MAY RETAIN API DATA FOR UP TO 30 DAYS. THIS IS A VISUAL PREVIEW, NOT A SIZE OR FIT GUARANTEE.")
                         .font(PyxisTypography.label)
                         .foregroundStyle(PyxisColors.inactiveText)
                         .multilineTextAlignment(.center)

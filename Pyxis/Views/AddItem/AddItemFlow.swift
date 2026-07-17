@@ -157,7 +157,7 @@ struct AddItemFlow: View {
                     .accessibilityLabel(viewModel.stage.isFailed ? "Save item with original image" : "Save item")
                 }
 
-                Text("AI DE-WRINKLE UPLOADS THIS PHOTO FOR GENERATION. VERIFY FABRIC, LOGOS, AND CONDITION BEFORE SAVING.")
+                Text("AI DE-WRINKLE SENDS THIS PHOTO TO XAI FOR GENERATION. XAI MAY RETAIN API DATA FOR UP TO 30 DAYS. VERIFY FABRIC, LOGOS, AND CONDITION BEFORE SAVING.")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.inactiveText)
                     .multilineTextAlignment(.center)

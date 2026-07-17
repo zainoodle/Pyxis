@@ -59,14 +59,21 @@ Run the distribution preflight after App Store Connect provider access and an Ap
 - No analytics or telemetry.
 - Core closet organization, background removal, and saved-fit features work locally.
 - `AI DE-WRINKLE` and `AI TRY-ON` are optional actions that upload only the photos selected for that generation.
-- AI requests go through a Pyxis-owned backend; never put an OpenAI API key in the app.
+- AI requests go through the Pyxis xAI gateway; never put an xAI provider key in the app.
 
 Images are stored locally in Application Support. Metadata is stored with SwiftData.
 On-device memory records, including item/fit summaries and local embedding vectors, are keyed, validated, stored with SwiftData, and retrieved in-process.
 
-Set the `PYXIS_AI_BASE_URL` Xcode build setting to the HTTPS origin that implements:
+Deploy `backend/pyxis-ai-worker`, copy `Config/Pyxis.local.xcconfig.example` to the Git-ignored `Config/Pyxis.local.xcconfig`, then set:
+
+- `PYXIS_AI_BASE_URL`: the Worker's HTTPS origin
+- `PYXIS_AI_ACCESS_TOKEN`: the same scoped gateway token stored as the Worker's `PYXIS_ACCESS_TOKEN` secret
+
+The gateway implements:
 
 - `POST /v1/ai/garment-cleanup` with multipart field `source`
 - `POST /v1/ai/virtual-try-on` with multipart fields `person` and `garment_1...n`
 
-Each endpoint returns image bytes, or JSON `{ "image_base64": "..." }`. The backend should use GPT Image 2, authenticate/rate-limit callers, remove image metadata, impose upload limits, and keep `OPENAI_API_KEY` server-side.
+Each endpoint returns image bytes. The included Cloudflare Worker authenticates and rate-limits callers, validates uploads, calls `grok-imagine-image-quality`, and keeps `XAI_API_KEY` server-side. The app downsamples uploads and strips their source metadata before sending them.
+
+See `docs/AI_GATEWAY.md` for secret setup, deployment, testing, and the production-authentication limitation of the initial shared gateway token.

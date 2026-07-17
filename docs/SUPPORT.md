@@ -22,7 +22,7 @@ Do not send private clothing photos unless you are comfortable sharing them for 
 
 ## Local Data
 
-Pyxis does not create accounts, run analytics, or sync the closet database to a cloud service. Closet photos remain local unless you explicitly tap an AI generation action; that action sends the person and/or garment photos shown in the disclosure to the configured Pyxis AI service. Deleting the app removes data stored in the app's local container from the device.
+Pyxis does not create accounts, run analytics, or sync the closet database to a cloud service. Closet photos remain local unless you explicitly tap an AI generation action; that action sends the disclosed person and/or garment photos through the Pyxis gateway to xAI. xAI may retain API requests and responses for up to 30 days under its standard data controls. Deleting the app removes data stored in the app's local container from the device but does not shorten that temporary provider retention window.
 
 ## Privacy Policy
 
