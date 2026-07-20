@@ -19,6 +19,11 @@ same checks, so bypassing a local hook does not bypass repository policy.
 Configure the `Release notes policy / validate` check as required in the
 GitHub `main` branch ruleset.
 
+For a migration pull request whose target branch predates this policy, GitHub
+starts commit validation at the commit that introduced the validator. Once the
+validator is present on the target branch, every commit in the comparison range
+must follow the policy.
+
 ## Every Update
 
 1. Make one coherent change.

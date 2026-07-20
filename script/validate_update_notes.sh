@@ -36,9 +36,9 @@ validate_fragment() {
   [[ "$bump" =~ ^(none|patch|minor|major)$ ]] || fail "$path has invalid bump '$bump'"
   [[ "$area" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || fail "$path area must be kebab-case"
   [[ ${#summary} -ge 10 && ${#summary} -le 140 ]] || fail "$path summary must be 10-140 characters"
-  rg -q '^## Details$' "$path" || fail "$path must include a Details section"
-  rg -q '^## Verification$' "$path" || fail "$path must include a Verification section"
-  rg -q '^- .+' "$path" || fail "$path must include at least one bullet"
+  grep -Eq '^## Details$' "$path" || fail "$path must include a Details section"
+  grep -Eq '^## Verification$' "$path" || fail "$path must include a Verification section"
+  grep -Eq '^- .+' "$path" || fail "$path must include at least one bullet"
 }
 
 MODE="${1:-}"
@@ -61,9 +61,9 @@ case "$MODE" in
     fragments=()
     while IFS= read -r path; do
       [[ -n "$path" ]] && fragments+=("$path")
-    done < <(git diff --name-only --diff-filter=AR "$BASE" "$HEAD" -- 'changes/*.md' 'changes/archive/**/*.md' | rg -v '^changes/(README|template)\.md$' || true)
+    done < <(git diff --name-only --diff-filter=AR "$BASE" "$HEAD" -- 'changes/*.md' 'changes/archive/**/*.md' | grep -Ev '^changes/(README|template)\.md$' || true)
 
-    changed_files="$(git diff --name-only "$BASE" "$HEAD" | rg -v '^changes/(README|template)\.md$' || true)"
+    changed_files="$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '^changes/(README|template)\.md$' || true)"
     if [[ -n "$changed_files" && ${#fragments[@]} -eq 0 ]]; then
       fail "this push changes files but adds no new change fragment; run ./script/new_update_note.sh"
     fi

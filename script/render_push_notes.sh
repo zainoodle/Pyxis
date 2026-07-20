@@ -13,7 +13,7 @@ HEAD="$2"
 fragments=()
 while IFS= read -r path; do
   [[ -n "$path" ]] && fragments+=("$path")
-done < <(git diff --name-only --diff-filter=AR "$BASE" "$HEAD" -- 'changes/*.md' 'changes/archive/**/*.md' | rg -v '^changes/(README|template)\.md$' || true)
+done < <(git diff --name-only --diff-filter=AR "$BASE" "$HEAD" -- 'changes/*.md' 'changes/archive/**/*.md' | grep -Ev '^changes/(README|template)\.md$' || true)
 
 printf '## Push update notes\n\n'
 if [[ ${#fragments[@]} -eq 0 ]]; then
@@ -32,7 +32,7 @@ for type in added changed deprecated removed fixed security; do
   esac
   matching=()
   for path in "${fragments[@]}"; do
-    rg -q "^type: $type$" "$path" && matching+=("$path")
+    grep -Eq "^type: $type$" "$path" && matching+=("$path")
   done
   [[ ${#matching[@]} -gt 0 ]] || continue
   printf '### %s\n\n' "$heading"

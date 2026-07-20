@@ -28,6 +28,18 @@ jobs:
             git fetch origin main --quiet || true
             base="$(git merge-base HEAD origin/main 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -n 1)"
           fi
+
+          # A long-lived PR can contain commits created before this policy was
+          # introduced. Start validation at the commit that added the policy
+          # only when the comparison base does not already contain it. Once the
+          # policy reaches main, every commit in subsequent PRs is validated.
+          if ! git cat-file -e "${base}:script/validate_commit_messages.sh" 2>/dev/null; then
+            policy_commit="$(git log --reverse --format=%H "$base..HEAD" -- script/validate_commit_messages.sh | head -n 1)"
+            if [[ -n "$policy_commit" ]]; then
+              base="${policy_commit}^"
+            fi
+          fi
+
           echo "sha=$base" >> "$GITHUB_OUTPUT"
 
       - name: Validate commit subjects
