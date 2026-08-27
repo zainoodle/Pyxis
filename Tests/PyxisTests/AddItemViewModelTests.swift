@@ -1,0 +1,399 @@
+import XCTest
+@testable import PyxisCore
+
+@MainActor
+final class AddItemViewModelTests: XCTestCase {
+    func testPersistsClassificationAndColorConfidenceOnCreatedItem() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "navy-cargo-pants.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let backgroundRemoval = FailingBackgroundRemovalService(imageStorage: storage)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: backgroundRemoval
+        )
+
+        viewModel.selectImage(source)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000042"))
+        await viewModel.processSelectedImage(itemID: itemID)
+        let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
+
+        XCTAssertEqual(item.id, itemID)
+        XCTAssertEqual(item.category, .bottoms)
+        XCTAssertEqual(item.subtype, .pants)
+        XCTAssertGreaterThan(item.classificationConfidence ?? 0, 0)
+        XCTAssertNotNil(item.colorConfidence)
+    }
+
+    func testUsesFilenameColorWhenImageAnalysisHasNoVisiblePixels() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(
+            named: "black-hoodie.png",
+            root: root,
+            color: PyxisColor(red: 1, green: 1, blue: 1, alpha: 0),
+            format: .png
+        )
+        let storage = try ImageStorageService(rootURL: root)
+        let backgroundRemoval = FailingBackgroundRemovalService(imageStorage: storage)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: backgroundRemoval
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
+
+        XCTAssertEqual(item.primaryColor, .black)
+        XCTAssertGreaterThan(item.colorConfidence ?? 0, 0)
+    }
+
+    func testSelectingNewImageWithoutColorHintClearsPreviousColorMetadata() throws {
+        let root = try makeTemporaryRoot()
+        let firstSource = try makeImageFile(named: "black-hoodie.png", root: root)
+        let secondSource = try makeImageFile(named: "pyxis-import.png", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(firstSource)
+        XCTAssertEqual(viewModel.primaryColor, .black)
+
+        viewModel.selectImage(secondSource)
+
+        XCTAssertEqual(viewModel.primaryColor, .unknown)
+        XCTAssertEqual(viewModel.colorConfidence, 0)
+    }
+
+    func testKeepsConfidentImageColorOverFilenameColorHint() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(
+            named: "black-shirt.jpg",
+            root: root,
+            color: .red,
+            format: .jpeg
+        )
+        let storage = try ImageStorageService(rootURL: root)
+        let backgroundRemoval = FailingBackgroundRemovalService(imageStorage: storage)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: backgroundRemoval
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
+
+        XCTAssertEqual(item.primaryColor, .red)
+        XCTAssertGreaterThan(item.colorConfidence ?? 0, 0.9)
+    }
+
+    func testVisualClassificationRefinesFilenameMetadataAfterProcessing() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "black-shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage),
+            classificationService: StubClassificationService(
+                filenameResult: ClothingClassificationResult(
+                    category: .tops,
+                    subtype: .shirt,
+                    confidence: 0.55
+                ),
+                imageResult: ClothingClassificationResult(
+                    category: .bottoms,
+                    subtype: .jeans,
+                    confidence: 0.9
+                )
+            )
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
+
+        XCTAssertEqual(item.category, .bottoms)
+        XCTAssertEqual(item.subtype, .jeans)
+        XCTAssertEqual(item.classificationConfidence, 0.9)
+    }
+
+    func testManualClassificationEditPreventsVisualClassificationOverride() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "black-shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage),
+            classificationService: StubClassificationService(
+                filenameResult: ClothingClassificationResult(
+                    category: .tops,
+                    subtype: .shirt,
+                    confidence: 0.55
+                ),
+                imageResult: ClothingClassificationResult(
+                    category: .bottoms,
+                    subtype: .jeans,
+                    confidence: 0.9
+                )
+            )
+        )
+
+        viewModel.selectImage(source)
+        viewModel.updateCategory(.accessories, preferredSubtype: .watch)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: []))
+
+        XCTAssertEqual(item.category, .accessories)
+        XCTAssertEqual(item.subtype, .watch)
+        XCTAssertEqual(item.classificationConfidence, 0.55)
+    }
+
+    func testRotatingProcessedImageUpdatesStoredOriginalAndThumbnail() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(
+            named: "wide-shirt.jpg",
+            root: root,
+            size: CGSize(width: 24, height: 12)
+        )
+        let storage = try ImageStorageService(rootURL: root)
+        let itemID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000077"))
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: itemID)
+
+        try viewModel.rotateProcessedImage(.clockwise)
+
+        let result = try XCTUnwrap(viewModel.result)
+        let originalImage = try XCTUnwrap(PyxisImage(contentsOfFile: storage.url(for: result.originalPath).path))
+        let thumbnailPath = try XCTUnwrap(result.thumbnailPath)
+        let thumbnailImage = try XCTUnwrap(PyxisImage(contentsOfFile: storage.url(for: thumbnailPath).path))
+        XCTAssertLessThan(originalImage.size.width, originalImage.size.height)
+        XCTAssertLessThan(thumbnailImage.size.width, thumbnailImage.size.height)
+        XCTAssertEqual(
+            originalImage.size.width / originalImage.size.height,
+            thumbnailImage.size.width / thumbnailImage.size.height,
+            accuracy: 0.001
+        )
+        XCTAssertLessThanOrEqual(max(thumbnailImage.size.width, thumbnailImage.size.height), 420)
+    }
+
+    func testUsesDisplayedCandidateCodeWhenItIsStillAvailable() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(
+            viewModel.makeClosetItem(
+                existingCodes: ["SH-001"],
+                preferredItemCode: "SH-009"
+            )
+        )
+
+        XCTAssertEqual(item.itemCode, "SH-009")
+    }
+
+    func testRegeneratesDisplayedCandidateCodeAfterCollision() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let item = try XCTUnwrap(
+            viewModel.makeClosetItem(
+                existingCodes: ["SH-001", "SH-009"],
+                preferredItemCode: "SH-009"
+            )
+        )
+
+        XCTAssertEqual(item.itemCode, "SH-002")
+    }
+
+    func testChangingCategoryResetsIncompatibleSubtype() throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+        viewModel.category = .accessories
+        viewModel.subtype = .sunglasses
+
+        viewModel.updateCategory(.bottoms)
+
+        XCTAssertEqual(viewModel.category, .bottoms)
+        XCTAssertEqual(viewModel.subtype, .pants)
+    }
+
+    func testDiscardDraftDeletesProcessedImages() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "draft-shirt.jpg", root: root)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage(itemID: UUID())
+        let result = try XCTUnwrap(viewModel.result)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
+
+        viewModel.discardDraft()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
+        if let thumbnailPath = result.thumbnailPath {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: thumbnailPath).path))
+        }
+        XCTAssertNil(viewModel.result)
+        XCTAssertNil(viewModel.selectedImageURL)
+    }
+
+    func testOlderRequestFinishingLastCannotOverwriteNewDraft() async throws {
+        let root = try makeTemporaryRoot()
+        let firstSource = try makeImageFile(named: "first-shirt.jpg", root: root, color: .red)
+        let secondSource = try makeImageFile(named: "second-shirt.jpg", root: root, color: .blue)
+        let storage = try ImageStorageService(rootURL: root)
+        let processor = ControlledBackgroundRemovalService()
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: processor
+        )
+        let firstID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000701"))
+        let secondID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000702"))
+
+        viewModel.selectImage(firstSource)
+        let firstTask = Task { await viewModel.processSelectedImage(itemID: firstID) }
+        await waitUntilRequested(firstID, by: processor)
+
+        viewModel.selectImage(secondSource)
+        let secondTask = Task { await viewModel.processSelectedImage(itemID: secondID) }
+        await waitUntilRequested(secondID, by: processor)
+
+        let secondPath = try storage.saveOriginal(from: secondSource, itemID: secondID)
+        await processor.complete(
+            secondID,
+            with: BackgroundRemovalResult(
+                originalPath: secondPath,
+                cutoutPath: nil,
+                thumbnailPath: nil,
+                status: .failed
+            )
+        )
+        await secondTask.value
+
+        let firstPath = try storage.saveOriginal(from: firstSource, itemID: firstID)
+        await processor.complete(
+            firstID,
+            with: BackgroundRemovalResult(
+                originalPath: firstPath,
+                cutoutPath: nil,
+                thumbnailPath: nil,
+                status: .failed
+            )
+        )
+        await firstTask.value
+
+        XCTAssertEqual(viewModel.result?.originalPath, secondPath)
+        XCTAssertEqual(viewModel.makeClosetItem(existingCodes: [])?.id, secondID)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: secondPath).path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: firstPath).path))
+    }
+
+    private func waitUntilRequested(
+        _ id: UUID,
+        by processor: ControlledBackgroundRemovalService
+    ) async {
+        var wasRequested = false
+        for _ in 0..<100 {
+            wasRequested = await processor.hasRequest(id)
+            if wasRequested { break }
+            await Task.yield()
+        }
+        XCTAssertTrue(wasRequested)
+    }
+
+    private func makeTemporaryRoot() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Pyxis-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: url)
+        }
+        return url
+    }
+
+    private enum TestImageFormat {
+        case jpeg
+        case png
+    }
+
+    private func makeImageFile(
+        named name: String,
+        root: URL,
+        color: PyxisColor = PyxisColor(red: 0.02, green: 0.05, blue: 0.22, alpha: 1),
+        format: TestImageFormat = .jpeg,
+        size: CGSize = CGSize(width: 12, height: 12)
+    ) throws -> URL {
+        let url = root.appendingPathComponent(name)
+        let image = makeTestImage(color: color, size: size)
+        let data = try XCTUnwrap(format == .jpeg ? image.jpegDataForTests() : image.pngDataForTests())
+        try data.write(to: url)
+        return url
+    }
+}
+
+private struct StubClassificationService: ClothingClassificationProviding {
+    let filenameResult: ClothingClassificationResult
+    let imageResult: ClothingClassificationResult
+
+    func classify(filename: String?) -> ClothingClassificationResult {
+        filenameResult
+    }
+
+    func classify(
+        filename: String?,
+        visualObservations: [ClothingVisualObservation]
+    ) -> ClothingClassificationResult {
+        imageResult
+    }
+
+    func classify(imageURL: URL, filename: String?) -> ClothingClassificationResult {
+        imageResult
+    }
+}
+
+private actor ControlledBackgroundRemovalService: BackgroundRemovalServiceProtocol {
+    private var continuations: [UUID: CheckedContinuation<BackgroundRemovalResult, Never>] = [:]
+
+    func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult {
+        await withCheckedContinuation { continuation in
+            continuations[itemID] = continuation
+        }
+    }
+
+    func hasRequest(_ itemID: UUID) -> Bool {
+        continuations[itemID] != nil
+    }
+
+    func complete(_ itemID: UUID, with result: BackgroundRemovalResult) {
+        continuations.removeValue(forKey: itemID)?.resume(returning: result)
+    }
+}

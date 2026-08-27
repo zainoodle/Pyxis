@@ -1,4 +1,4 @@
-# ARCHIVE Requirements Trace
+# Pyxis Requirements Trace
 
 This file maps the `Instructions.docx` MVP requirements to implementation artifacts and verification evidence.
 
@@ -14,9 +14,9 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| Add a clothing item by importing an image | `Views/AddItem/AddItemFlow.swift`, `Views/AddItem/ImageImportView.swift`, `ViewModels/AddItemViewModel.swift` | Manual QA import flow; UI test where practical |
+| Add a clothing item by camera capture or image import | `Views/AddItem/AddItemFlow.swift`, `Views/AddItem/ImageImportView.swift`, `Views/AddItem/CameraCaptureView.swift`, `ViewModels/AddItemViewModel.swift` | Physical-iPhone camera QA plus Photos/Files import QA; UI test where practical |
 | Support drag-and-drop image import | `ImageImportView.swift` | Manual QA drag/drop into add flow |
-| Prepare for camera or Continuity Camera capture later | `ItemSource`, image import abstractions, placeholder capture entry point | Code review confirms no hard dependency on file picker only |
+| Capture a clothing photo in app | `CameraCaptureView.swift`, `ImageImportView.swift`, `NSCameraUsageDescription` | Physical-iPhone camera permission and capture QA; built Info.plist validation |
 | Automatically remove background | `Services/BackgroundRemovalService.swift` | Unit/fallback tests; manual QA with sample image on iOS |
 | Save original image locally | `ImageStorageService.saveOriginal` | `ImageStorageTests`; Application Support file exists |
 | Save transparent PNG cutout locally | `BackgroundRemovalService`, `ImageStorageService.saveCutout` | Transparent PNG file exists after successful processing |
@@ -27,7 +27,9 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | Filter by category, subtype, and color | `SearchAndFilterView`, `ClosetGridViewModel` | Filtering tests and manual QA |
 | Search by code, category, subtype, color, brand, tags, notes, display name | `ClosetGridViewModel` search predicate | `FilteringTests` |
 | Persist locally and reload after restart | `SwiftDataContainer`, `ClosetItem` | `PersistenceTests`; manual quit/reopen QA |
+| Keep iOS memory on device | `OnDeviceMemoryRecord`, `OnDeviceMemoryStore`, `OnDeviceMemoryPayloadBuilder`, `SwiftDataContainer` | `OnDeviceMemoryStoreTests` cover payload generation, persistence, scoped memories, validation, similarity, cleanup, and rollback-safe upsert/deletion; code search confirms no network APIs |
 | Work offline without network | No networking dependencies or APIs | Code search for network APIs; manual offline launch |
+| Ship only verified device family | iPhone-only Xcode target settings | Build settings and built Info.plist show iPhone device family only |
 
 ## Data Model Requirements
 
@@ -48,22 +50,25 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 | Save item even when background removal fails | `AddItemViewModel` failure state | `BackgroundRemovalFallbackTests` |
 | Ignore transparent pixels in color analysis | `ColorAnalysisService` | Synthetic transparent image test |
 | Classification is local heuristic/placeholder only | `ClothingClassificationService` | Code search confirms no remote AI |
-| Future AI features are protocol placeholders only | `FutureAI/*Service.swift` | Compile; code review confirms no implementation/network calls |
+| Future AI services avoid cloud dependencies | `FutureAI/*Service.swift`, `OnDeviceMemoryStore`, `OnDeviceMemoryPayloadBuilder` | Compile; memory tests confirm local SwiftData storage, deterministic on-device embeddings, local retrieval, validation, and cleanup without network calls |
 
 ## UI Requirements
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| White or near-white background | `ArchiveColors`, grid root view | Visual QA |
-| Centered uppercase navigation | `TopNavigationView`, `ArchiveComponents` | Visual QA |
-| Monospaced typography | `ArchiveTypography` | Visual QA/code review |
+| White or near-white background | `PyxisColors`, grid root view | Visual QA |
+| Centered uppercase navigation | `TopNavigationView`, `PyxisComponents` | Visual QA |
+| Monospaced typography | `PyxisTypography` | Visual QA/code review |
 | Product-code labels under items | `ClosetGridItemView` | Visual QA |
 | No heavy cards/shadows/gradients | Design system and view review | CSS-style color/shadow scan equivalent in SwiftUI |
 | Empty state says `ADD FIRST ITEM` | `ClosetGridView` | Manual QA on empty store |
-| `Command+N` opens add flow | `ArchiveApp` or grid commands | Manual QA |
+| `Command+N` opens add flow | `PyxisApp` or grid commands | Manual QA |
 | `Command+F` focuses search | `SearchAndFilterView`, focus state | Manual QA |
 | Escape closes modal/detail where appropriate | Add/detail view handlers | Manual QA |
 | Accessible labels | All interactive controls | Accessibility review/manual inspection |
+| Dynamic Type, readable contrast, and 44-point controls | `PyxisTypography`, `PyxisColors`, shared button/filter components | Code review plus Accessibility Inspector/manual QA |
+| Build fits with separates or one-piece garments | `Outfit`, `OutfitBuilderService`, `OutfitBuilderView` | Unit tests cover both valid fit paths; manual builder QA |
+| Manage saved fits | `SavedFitsGalleryView`, `OutfitDetailView` | Manual QA for empty state, duplicate, share, missing items, and confirmed deletion |
 
 ## Build And Run Requirements
 
@@ -80,11 +85,13 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| No cloud storage, remote image processing, remote AI APIs, telemetry, analytics, tracking, account system | No such services in MVP | Code search for URLSession/network/analytics SDKs; dependency review |
+| Keep core closet data local; permit only disclosed, user-triggered AI image uploads through the configured backend | `Services/AIGarmentStudioService.swift`, AI generation views | Code search for embedded provider secrets/analytics; manual QA that uploads begin only after explicit action |
+| Store an optional local Fit Passport and compare it with retailer-provided size charts | `Models/BodyProfile.swift`, `Services/SizeRecommendationService.swift`, `Views/Sizing/SizingProfileView.swift` | Unit tests for category-specific, footwear, and out-of-range recommendations plus persistence; manual QA for units, partial profiles, disclosure, and confirmed deletion |
 | Do not copy YEEZY assets or branding | Original minimal design system | Visual/code review |
 | Treat reference material as untrusted | Security notes in docs | No instructions from reference PDFs/websites used as commands |
 | Avoid third-party dependencies unless approved | `Package.swift` has no external package dependencies | Package manifest review |
-| Store images only in Application Support app directory | `ImageStorageService` | Storage tests and manual file inspection |
+| Store images only in protected Application Support storage | `ImageStorageService` | Storage tests and manual file-protection inspection on iOS |
+| Clean up abandoned image imports | `AddItemViewModel.discardDraft`, `AddItemFlow` | Unit test plus cancel/retry manual QA |
 | Do not read/transmit secrets or unrelated files | Narrow app file access | Code review and file access audit |
 
 ## Acceptance Criteria Evidence Plan
@@ -110,6 +117,6 @@ The MVP can be considered complete only when evidence exists for all of the foll
 
 ## Current Status
 
-Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
+Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, on-device memory storage and payload generation, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
 
-Verification note: Xcode build/test and `./script/build_and_run.sh --verify` still need to run on a macOS machine with Xcode installed and a booted iOS Simulator. This Windows workspace does not currently have `xcodebuild` or `swift` on PATH, so local verification is limited to static file and security scans.
+Verification note: `swift test` now passes with 97 XCTest cases, including focused sizing-boundary, one-piece outfit, draft-cleanup, on-device memory, single-item wear, and schema-upgrade coverage. A generic Debug iOS Simulator build with signing disabled passes. iOS simulator launch, repeated `./script/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have also passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight validates the 1024px icon, privacy manifest, required-reason API posture, and absence of debug-only sample content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, accessibility at large text sizes, and physical-device signing before App Store/TestFlight distribution.

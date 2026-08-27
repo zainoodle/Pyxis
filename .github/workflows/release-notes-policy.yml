@@ -1,0 +1,92 @@
+name: Release notes policy
+
+on:
+  push:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve comparison base
+        id: base
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            base="${{ github.event.before }}"
+          else
+            git fetch origin main --quiet || true
+            base="$(git merge-base HEAD origin/main 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          # A long-lived PR can contain commits created before this policy was
+          # introduced. Start validation at the commit that added the policy
+          # only when the comparison base does not already contain it. Once the
+          # policy reaches main, every commit in subsequent PRs is validated.
+          if ! git cat-file -e "${base}:script/validate_commit_messages.sh" 2>/dev/null; then
+            policy_commit="$(git log --reverse --format=%H "$base..HEAD" -- script/validate_commit_messages.sh | head -n 1)"
+            if [[ -n "$policy_commit" ]]; then
+              base="${policy_commit}^"
+            fi
+          fi
+
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+
+      - name: Validate commit subjects
+        run: ./script/validate_commit_messages.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
+
+      - name: Validate update fragments
+        run: ./script/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
+
+      - name: Attach push notes to the check summary
+        if: always()
+        run: |
+          if ./script/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD >/dev/null 2>&1; then
+            ./script/render_push_notes.sh "${{ steps.base.outputs.sha }}" HEAD >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Release notes" >> "$GITHUB_STEP_SUMMARY"
+            echo "This push did not include valid update fragments." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  quality:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run core tests
+        run: ./script/test.sh
+
+      - name: Install Worker dependencies
+        working-directory: backend/pyxis-ai-worker
+        run: npm ci
+
+      - name: Test and check Worker
+        working-directory: backend/pyxis-ai-worker
+        run: npm test && npm run check
+
+      - name: Audit Worker dependencies
+        working-directory: backend/pyxis-ai-worker
+        run: npm audit --audit-level=high
+
+      - name: Run static deployment preflight
+        run: ./script/deployment_preflight.sh static
+
+      - name: Build the iOS app
+        run: >-
+          xcodebuild
+          -project Pyxis.xcodeproj
+          -scheme Pyxis
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build

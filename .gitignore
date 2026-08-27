@@ -1,9 +1,12 @@
 .build/
+**/node_modules/
 dist/
-DerivedData/
+DerivedData*/
 *.xcuserdata/
 *.xcuserstate
 .DS_Store
 *.swp
 *.tmp
 .superpowers/
+backend/pyxis-ai-worker/.dev.vars
+Config/Pyxis.local.xcconfig

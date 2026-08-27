@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+ZERO_SHA='0000000000000000000000000000000000000000'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" == "$ZERO_SHA" ]] && continue
+
+  if [[ "$remote_sha" == "$ZERO_SHA" ]]; then
+    default_remote_ref="refs/remotes/origin/main"
+    if git show-ref --verify --quiet "$default_remote_ref"; then
+      base="$(git merge-base "$local_sha" "$default_remote_ref")"
+    else
+      base="$(git rev-list --max-parents=0 "$local_sha" | tail -n 1)"
+    fi
+  else
+    base="$remote_sha"
+  fi
+
+  "$ROOT_DIR/script/validate_commit_messages.sh" --base "$base" --head "$local_sha"
+  "$ROOT_DIR/script/validate_update_notes.sh" --base "$base" --head "$local_sha"
+done

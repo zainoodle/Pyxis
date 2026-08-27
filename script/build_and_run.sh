@@ -2,12 +2,50 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-PROJECT="ARCHIVE.xcodeproj"
-SCHEME="ARCHIVE"
-BUNDLE_ID="com.zainoodle.archive"
+PROJECT="Pyxis.xcodeproj"
+SCHEME="Pyxis"
+BUNDLE_ID="com.zainoodle.pyxis"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DERIVED_DATA="$ROOT_DIR/DerivedData"
+DERIVED_DATA="$(mktemp -d "${TMPDIR:-/tmp}/pyxis-derived-data.XXXXXX")"
+LAUNCHED_PID=""
+
+cleanup() {
+  case "$DERIVED_DATA" in
+    "${TMPDIR:-/tmp}"/pyxis-derived-data.*)
+      find "$DERIVED_DATA" -depth -delete 2>/dev/null || true
+      ;;
+    *)
+      printf 'warning: refusing to clean unexpected DerivedData path: %s\n' "$DERIVED_DATA" >&2
+      ;;
+  esac
+}
+trap cleanup EXIT
+
+resolve_developer_dir() {
+  local selected="${DEVELOPER_DIR:-$(xcode-select -p 2>/dev/null || true)}"
+
+  if [[ "$selected" == */CommandLineTools ]]; then
+    if [[ -d /Applications/Xcode.app/Contents/Developer ]]; then
+      selected="/Applications/Xcode.app/Contents/Developer"
+      printf 'Using Xcode at %s (Command Line Tools are globally selected).\n' "$selected" >&2
+    else
+      printf '%s\n' \
+        'error: Full Xcode is required. Install Xcode or set DEVELOPER_DIR to its Contents/Developer directory.' >&2
+      exit 2
+    fi
+  fi
+
+  if [[ ! -x "$selected/usr/bin/xcodebuild" ]]; then
+    printf 'error: DEVELOPER_DIR does not point to a full Xcode installation: %s\n' "$selected" >&2
+    exit 2
+  fi
+
+  printf '%s' "$selected"
+}
+
+DEVELOPER_DIR="$(resolve_developer_dir)"
+export DEVELOPER_DIR
 
 cd "$ROOT_DIR"
 
@@ -30,11 +68,20 @@ app_bundle_path() {
   find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1
 }
 
+terminate_existing_app() {
+  local simulator_id="$1"
+  xcrun simctl terminate "$simulator_id" "$BUNDLE_ID" >/dev/null 2>&1 || true
+}
+
 run_on_booted_simulator() {
   local simulator_id
   simulator_id="$(booted_simulator_id)"
   if [[ -z "$simulator_id" ]]; then
-    echo "No booted iOS Simulator found. Boot an iPhone simulator in Xcode, then rerun this script." >&2
+    if ! xcrun simctl list runtimes available | grep -q 'iOS'; then
+      echo "No available iOS Simulator runtime is installed. Install one from Xcode > Settings > Components, create and boot an iPhone simulator, then rerun this script." >&2
+    else
+      echo "No booted iOS Simulator found. Boot an iPhone simulator in Xcode, then rerun this script." >&2
+    fi
     exit 2
   fi
 
@@ -47,8 +94,31 @@ run_on_booted_simulator() {
     exit 1
   fi
 
+  terminate_existing_app "$simulator_id"
   xcrun simctl install "$simulator_id" "$app_path"
-  xcrun simctl launch "$simulator_id" "$BUNDLE_ID"
+  local launch_output
+  launch_output="$(xcrun simctl launch "$simulator_id" "$BUNDLE_ID")"
+  echo "$launch_output"
+
+  LAUNCHED_PID="${launch_output##*: }"
+  if [[ ! "$LAUNCHED_PID" =~ ^[0-9]+$ ]]; then
+    echo "Could not parse launched app pid from simctl output: $launch_output" >&2
+    exit 1
+  fi
+}
+
+verify_launched_app() {
+  if [[ -z "$LAUNCHED_PID" ]]; then
+    echo "No launched app pid was captured." >&2
+    exit 1
+  fi
+
+  # Simulator app processes are host processes. Checking the host PID works
+  # across runtimes where `simctl spawn ... /bin/ps` is unavailable.
+  if ! kill -0 "$LAUNCHED_PID" 2>/dev/null; then
+    echo "Launched app process $LAUNCHED_PID is no longer running." >&2
+    exit 1
+  fi
 }
 
 case "$MODE" in
@@ -58,7 +128,7 @@ case "$MODE" in
   --verify|verify)
     run_on_booted_simulator
     sleep 1
-    xcrun simctl spawn booted launchctl print system >/dev/null
+    verify_launched_app
     ;;
   --logs|logs)
     run_on_booted_simulator

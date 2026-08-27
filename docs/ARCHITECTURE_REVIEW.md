@@ -1,24 +1,22 @@
-# ARCHIVE Architecture Review
+# Pyxis Architecture Review
 
-> Note: This original review described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `ARCHIVE.xcodeproj`.
+> Note: This original review described the macOS prototype. The macOS version is preserved on the `macos-main` branch. The `main` branch now targets iOS with `Pyxis.xcodeproj`.
 
-## Current Workspace
+## Original Workspace
 
-- Project root: `C:\Users\zaino\OneDrive\Documents\Github\Pyxis`
-- Existing app project: none found.
-- Existing Swift source: none found.
-- Existing build files: no `Package.swift`, `.xcodeproj`, or `.xcworkspace`.
-- Existing git repo: none found.
+- Original project root: `C:\Users\zaino\OneDrive\Documents\Github\Pyxis`
+- The current branch now contains `Pyxis.xcodeproj`, Swift sources, tests, docs, and the iOS build/run script.
+- Current local workspace: `/Users/isaiahjohnson/Documents/Github/Pyxis`
 - Reference files present:
   - `Instructions.docx`
   - `YEEZY style reference.pdf`
   - `(15) Chrome on X_ _How to Build Claude Workflows That Run Without You_ _ X.pdf`
 
-This review is Phase 1 only. The instruction document requires approval before large implementation begins.
+This review began as Phase 1 for the original prototype. The current branch is the implemented iOS app.
 
 ## Product Summary
 
-ARCHIVE is a local-first macOS SwiftUI app for logging and organizing clothing items. The MVP focuses on:
+Pyxis is a local-first iOS SwiftUI app for logging and organizing clothing items. The MVP focuses on:
 
 1. Importing or dropping clothing photos.
 2. Attempting local background removal.
@@ -28,17 +26,17 @@ ARCHIVE is a local-first macOS SwiftUI app for logging and organizing clothing i
 6. Searching and filtering the closet.
 7. Persisting the closet across app restarts.
 
-AI outfit recommendations, purchase compatibility, and embedding-based similarity are future phases only. The MVP should define protocols/placeholders for those services without implementing network AI, cloud calls, or recommendation UI as the centerpiece.
+AI outfit recommendations and purchase compatibility are future phases. The app may persist on-device memory records and local embedding vectors, but must not implement network AI, cloud calls, or recommendation UI as the centerpiece without explicit approval.
 
 ## Proposed Project Shape
 
-Use a SwiftPM-first macOS SwiftUI application. Xcode can open the package directly, and the build/run script can stage a local `.app` bundle from the executable product for Codex app launch support.
+Use an iOS SwiftUI application in `Pyxis.xcodeproj`, with a SwiftPM package target for testable core code. The build/run script builds, installs, and launches the iOS app on a booted simulator.
 
 ```text
 Package.swift
-ARCHIVE/
+Pyxis/
   App/
-    ArchiveApp.swift
+    PyxisApp.swift
   Models/
     ClosetItem.swift
     ClothingCategory.swift
@@ -77,15 +75,15 @@ ARCHIVE/
     Search/
       SearchAndFilterView.swift
   DesignSystem/
-    ArchiveTypography.swift
-    ArchiveColors.swift
-    ArchiveSpacing.swift
-    ArchiveComponents.swift
+    PyxisTypography.swift
+    PyxisColors.swift
+    PyxisSpacing.swift
+    PyxisComponents.swift
   Utilities/
     ImageUtilities.swift
     FileManagerExtensions.swift
 Tests/
-  ArchiveTests/
+  PyxisTests/
     ItemCodeGeneratorTests.swift
     ColorAnalysisTests.swift
     ImageStorageTests.swift
@@ -143,7 +141,7 @@ Use SwiftData for closet item metadata and Application Support for image assets.
 Image storage root:
 
 ```text
-Application Support/ARCHIVE/Images/
+Application Support/Pyxis/Images/
   Originals/
   Cutouts/
   Thumbnails/
@@ -214,8 +212,8 @@ Implementation plan:
 
 Deployment target recommendation:
 
-- Prefer macOS 14+ for the older `VNGenerateForegroundInstanceMaskRequest` path.
-- Consider macOS 15+ if adopting the newer Swift Vision `GenerateForegroundInstanceMaskRequest` API.
+- Current app target: iOS 17+.
+- Use Apple local Vision/Core Image APIs available to the selected iOS deployment target.
 
 The app must never upload images to a remote background-removal service.
 
@@ -241,7 +239,9 @@ Create protocols only:
 - `PurchaseCompatibilityService`
 - `EmbeddingService`
 
-Do not implement network AI, cloud model calls, shopping integrations, accounts, or outfit generation in the MVP.
+Do not add network-backed recommendations, shopping integrations, accounts, telemetry, or cloud memory in the MVP. The separately approved AI Studio image actions are the only remote-AI exception.
+
+Current iOS note: future recommendation and memory behavior remains local-first. The app may persist on-device memory records and embedding vectors through SwiftData. User-triggered AI garment cleanup and try-on may call only the configured Pyxis gateway after an explicit upload disclosure; provider keys remain server-side.
 
 ## UI Architecture
 
@@ -327,15 +327,15 @@ After implementation approval:
 2. Create `Package.swift` and SwiftPM targets.
 3. Create `script/build_and_run.sh`.
 4. Wire `.codex/environments/environment.toml` Run action to `./script/build_and_run.sh`.
-5. For the SwiftPM GUI app, the script should:
-   - stop an existing `ARCHIVE` process,
-   - run `swift build`,
-   - stage `dist/ARCHIVE.app`,
-   - generate a minimal `Info.plist`,
-   - launch with `/usr/bin/open -n dist/ARCHIVE.app`,
+5. For the iOS app, the script should:
+   - find a booted iOS simulator,
+   - build the `Pyxis` Xcode scheme,
+   - stop an existing simulator `Pyxis` process,
+   - install the app bundle,
+   - launch the app with `xcrun simctl launch`,
    - support `--verify`, `--logs`, and `--debug` where practical.
 
-Current environment note: this workspace is on Windows/PowerShell. Swift/Xcode build and app launch verification require macOS with Xcode or a Swift toolchain.
+Current environment note: this workspace is on macOS with Xcode. SwiftPM tests and iOS simulator builds have been verified locally.
 
 ## Testing Plan
 

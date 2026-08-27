@@ -1,0 +1,5 @@
+PYXIS_AI_BASE_URL =
+PYXIS_AI_ACCESS_TOKEN =
+
+// Local values override the safe blanks above. The local file is ignored by Git.
+#include? "Pyxis.local.xcconfig"
