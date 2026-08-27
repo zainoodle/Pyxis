@@ -64,15 +64,12 @@ final class ItemDetailViewModel: ObservableObject {
     }
 
     static func backgroundRemovalItemID(for item: ClosetItem) -> UUID {
-        StoredImageSet(
-            originalPath: item.imageOriginalPath,
-            cutoutPath: item.imageCutoutPath,
-            thumbnailPath: item.thumbnailPath
-        ).stableItemID
+        item.id
     }
 
     func storedImageSet(for item: ClosetItem) -> StoredImageSet {
         StoredImageSet(
+            itemID: item.id,
             originalPath: item.imageOriginalPath,
             cutoutPath: item.imageCutoutPath,
             thumbnailPath: item.thumbnailPath

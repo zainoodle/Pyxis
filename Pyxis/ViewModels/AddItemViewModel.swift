@@ -36,6 +36,11 @@ final class AddItemViewModel: ObservableObject {
     private let aiStudioService: any AIGarmentStudioProviding
     private var userAdjustedClassification = false
     private var draftItemID = UUID()
+    private var processingGeneration: UInt64 = 0
+
+    var isAIStudioAvailable: Bool {
+        aiStudioService.isConfigured
+    }
 
     init() {
         do {
@@ -70,6 +75,7 @@ final class AddItemViewModel: ObservableObject {
     }
 
     func selectImage(_ url: URL) {
+        invalidateProcessing()
         discardProcessedImages()
         discardTemporaryImport()
         draftItemID = UUID()
@@ -111,37 +117,72 @@ final class AddItemViewModel: ObservableObject {
             return
         }
 
+        processingGeneration &+= 1
+        let generation = processingGeneration
+        let priorResult = result
+        let processingItemID: UUID
+        if let itemID {
+            processingItemID = itemID
+        } else if stage == .selected, result == nil {
+            processingItemID = draftItemID
+        } else {
+            processingItemID = UUID()
+        }
+
         stage = .processing
-        let processingStartedAt = Date()
         let processed = await backgroundRemovalService.processImage(
             at: selectedImageURL,
-            itemID: itemID ?? draftItemID
+            itemID: processingItemID
         )
-        result = processed
 
-        if let analysisURL = analysisURL(from: processed),
-           let analysis = try? colorAnalysisService.analyze(imageURL: analysisURL),
+        guard !Task.isCancelled,
+              generation == processingGeneration,
+              self.selectedImageURL == selectedImageURL else {
+            deleteProcessedImages(processed, itemID: processingItemID)
+            discardTemporaryImport(at: selectedImageURL)
+            return
+        }
+
+        let analysisURL = analysisURL(from: processed)
+        let colorAnalysisService = self.colorAnalysisService
+        let classificationService = self.classificationService
+        let filename = selectedImageURL.lastPathComponent
+        let suggestions = await Task.detached(priority: .userInitiated) {
+            let color = analysisURL.flatMap { try? colorAnalysisService.analyze(imageURL: $0) }
+            let classification = analysisURL.map {
+                classificationService.classify(
+                    imageURL: $0,
+                    filename: filename
+                )
+            }
+            return (color, classification)
+        }.value
+
+        guard !Task.isCancelled,
+              generation == processingGeneration,
+              self.selectedImageURL == selectedImageURL else {
+            deleteProcessedImages(processed, itemID: processingItemID)
+            return
+        }
+
+        if let analysis = suggestions.0,
            analysis.primaryColor != .unknown,
            analysis.confidence > 0 {
             primaryColor = analysis.primaryColor
             colorConfidence = analysis.confidence
         }
 
-        if let analysisURL = analysisURL(from: processed), !userAdjustedClassification {
-            let classification = classificationService.classify(
-                imageURL: analysisURL,
-                filename: selectedImageURL.lastPathComponent
-            )
+        if let classification = suggestions.1, !userAdjustedClassification {
             if classification.confidence > classificationConfidence {
                 applyAutomaticClassification(classification)
             }
         }
 
-        let elapsed = Date().timeIntervalSince(processingStartedAt)
-        let minimumRevealDuration: TimeInterval = 1.15
-        if elapsed < minimumRevealDuration {
-            try? await Task.sleep(nanoseconds: UInt64((minimumRevealDuration - elapsed) * 1_000_000_000))
+        if let priorResult, priorResult != processed {
+            deleteProcessedImages(priorResult, itemID: draftItemID)
         }
+        draftItemID = processingItemID
+        result = processed
 
         switch processed.status {
         case .succeeded:
@@ -173,14 +214,8 @@ final class AddItemViewModel: ObservableObject {
             )
         }
 
-        let imageSet = StoredImageSet(
-            originalPath: result.originalPath,
-            cutoutPath: result.cutoutPath,
-            thumbnailPath: result.thumbnailPath
-        )
-
         return ClosetItem(
-            id: imageSet.stableItemID,
+            id: draftItemID,
             itemCode: code,
             displayName: displayName.nilIfBlank,
             category: category,
@@ -205,6 +240,7 @@ final class AddItemViewModel: ObservableObject {
     }
 
     func discardDraft() {
+        invalidateProcessing()
         discardProcessedImages()
         discardTemporaryImport()
         result = nil
@@ -220,14 +256,9 @@ final class AddItemViewModel: ObservableObject {
             let data = try await aiStudioService.makePristineGarment(
                 from: imageStorage.url(for: result.originalPath)
             )
-            let itemID = StoredImageSet(
-                originalPath: result.originalPath,
-                cutoutPath: result.cutoutPath,
-                thumbnailPath: result.thumbnailPath
-            ).stableItemID
-            let cutoutPath = try imageStorage.saveCutoutPNG(data, itemID: itemID)
+            let cutoutPath = try imageStorage.saveCutoutPNG(data, itemID: draftItemID)
             let thumbnailPath = try? imageStorage.makeThumbnail(
-                from: imageStorage.url(for: cutoutPath), itemID: itemID
+                from: imageStorage.url(for: cutoutPath), itemID: draftItemID
             )
             self.result = BackgroundRemovalResult(
                 originalPath: result.originalPath,
@@ -251,6 +282,7 @@ final class AddItemViewModel: ObservableObject {
 
         let rotatedImageSet = try imageStorage.rotateImages(
             StoredImageSet(
+                itemID: draftItemID,
                 originalPath: result.originalPath,
                 cutoutPath: result.cutoutPath,
                 thumbnailPath: result.thumbnailPath
@@ -295,6 +327,7 @@ final class AddItemViewModel: ObservableObject {
         guard let imageStorage, let result, !result.originalPath.isEmpty else { return }
         imageStorage.deleteImages(
             StoredImageSet(
+                itemID: draftItemID,
                 originalPath: result.originalPath,
                 cutoutPath: result.cutoutPath,
                 thumbnailPath: result.thumbnailPath
@@ -305,6 +338,10 @@ final class AddItemViewModel: ObservableObject {
 
     private func discardTemporaryImport() {
         guard let selectedImageURL else { return }
+        discardTemporaryImport(at: selectedImageURL)
+    }
+
+    private func discardTemporaryImport(at selectedImageURL: URL) {
         let temporaryRoot = FileManager.default.temporaryDirectory.standardizedFileURL.path
         let candidate = selectedImageURL.standardizedFileURL
         var prefixes = ["Pyxis-photo-", "Pyxis-camera-", "Pyxis-drop-"]
@@ -314,6 +351,22 @@ final class AddItemViewModel: ObservableObject {
         guard candidate.path.hasPrefix(temporaryRoot + "/"),
               prefixes.contains(where: { candidate.lastPathComponent.hasPrefix($0) }) else { return }
         try? FileManager.default.removeItem(at: candidate)
+    }
+
+    private func invalidateProcessing() {
+        processingGeneration &+= 1
+    }
+
+    private func deleteProcessedImages(_ result: BackgroundRemovalResult, itemID: UUID) {
+        guard let imageStorage, !result.originalPath.isEmpty else { return }
+        imageStorage.deleteImages(
+            StoredImageSet(
+                itemID: itemID,
+                originalPath: result.originalPath,
+                cutoutPath: result.cutoutPath,
+                thumbnailPath: result.thumbnailPath
+            )
+        )
     }
 }
 

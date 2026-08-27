@@ -24,8 +24,13 @@ public enum AIGarmentStudioError: LocalizedError, Equatable {
 }
 
 public protocol AIGarmentStudioProviding: Sendable {
+    var isConfigured: Bool { get }
     func makePristineGarment(from imageURL: URL) async throws -> Data
     func makeTryOn(personURL: URL, garmentURLs: [URL]) async throws -> Data
+}
+
+public extension AIGarmentStudioProviding {
+    var isConfigured: Bool { true }
 }
 
 /// Talks only to the app owner's authenticated backend. Provider API keys must
@@ -35,15 +40,25 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
     private let baseURL: URL?
     private let accessToken: String?
     private let session: URLSession
+    private static let maximumResponseBytes = 20 * 1_024 * 1_024
+    private static let maximumRequestBytes = 48 * 1_024 * 1_024
 
     public init(
         baseURL: URL? = AIGarmentStudioService.configuredBaseURL,
         accessToken: String? = AIGarmentStudioService.configuredAccessToken,
-        session: URLSession = .shared
+        session: URLSession? = nil
     ) {
         self.baseURL = baseURL
         self.accessToken = accessToken
-        self.session = session
+        self.session = session ?? Self.makeEphemeralSession()
+    }
+
+    public var isConfigured: Bool {
+        baseURL != nil && accessToken != nil
+    }
+
+    public static var isConfigured: Bool {
+        configuredBaseURL != nil && configuredAccessToken != nil
     }
 
     public func makePristineGarment(from imageURL: URL) async throws -> Data {
@@ -88,7 +103,6 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         request.timeoutInterval = 120
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue(UUID().uuidString, forHTTPHeaderField: "Idempotency-Key")
         request.httpBody = try Self.multipartBody(images: images, boundary: boundary)
 
         let (data, response) = try await session.data(for: request)
@@ -99,14 +113,30 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
             let payload = try? JSONDecoder().decode(ErrorEnvelope.self, from: data)
             throw AIGarmentStudioError.server(payload?.error ?? "AI generation failed. Try again.")
         }
-        guard !data.isEmpty else { throw AIGarmentStudioError.invalidResponse }
+        guard !data.isEmpty, data.count <= Self.maximumResponseBytes else {
+            throw AIGarmentStudioError.invalidResponse
+        }
+
+        if let contentLength = http.value(forHTTPHeaderField: "Content-Length") {
+            guard let length = Int(contentLength), length >= 0, length <= Self.maximumResponseBytes else {
+                throw AIGarmentStudioError.invalidResponse
+            }
+        }
 
         if http.value(forHTTPHeaderField: "Content-Type")?.contains("application/json") == true {
             guard let payload = try? JSONDecoder().decode(ImageEnvelope.self, from: data),
-                  let decoded = Data(base64Encoded: payload.imageBase64), !decoded.isEmpty else {
+                  payload.imageBase64.utf8.count <= Self.maximumResponseBytes * 4 / 3 + 16,
+                  let decoded = Data(base64Encoded: payload.imageBase64),
+                  Self.isSupportedImage(decoded) else {
                 throw AIGarmentStudioError.invalidResponse
             }
             return decoded
+        }
+
+        guard let mimeType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased(),
+              ["image/jpeg", "image/png", "image/webp"].contains(where: mimeType.hasPrefix),
+              Self.isSupportedImage(data) else {
+            throw AIGarmentStudioError.invalidResponse
         }
         return data
     }
@@ -122,9 +152,42 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
             body.append("Content-Type: image/jpeg\r\n\r\n")
             body.append(data)
             body.append("\r\n")
+            guard body.count <= maximumRequestBytes else {
+                throw AIGarmentStudioError.invalidImage
+            }
         }
         body.append("--\(boundary)--\r\n")
+        guard body.count <= maximumRequestBytes else {
+            throw AIGarmentStudioError.invalidImage
+        }
         return body
+    }
+
+    private static func makeEphemeralSession() -> URLSession {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        configuration.httpShouldSetCookies = false
+        configuration.httpCookieAcceptPolicy = .never
+        configuration.timeoutIntervalForRequest = 120
+        configuration.timeoutIntervalForResource = 150
+        return URLSession(configuration: configuration)
+    }
+
+    private static func isSupportedImage(_ data: Data) -> Bool {
+        let bytes = [UInt8](data.prefix(12))
+        if bytes.count >= 3, bytes[0...2].elementsEqual([0xFF, 0xD8, 0xFF]) {
+            return true
+        }
+        if bytes.count >= 8, bytes[0...7].elementsEqual([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
+            return true
+        }
+        if bytes.count >= 12,
+           bytes[0...3].elementsEqual(Array("RIFF".utf8)),
+           bytes[8...11].elementsEqual(Array("WEBP".utf8)) {
+            return true
+        }
+        return false
     }
 }
 

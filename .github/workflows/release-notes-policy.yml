@@ -64,7 +64,22 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Run core tests
-        run: swift test
+        run: ./script/test.sh
+
+      - name: Install Worker dependencies
+        working-directory: backend/pyxis-ai-worker
+        run: npm ci
+
+      - name: Test and check Worker
+        working-directory: backend/pyxis-ai-worker
+        run: npm test && npm run check
+
+      - name: Audit Worker dependencies
+        working-directory: backend/pyxis-ai-worker
+        run: npm audit --audit-level=high
+
+      - name: Run static deployment preflight
+        run: ./script/deployment_preflight.sh static
 
       - name: Build the iOS app
         run: >-

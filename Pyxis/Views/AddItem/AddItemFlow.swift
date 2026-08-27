@@ -11,6 +11,7 @@ struct AddItemFlow: View {
     @State private var didApplyInitialCloset = false
     @State private var saveErrorMessage: String?
     @State private var didSave = false
+    @State private var processingTask: Task<Void, Never>?
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
     private let initialClosetID: UUID?
@@ -43,6 +44,8 @@ struct AddItemFlow: View {
                     .accessibilityLabel("Close add item")
                 }
 
+                AddItemStepIndicator(stage: viewModel.stage)
+
                 if let setupError = viewModel.setupError {
                     InlineErrorMessage(message: setupError)
                 }
@@ -53,9 +56,10 @@ struct AddItemFlow: View {
 
                 if viewModel.selectedImageURL == nil {
                     ImageImportView { url in
+                        processingTask?.cancel()
                         viewModel.selectImage(url)
                         applyInitialMetadata()
-                        Task {
+                        processingTask = Task {
                             await viewModel.processSelectedImage()
                         }
                     }
@@ -67,11 +71,28 @@ struct AddItemFlow: View {
             .padding(PyxisSpacing.md)
         }
         .background(PyxisColors.background)
+        .safeAreaInset(edge: .bottom) {
+            if viewModel.selectedImageURL != nil, !viewModel.stage.isProcessing {
+                Button(viewModel.stage.isFailed ? "SAVE ORIGINAL" : "SAVE ITEM") {
+                    save()
+                }
+                .buttonStyle(MinimalButtonStyle())
+                .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+                .accessibilityLabel(viewModel.stage.isFailed ? "Save item with original image" : "Save item")
+                .padding(PyxisSpacing.md)
+                .frame(maxWidth: .infinity)
+                .background(PyxisColors.background)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+                }
+            }
+        }
         .onAppear(perform: applyInitialCloset)
         .onChange(of: closets.map(\.id)) { _, _ in
             applyInitialCloset()
         }
         .onDisappear {
+            processingTask?.cancel()
             if !didSave {
                 viewModel.discardDraft()
             }
@@ -80,11 +101,7 @@ struct AddItemFlow: View {
 
     @ViewBuilder
     private var editorContent: some View {
-        if viewModel.stage.isProcessing {
-            previewAndActions
-        } else {
-            responsiveEditorContent
-        }
+        responsiveEditorContent
     }
 
     private var responsiveEditorContent: some View {
@@ -132,9 +149,16 @@ struct AddItemFlow: View {
             }
 
             if !viewModel.stage.isProcessing {
-                rotationControls
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PyxisSpacing.sm) {
+                        secondaryProcessingActions
+                    }
+                    VStack(spacing: PyxisSpacing.sm) {
+                        secondaryProcessingActions
+                    }
+                }
 
-                HStack {
+                if viewModel.isAIStudioAvailable {
                     Button(viewModel.isAIEnhancing ? "GENERATING" : "AI DE-WRINKLE") {
                         Task { await viewModel.makePristineWithAI() }
                     }
@@ -142,27 +166,30 @@ struct AddItemFlow: View {
                     .disabled(viewModel.isAIEnhancing || (viewModel.result?.originalPath.isEmpty ?? true))
                     .accessibilityLabel("Generate a pristine AI garment image")
 
-                    Button("IMPROVE CUTOUT") {
-                        Task { await viewModel.retry() }
-                    }
-                    .buttonStyle(MinimalButtonStyle())
-                    .disabled(viewModel.selectedImageURL == nil)
-                    .accessibilityLabel("Retry background removal")
-
-                    Button(viewModel.stage.isFailed ? "USE AS IS" : "SAVE") {
-                        save()
-                    }
-                    .buttonStyle(MinimalButtonStyle())
-                    .disabled(viewModel.result?.originalPath.isEmpty ?? true)
-                    .accessibilityLabel(viewModel.stage.isFailed ? "Save item with original image" : "Save item")
+                    Text("AI DE-WRINKLE SENDS THIS PHOTO TO XAI FOR GENERATION. XAI MAY RETAIN API DATA FOR UP TO 30 DAYS. VERIFY FABRIC, LOGOS, AND CONDITION BEFORE SAVING.")
+                        .font(PyxisTypography.body)
+                        .foregroundStyle(PyxisColors.inactiveText)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("AI STUDIO IS UNAVAILABLE IN THIS BUILD. LOCAL CUTOUTS AND SAVING STILL WORK OFFLINE.")
+                        .font(PyxisTypography.body)
+                        .foregroundStyle(PyxisColors.inactiveText)
+                        .multilineTextAlignment(.center)
                 }
-
-                Text("AI DE-WRINKLE SENDS THIS PHOTO TO XAI FOR GENERATION. XAI MAY RETAIN API DATA FOR UP TO 30 DAYS. VERIFY FABRIC, LOGOS, AND CONDITION BEFORE SAVING.")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.inactiveText)
-                    .multilineTextAlignment(.center)
             }
         }
+    }
+
+    @ViewBuilder
+    private var secondaryProcessingActions: some View {
+        rotationControls
+
+        Button("IMPROVE CUTOUT") {
+            retryProcessing()
+        }
+        .buttonStyle(MinimalButtonStyle())
+        .disabled(viewModel.selectedImageURL == nil)
+        .accessibilityLabel("Retry background removal")
     }
 
     private var rotationControls: some View {
@@ -203,10 +230,16 @@ struct AddItemFlow: View {
         case .processed:
             Text("READY")
                 .font(PyxisTypography.label)
-        case .failed:
-            Text("ORIGINAL ONLY")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
+        case .failed(let message):
+            VStack(spacing: PyxisSpacing.xs) {
+                Text("ORIGINAL ONLY")
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                Text("\(message) THE ORIGINAL PHOTO WILL BE SAVED IF YOU CONTINUE.")
+                    .font(PyxisTypography.body)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
@@ -270,6 +303,13 @@ struct AddItemFlow: View {
         }
     }
 
+    private func retryProcessing() {
+        processingTask?.cancel()
+        processingTask = Task {
+            await viewModel.retry()
+        }
+    }
+
     private func upsertMemory(for item: ClosetItem) throws {
         let payload = OnDeviceMemoryPayloadBuilder.closetItemPayload(for: item)
         try OnDeviceMemoryStore(context: modelContext).upsertMemory(
@@ -300,6 +340,60 @@ struct AddItemFlow: View {
         }
         selectedClosetIDs.insert(initialClosetID)
         didApplyInitialCloset = true
+    }
+}
+
+private struct AddItemStepIndicator: View {
+    let stage: AddItemViewModel.Stage
+
+    private var currentStep: Int {
+        switch stage {
+        case .idle: 0
+        case .selected, .processing: 1
+        case .processed, .failed: 2
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: PyxisSpacing.sm) {
+            step(0, title: "ADD PHOTO")
+            connector(after: 0)
+            step(1, title: "CLEAN IMAGE")
+            connector(after: 1)
+            step(2, title: "REVIEW DETAILS")
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step \(currentStep + 1) of 3, \(stepTitle)")
+    }
+
+    private func step(_ index: Int, title: String) -> some View {
+        VStack(spacing: PyxisSpacing.xs) {
+            Text("\(index + 1)")
+                .font(PyxisTypography.code)
+                .frame(width: 28, height: 28)
+                .foregroundStyle(index <= currentStep ? PyxisColors.surface : PyxisColors.secondaryText)
+                .background(index <= currentStep ? PyxisColors.text : PyxisColors.field)
+                .clipShape(Circle())
+            Text(title)
+                .font(PyxisTypography.label)
+                .foregroundStyle(index == currentStep ? PyxisColors.text : PyxisColors.inactiveText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func connector(after index: Int) -> some View {
+        Rectangle()
+            .fill(index < currentStep ? PyxisColors.text : PyxisColors.hairline)
+            .frame(maxWidth: 36, maxHeight: 1)
+    }
+
+    private var stepTitle: String {
+        switch currentStep {
+        case 0: "Add photo"
+        case 1: "Clean image"
+        default: "Review details"
+        }
     }
 }
 

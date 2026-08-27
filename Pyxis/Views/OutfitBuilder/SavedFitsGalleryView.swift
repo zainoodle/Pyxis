@@ -5,11 +5,12 @@ struct SavedFitsGalleryView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
-    @State private var selectedOutfit: Outfit?
     let buildAction: (() -> Void)?
+    let showsCloseButton: Bool
 
-    init(buildAction: (() -> Void)? = nil) {
+    init(buildAction: (() -> Void)? = nil, showsCloseButton: Bool = true) {
         self.buildAction = buildAction
+        self.showsCloseButton = showsCloseButton
     }
 
     var body: some View {
@@ -18,12 +19,14 @@ struct SavedFitsGalleryView: View {
                 Text("FITS")
                     .font(PyxisTypography.title)
                 Spacer()
-                Button("CLOSE") {
-                    dismiss()
+                if showsCloseButton {
+                    Button("CLOSE") {
+                        dismiss()
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Close saved fits")
                 }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel("Close saved fits")
             }
 
             if outfits.isEmpty {
@@ -46,9 +49,12 @@ struct SavedFitsGalleryView: View {
                         spacing: PyxisSpacing.lg
                     ) {
                         ForEach(outfits) { outfit in
-                            SavedFitCard(outfit: outfit, items: items, isRecent: false) {
-                                selectedOutfit = outfit
+                            NavigationLink {
+                                OutfitDetailView(outfit: outfit)
+                            } label: {
+                                SavedFitCard(outfit: outfit, items: items, isRecent: false)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.top, PyxisSpacing.md)
@@ -57,8 +63,5 @@ struct SavedFitsGalleryView: View {
         }
         .padding(PyxisSpacing.md)
         .background(PyxisColors.background)
-        .sheet(item: $selectedOutfit) { outfit in
-            OutfitDetailView(outfit: outfit)
-        }
     }
 }

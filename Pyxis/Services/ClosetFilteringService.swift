@@ -35,6 +35,33 @@ public struct ClosetFilterState: Equatable, Sendable {
         self.sort = sort
         self.closetID = closetID
     }
+
+    public var activeFilterCount: Int {
+        var count = 0
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { count += 1 }
+        if closetID != nil { count += 1 }
+        if category != nil { count += 1 }
+        if subtype != nil { count += 1 }
+        if color != nil { count += 1 }
+        if favoritesOnly { count += 1 }
+        if sort != .newest { count += 1 }
+        return count
+    }
+
+    public var hasActiveFilters: Bool {
+        activeFilterCount > 0
+    }
+
+    public mutating func selectCategory(_ newCategory: ClothingCategory?) {
+        category = newCategory
+        if let subtype, let newCategory, !subtype.isCompatible(with: newCategory) {
+            self.subtype = nil
+        }
+    }
+
+    public mutating func clearAll() {
+        self = ClosetFilterState()
+    }
 }
 
 public struct ClosetFilteringService: Sendable {
@@ -57,6 +84,9 @@ public struct ClosetFilteringService: Sendable {
         }
 
         let filtered = items.filter { item in
+            if item.isDeleted {
+                return false
+            }
             if let closetItemIDs, !closetItemIDs.contains(item.id) {
                 return false
             }

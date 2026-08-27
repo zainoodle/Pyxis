@@ -1,16 +1,17 @@
 import SwiftData
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct OutfitBuilderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
-    @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
     @State private var selections: [OutfitSlot: Int] = [:]
     @State private var notes = ""
     @State private var isShowingAddFlow = false
     @State private var selectedItem: ClosetItem?
-    @State private var selectedOutfit: Outfit?
     @State private var pendingAddSlot: OutfitSlot?
     @State private var focusedItemID: UUID?
     @State private var savedConfirmationID: UUID?
@@ -19,10 +20,12 @@ struct OutfitBuilderView: View {
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
+    private let showsCloseButton: Bool
 
-    init(initialItem: ClosetItem? = nil) {
-        self.initialItemID = initialItem?.id
-        self._focusedItemID = State(initialValue: initialItem?.id)
+    init(initialItemID: UUID? = nil, showsCloseButton: Bool = true) {
+        self.initialItemID = initialItemID
+        self.showsCloseButton = showsCloseButton
+        self._focusedItemID = State(initialValue: initialItemID)
     }
 
     private var rows: [OutfitRow] {
@@ -46,19 +49,23 @@ struct OutfitBuilderView: View {
         VStack(spacing: PyxisSpacing.lg) {
             header
 
-            ClosetReadinessView(rows: rows, draft: draft)
-
-            OutfitAssemblyPreview(selectedPieces: selectedPieces)
-
-            Button("TRY THIS FIT ON YOU") {
-                isShowingAITryOn = true
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .disabled(selectedPieces.isEmpty)
-            .accessibilityLabel("Open AI try-on with the selected clothing")
-
             ScrollView {
                 VStack(spacing: PyxisSpacing.lg) {
+                    ClosetReadinessView(rows: rows, draft: draft)
+
+                    OutfitAssemblyPreview(selectedPieces: selectedPieces)
+
+                    Button(AIGarmentStudioService.isConfigured ? "TRY THIS FIT ON YOU" : "AI STUDIO UNAVAILABLE") {
+                        isShowingAITryOn = true
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                    .disabled(selectedPieces.isEmpty || !AIGarmentStudioService.isConfigured)
+                    .accessibilityLabel(
+                        AIGarmentStudioService.isConfigured
+                            ? "Open AI try-on with the selected clothing"
+                            : "AI Studio is unavailable in this build"
+                    )
+
                     ForEach(rows) { row in
                         if row.items.isEmpty {
                             MissingOutfitRow(slot: row.slot) {
@@ -78,15 +85,17 @@ struct OutfitBuilderView: View {
                 }
                 .padding(.vertical, PyxisSpacing.md)
             }
-
-            SavedFitsStrip(outfits: outfits, items: items, recentOutfitID: savedConfirmationID) { outfit in
-                selectedOutfit = outfit
-            }
-
-            saveRail
         }
         .padding(PyxisSpacing.md)
         .background(PyxisColors.background)
+        .safeAreaInset(edge: .bottom) {
+            saveRail
+                .padding(PyxisSpacing.md)
+                .background(PyxisColors.background)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+                }
+        }
         .onAppear(perform: reconcileSelections)
         .onChange(of: initialItemID) { _, newValue in
             focusedItemID = newValue
@@ -107,9 +116,6 @@ struct OutfitBuilderView: View {
         .sheet(item: $selectedItem) { item in
             ItemDetailView(item: item)
         }
-        .sheet(item: $selectedOutfit) { outfit in
-            OutfitDetailView(outfit: outfit)
-        }
         .sheet(isPresented: $isShowingAITryOn) {
             AITryOnView(items: selectedPieces.map(\.item))
         }
@@ -128,12 +134,14 @@ struct OutfitBuilderView: View {
 
             Spacer()
 
-            Button("CLOSE") {
-                dismiss()
+            if showsCloseButton {
+                Button("CLOSE") {
+                    dismiss()
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("Close outfit builder")
             }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.cancelAction)
-            .accessibilityLabel("Close outfit builder")
         }
     }
 
@@ -161,7 +169,24 @@ struct OutfitBuilderView: View {
             if let saveErrorMessage {
                 InlineErrorMessage(message: saveErrorMessage)
             }
+
+            if let saveRequirement {
+                Text(saveRequirement)
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .accessibilityLabel(saveRequirement.capitalized)
+            }
         }
+    }
+
+    private var saveRequirement: String? {
+        if draft.footwearItemID == nil {
+            return "ADD FOOTWEAR"
+        }
+        if draft.onePieceItemID == nil && (draft.topItemID == nil || draft.bottomItemID == nil) {
+            return "SELECT A TOP AND BOTTOM, OR SELECT A ONE-PIECE"
+        }
+        return nil
     }
 
     private var notesField: some View {
@@ -231,6 +256,15 @@ struct OutfitBuilderView: View {
         } else if slot == .top || slot == .bottom {
             selections[.onePiece] = nil
         }
+
+        #if canImport(UIKit)
+        if let row = rows.first(where: { $0.slot == slot }), row.items.indices.contains(index) {
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: "Selected \(row.items[index].itemCode) for \(slot.title.lowercased())"
+            )
+        }
+        #endif
     }
 
     private func saveFit() {

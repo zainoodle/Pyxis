@@ -1,16 +1,29 @@
 # Pyxis Deployment Readiness
 
-Last audited: 2026-07-16
+Last audited: 2026-08-27
 
-## Verified
+## Current v1.1 Verification
 
-- `swift test` passes with 97 XCTest cases.
+- `./script/test.sh` passes with 110 XCTest cases from a fresh temporary SwiftPM scratch directory while using `/Applications/Xcode.app/Contents/Developer` explicitly.
+- A full iOS 17 source type-check against the installed iPhoneOS SDK passes with no diagnostics.
+- `./script/deployment_preflight.sh static` passes, including the privacy/document consistency validator.
+- Worker `npm ci`, six Node tests, JavaScript syntax checking, and `npm audit --audit-level=high` pass; the current lockfile reports zero vulnerabilities.
+- Xcode's iOS 26.5 Simulator runtime is installed, and current Debug builds, installs, launches, and process verification pass on iPhone 17e and iPhone 17 Pro Max simulators.
+- `./script/build_and_run.sh --verify` passes repeatedly on the booted iPhone 17e. It now keeps DerivedData outside the iCloud-synced checkout and verifies the host-side Simulator process without relying on unavailable in-runtime `ps` tooling.
+- `./script/deployment_preflight.sh local` passes, including clean tests, a generic unsigned Release iOS build, artifact inspection, and an unsigned Release archive.
+- Current simulator smoke checks pass for empty Closet, Add Item open/cancel, debug import through review, save-original fallback, grid persistence after relaunch, subtype/filter chips and reset, search-specific no-results recovery, native item detail navigation, direct Build handoff, AI unavailable state, Save Fit confirmation, and compact/Pro Max initial layouts.
+- An AX5 Dynamic Type plus Increased Contrast check exposed and then verified the accessibility fallback for the Closet header, search/sort/favorites controls, and single-column filter options. Full VoiceOver and Reduce Motion walkthroughs remain manual gates.
+- The connected iPhone 17 Pro Max is paired and recognized as an eligible destination. Physical-device build/install remains gated on enabling Developer Mode in Settings > Privacy & Security on that phone.
+
+## Previously Verified Release Evidence
+
+- `swift test` passed with 97 XCTest cases at the time of the earlier release audit.
 - Focused on-device memory tests pass with 13 XCTest cases.
 - SwiftData can open a store created before `OnDeviceMemoryRecord` existed and then persist a memory record.
 - Closet item and saved-fit save paths populate local memory records with deterministic on-device embeddings.
-- iOS simulator Debug build passes through XcodeBuildMCP with no diagnostics.
-- iOS simulator build/install/launch passes through XcodeBuildMCP.
-- `./script/build_and_run.sh --verify` passes on a booted iOS Simulator and replaces the existing app process.
+- iOS simulator Debug build passed through XcodeBuildMCP with no diagnostics during the earlier release audit.
+- iOS simulator build/install/launch passed through XcodeBuildMCP during the earlier release audit.
+- `./script/build_and_run.sh --verify` passed on a booted iOS Simulator during the earlier release audit and replaced the existing app process.
 - `./script/deployment_preflight.sh local` passes, covering metadata linting, policy scans, privacy-manifest regression scans, whitespace checks, `swift test`, generic Release iOS build, artifact metadata inspection, Release debug-content scans, and unsigned Release archive.
 - Generic Release iOS build passes with `CODE_SIGNING_ALLOWED=NO`.
 - Unsigned Release archive creation passes with `CODE_SIGNING_ALLOWED=NO`.
@@ -70,6 +83,8 @@ Last audited: 2026-07-16
 - Updated stale docs that still described the old macOS prototype as the current app shape.
 
 ## Remaining Manual Gates
+
+- The release privacy label must disclose photos/videos used for app functionality if optional AI is enabled while xAI's standard request/response retention of up to 30 days is active; confirm the final answers in App Store Connect against the shipped artifact and current provider terms.
 
 - Deploy `backend/pyxis-ai-worker`, configure its secrets, and complete the real xAI checks in `docs/AI_GATEWAY.md`.
 - Replace the initial shared gateway token with App Attest or short-lived server-issued tokens before a broad public release.

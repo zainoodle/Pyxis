@@ -14,6 +14,11 @@ struct SizingProfileView: View {
     @State private var recommendation: SizeRecommendation?
     @State private var message: String?
     @State private var isConfirmingDelete = false
+    let showsCloseButton: Bool
+
+    init(showsCloseButton: Bool = true) {
+        self.showsCloseButton = showsCloseButton
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,7 +35,9 @@ struct SizingProfileView: View {
             .navigationTitle("MY SIZE")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("CLOSE") { dismiss() }
+                    if showsCloseButton {
+                        Button("CLOSE") { dismiss() }
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("SAVE") { saveProfile() }
@@ -196,7 +203,8 @@ struct SizingProfileView: View {
         values[.foot] = display(profile.footLengthCentimeters, key: .foot)
     }
 
-    private func saveProfile() {
+    @discardableResult
+    private func saveProfile() -> Bool {
         let profile = profiles.first ?? BodyProfile()
         if profiles.isEmpty { modelContext.insert(profile) }
         profile.measurementSystem = system
@@ -213,13 +221,16 @@ struct SizingProfileView: View {
         do {
             try modelContext.save()
             message = "Fit Passport saved"
+            return true
         } catch {
+            modelContext.rollback()
             message = PersistenceErrorMessage.saveFailed(error)
+            return false
         }
     }
 
     private func findSize() {
-        saveProfile()
+        guard saveProfile() else { return }
         guard let profile = profiles.first ?? (try? modelContext.fetch(FetchDescriptor<BodyProfile>()).first) else { return }
         let options = chartRows.compactMap { $0.option(system: system) }
         recommendation = SizeRecommendationService().recommend(profile: profile, category: category, options: options)

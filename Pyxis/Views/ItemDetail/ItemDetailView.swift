@@ -12,9 +12,15 @@ struct ItemDetailView: View {
     @State private var saveErrorMessage: String?
     @State private var isConfirmingDeletion = false
     let buildAction: ((ClosetItem) -> Void)?
+    let showsCloseButton: Bool
 
-    init(item: ClosetItem, buildAction: ((ClosetItem) -> Void)? = nil) {
+    init(
+        item: ClosetItem,
+        showsCloseButton: Bool = true,
+        buildAction: ((ClosetItem) -> Void)? = nil
+    ) {
         self.item = item
+        self.showsCloseButton = showsCloseButton
         self.buildAction = buildAction
     }
 
@@ -43,6 +49,8 @@ struct ItemDetailView: View {
             .padding(PyxisSpacing.md)
         }
         .background(PyxisColors.background)
+        .navigationTitle(item.itemCode)
+        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
             "DELETE \(item.itemCode)?",
             isPresented: $isConfirmingDeletion,
@@ -100,12 +108,14 @@ struct ItemDetailView: View {
                 Text("DETAIL")
                     .font(PyxisTypography.title)
                 Spacer()
-                Button("CLOSE") {
-                    saveAndDismiss()
+                if showsCloseButton {
+                    Button("CLOSE") {
+                        saveAndDismiss()
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Close item detail")
                 }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel("Close item detail")
             }
 
             utilityBlock
@@ -117,7 +127,6 @@ struct ItemDetailView: View {
             if canBuildWithItem, let buildAction {
                 Button("BUILD WITH THIS") {
                     buildAction(item)
-                    dismiss()
                 }
                 .buttonStyle(MinimalButtonStyle())
             }

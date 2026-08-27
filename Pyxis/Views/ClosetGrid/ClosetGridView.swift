@@ -6,43 +6,34 @@ struct ClosetGridView: View {
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
     @State private var isShowingAddFlow = false
-    @State private var isShowingBuilder = false
-    @State private var isShowingSavedFits = false
-    @State private var shouldOpenBuilderAfterSavedFitsDismiss = false
-    @State private var isShowingClosets = false
-    @State private var isShowingSizing = false
-    @State private var selectedItem: ClosetItem?
-    @State private var builderFocusItem: ClosetItem?
     @State private var savedItemPrompt: ClosetItem?
     @State private var seedMessage: String?
     @Environment(\.modelContext) private var modelContext
     @FocusState private var isSearchFocused: Bool
+    private let buildAction: (UUID?) -> Void
 
     private let columns = [
         GridItem(.adaptive(minimum: 158, maximum: 210), spacing: PyxisSpacing.lg)
     ]
+
+    init(buildAction: @escaping (UUID?) -> Void = { _ in }) {
+        self.buildAction = buildAction
+    }
 
     var body: some View {
         VStack(spacing: PyxisSpacing.lg) {
             TopNavigationView(
                 filterState: $viewModel.filterState,
                 closets: closets,
-                addAction: { isShowingAddFlow = true },
-                buildAction: {
-                    builderFocusItem = nil
-                    isShowingBuilder = true
-                },
-                fitsAction: { isShowingSavedFits = true },
-                manageClosetsAction: { isShowingClosets = true },
-                sizingAction: { isShowingSizing = true }
+                addAction: { isShowingAddFlow = true }
             )
             .padding(.top, PyxisSpacing.lg)
 
             if let savedItemPrompt {
                 SavedItemBuildPrompt(item: savedItemPrompt) {
-                    builderFocusItem = savedItemPrompt
+                    let itemID = savedItemPrompt.id
                     self.savedItemPrompt = nil
-                    isShowingBuilder = true
+                    buildAction(itemID)
                 } dismissAction: {
                     self.savedItemPrompt = nil
                 }
@@ -51,6 +42,7 @@ struct ClosetGridView: View {
 
             SearchAndFilterView(
                 filterState: $viewModel.filterState,
+                closets: closets,
                 isSearchFocused: $isSearchFocused
             )
 
@@ -74,37 +66,6 @@ struct ClosetGridView: View {
             AddItemFlow(initialClosetID: viewModel.filterState.closetID) { item in
                 withAnimation(.easeOut(duration: 0.2)) {
                     savedItemPrompt = item
-                }
-            }
-        }
-        .sheet(isPresented: $isShowingClosets) {
-            ClosetManagementView(selectedClosetID: $viewModel.filterState.closetID)
-        }
-        .sheet(isPresented: $isShowingSizing) {
-            SizingProfileView()
-        }
-        .sheet(isPresented: $isShowingBuilder) {
-            OutfitBuilderView(initialItem: builderFocusItem)
-        }
-        .sheet(isPresented: $isShowingSavedFits, onDismiss: {
-            guard shouldOpenBuilderAfterSavedFitsDismiss else { return }
-            shouldOpenBuilderAfterSavedFitsDismiss = false
-            builderFocusItem = nil
-            isShowingBuilder = true
-        }) {
-            SavedFitsGalleryView {
-                shouldOpenBuilderAfterSavedFitsDismiss = true
-            }
-        }
-        .sheet(item: $selectedItem) { item in
-            ItemDetailView(item: item) { buildItem in
-                builderFocusItem = buildItem
-                selectedItem = nil
-                Task {
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                    await MainActor.run {
-                        isShowingBuilder = true
-                    }
                 }
             }
         }
@@ -148,11 +109,12 @@ struct ClosetGridView: View {
                     .font(PyxisTypography.body)
                     .foregroundStyle(PyxisColors.inactiveText)
 
-                if viewModel.filterState.closetID != nil {
-                    Button("MANAGE CLOSETS") {
-                        isShowingClosets = true
+                if viewModel.filterState.hasActiveFilters {
+                    Button("CLEAR ALL") {
+                        viewModel.filterState.clearAll()
                     }
                     .buttonStyle(MinimalButtonStyle())
+                    .accessibilityLabel("Clear search and all filters")
                 }
             }
             Spacer()
@@ -160,9 +122,14 @@ struct ClosetGridView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: PyxisSpacing.xl) {
                     ForEach(filteredItems) { item in
-                        ClosetGridItemView(item: item) {
-                            selectedItem = item
+                        NavigationLink {
+                            ItemDetailView(item: item, showsCloseButton: false) { buildItem in
+                                buildAction(buildItem.id)
+                            }
+                        } label: {
+                            ClosetGridItemView(item: item)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.top, PyxisSpacing.md)
@@ -181,7 +148,10 @@ struct ClosetGridView: View {
         if selectedCloset?.itemCount == 0 {
             return "THIS CLOSET IS EMPTY"
         }
-        return "NO MATCHES"
+        if !viewModel.filterState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "NO ITEMS MATCH THIS SEARCH"
+        }
+        return "NO ITEMS MATCH THESE FILTERS"
     }
 
     #if DEBUG

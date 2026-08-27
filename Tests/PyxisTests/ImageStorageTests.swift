@@ -60,6 +60,7 @@ final class ImageStorageTests: XCTestCase {
         let data = try XCTUnwrap(makeTestImage().pngDataForTests())
         let originalSource = try makeImageFile(named: "source.jpg", root: root)
         let imageSet = StoredImageSet(
+            itemID: itemID,
             originalPath: try storage.saveOriginal(from: originalSource, itemID: itemID),
             cutoutPath: try storage.saveCutoutPNG(data, itemID: itemID),
             thumbnailPath: try storage.saveThumbnailPNG(data, itemID: itemID)
@@ -94,7 +95,9 @@ final class ImageStorageTests: XCTestCase {
             try? FileManager.default.removeItem(at: outsideURL)
         }
 
-        storage.deleteImages(StoredImageSet(originalPath: "../\(outsideURL.lastPathComponent)"))
+        storage.deleteImages(
+            StoredImageSet(itemID: UUID(), originalPath: "../\(outsideURL.lastPathComponent)")
+        )
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: outsideURL.path))
     }

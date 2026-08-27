@@ -215,23 +215,28 @@ run_static_checks() {
   require_command strings
 
   ./script/validate_update_notes.sh --all
+  ./script/validate_privacy_consistency.sh
   lint_metadata
   scan_policy
   check_git_whitespace
 }
 
 run_local_checks() {
-  require_command swift
-  require_command xcodebuild
-
   run_static_checks
 
-  run_logged "swift test" "$LOG_DIR/swift-test.log" swift test
+  run_logged "clean Swift tests" "$LOG_DIR/swift-test.log" ./script/test.sh
+
+  local developer_dir
+  developer_dir="${DEVELOPER_DIR:-$(xcode-select -p 2>/dev/null || true)}"
+  if [[ "$developer_dir" == */CommandLineTools && -d /Applications/Xcode.app/Contents/Developer ]]; then
+    developer_dir="/Applications/Xcode.app/Contents/Developer"
+  fi
+  [[ -x "$developer_dir/usr/bin/xcodebuild" ]] || fail "full Xcode is required for local preflight"
 
   run_logged \
     "generic Release iOS build" \
     "$LOG_DIR/release-build.log" \
-    xcodebuild \
+    env DEVELOPER_DIR="$developer_dir" xcodebuild \
       -project "$PROJECT" \
       -scheme "$SCHEME" \
       -configuration Release \
@@ -246,7 +251,7 @@ run_local_checks() {
   run_logged \
     "unsigned Release archive" \
     "$LOG_DIR/unsigned-archive.log" \
-    xcodebuild \
+    env DEVELOPER_DIR="$developer_dir" xcodebuild \
       -project "$PROJECT" \
       -scheme "$SCHEME" \
       -configuration Release \

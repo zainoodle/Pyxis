@@ -1,11 +1,18 @@
 import Foundation
 
 public struct StoredImageSet: Equatable, Sendable {
+    public let itemID: UUID
     public var originalPath: String
     public var cutoutPath: String?
     public var thumbnailPath: String?
 
-    public init(originalPath: String, cutoutPath: String? = nil, thumbnailPath: String? = nil) {
+    public init(
+        itemID: UUID,
+        originalPath: String,
+        cutoutPath: String? = nil,
+        thumbnailPath: String? = nil
+    ) {
+        self.itemID = itemID
         self.originalPath = originalPath
         self.cutoutPath = cutoutPath
         self.thumbnailPath = thumbnailPath
@@ -109,6 +116,7 @@ public final class ImageStorageService: @unchecked Sendable {
         )
 
         return StoredImageSet(
+            itemID: imageSet.itemID,
             originalPath: imageSet.originalPath,
             cutoutPath: imageSet.cutoutPath,
             thumbnailPath: thumbnailPath
@@ -209,15 +217,6 @@ public final class ImageStorageService: @unchecked Sendable {
     private func isPath(_ path: String, nestedIn rootPath: String) -> Bool {
         path == rootPath || path.hasPrefix(rootPath + "/")
     }
-}
-
-extension StoredImageSet {
-    var itemID: UUID {
-        let fileName = URL(fileURLWithPath: originalPath).deletingPathExtension().lastPathComponent
-        return UUID(uuidString: fileName) ?? UUID()
-    }
-
-    var stableItemID: UUID { itemID }
 }
 
 private extension URL {

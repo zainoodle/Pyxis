@@ -4,6 +4,12 @@ import XCTest
 
 @MainActor
 final class PersistenceTests: XCTestCase {
+    func testCurrentSchemaHasAnExplicitVersionAndMigrationPlan() {
+        XCTAssertEqual(PyxisSchemaV1.versionIdentifier, Schema.Version(1, 0, 0))
+        XCTAssertEqual(PyxisMigrationPlan.schemas.count, 1)
+        XCTAssertTrue(PyxisMigrationPlan.stages.isEmpty)
+    }
+
     func testInsertsAndFetchesBodyProfile() throws {
         let container = try SwiftDataContainer.makeTestContainer()
         let context = ModelContext(container)

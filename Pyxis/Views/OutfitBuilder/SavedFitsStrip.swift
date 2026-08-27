@@ -30,13 +30,16 @@ struct SavedFitsStrip: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: PyxisSpacing.md) {
                         ForEach(outfits.prefix(12)) { outfit in
-                            SavedFitCard(
-                                outfit: outfit,
-                                items: items,
-                                isRecent: outfit.id == recentOutfitID
-                            ) {
+                            Button {
                                 openOutfit(outfit)
+                            } label: {
+                                SavedFitCard(
+                                    outfit: outfit,
+                                    items: items,
+                                    isRecent: outfit.id == recentOutfitID
+                                )
                             }
+                            .buttonStyle(.plain)
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                         }
                     }
@@ -51,7 +54,6 @@ struct SavedFitCard: View {
     let outfit: Outfit
     let items: [ClosetItem]
     let isRecent: Bool
-    let action: () -> Void
 
     private var selectedItems: [ClosetItem] {
         outfit.itemIDs.compactMap { itemID in
@@ -60,8 +62,7 @@ struct SavedFitCard: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                 HStack(spacing: PyxisSpacing.xs) {
                     ForEach(selectedItems.prefix(3)) { item in
                         SavedFitItemImage(item: item)
@@ -84,23 +85,21 @@ struct SavedFitCard: View {
                         .foregroundStyle(PyxisColors.secondaryText)
                         .transition(.opacity)
                 }
-            }
-            .frame(width: 150, alignment: .leading)
-            .padding(PyxisSpacing.sm)
-            .background(PyxisColors.field)
-            .overlay(alignment: .topTrailing) {
-                if isRecent {
-                    Circle()
-                        .fill(PyxisColors.text)
-                        .frame(width: 6, height: 6)
-                        .padding(PyxisSpacing.sm)
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .scaleEffect(isRecent ? 1.02 : 1)
-            .animation(.easeOut(duration: 0.18), value: isRecent)
         }
-        .buttonStyle(.plain)
+        .frame(width: 150, alignment: .leading)
+        .padding(PyxisSpacing.sm)
+        .background(PyxisColors.field)
+        .overlay(alignment: .topTrailing) {
+            if isRecent {
+                Circle()
+                    .fill(PyxisColors.text)
+                    .frame(width: 6, height: 6)
+                    .padding(PyxisSpacing.sm)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .scaleEffect(isRecent ? 1.02 : 1)
+        .animation(.easeOut(duration: 0.18), value: isRecent)
         .accessibilityLabel("Open saved fit \(outfit.name ?? outfit.dateCreated.formatted(date: .abbreviated, time: .omitted)), \(selectedItems.count) pieces")
     }
 }

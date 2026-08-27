@@ -34,10 +34,11 @@ final class ItemDetailViewModelTests: XCTestCase {
         XCTAssertEqual(item.thumbnailPath, "Images/Thumbnails/retry.png")
     }
 
-    func testRetryReusesOriginalImageSetIDWhenModelIDDiffers() {
+    func testRetryUsesAuthoritativeModelIDInsteadOfParsingFilename() {
         let imageID = UUID()
+        let modelID = UUID()
         let item = ClosetItem(
-            id: UUID(),
+            id: modelID,
             itemCode: "OT-001",
             category: .other,
             subtype: .other,
@@ -45,7 +46,8 @@ final class ItemDetailViewModelTests: XCTestCase {
             imageOriginalPath: "Images/Originals/\(imageID.uuidString).jpg"
         )
 
-        XCTAssertEqual(ItemDetailViewModel.backgroundRemovalItemID(for: item), imageID)
+        XCTAssertEqual(ItemDetailViewModel.backgroundRemovalItemID(for: item), modelID)
+        XCTAssertNotEqual(ItemDetailViewModel.backgroundRemovalItemID(for: item), imageID)
     }
 
     private func makeItem() -> ClosetItem {

@@ -14,13 +14,7 @@ public enum SwiftDataContainer {
         isStoredInMemoryOnly: Bool,
         storeURL: URL? = nil
     ) throws -> ModelContainer {
-        let schema = Schema([
-            ClosetItem.self,
-            Outfit.self,
-            Closet.self,
-            OnDeviceMemoryRecord.self,
-            BodyProfile.self
-        ])
+        let schema = Schema(versionedSchema: PyxisSchemaV1.self)
         let configuration: ModelConfiguration
         if let storeURL {
             configuration = ModelConfiguration(
@@ -38,6 +32,7 @@ public enum SwiftDataContainer {
 
         return try ModelContainer(
             for: schema,
+            migrationPlan: PyxisMigrationPlan.self,
             configurations: [configuration]
         )
     }

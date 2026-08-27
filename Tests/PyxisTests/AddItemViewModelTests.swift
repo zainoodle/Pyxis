@@ -266,6 +266,70 @@ final class AddItemViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.selectedImageURL)
     }
 
+    func testOlderRequestFinishingLastCannotOverwriteNewDraft() async throws {
+        let root = try makeTemporaryRoot()
+        let firstSource = try makeImageFile(named: "first-shirt.jpg", root: root, color: .red)
+        let secondSource = try makeImageFile(named: "second-shirt.jpg", root: root, color: .blue)
+        let storage = try ImageStorageService(rootURL: root)
+        let processor = ControlledBackgroundRemovalService()
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: processor
+        )
+        let firstID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000701"))
+        let secondID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000702"))
+
+        viewModel.selectImage(firstSource)
+        let firstTask = Task { await viewModel.processSelectedImage(itemID: firstID) }
+        await waitUntilRequested(firstID, by: processor)
+
+        viewModel.selectImage(secondSource)
+        let secondTask = Task { await viewModel.processSelectedImage(itemID: secondID) }
+        await waitUntilRequested(secondID, by: processor)
+
+        let secondPath = try storage.saveOriginal(from: secondSource, itemID: secondID)
+        await processor.complete(
+            secondID,
+            with: BackgroundRemovalResult(
+                originalPath: secondPath,
+                cutoutPath: nil,
+                thumbnailPath: nil,
+                status: .failed
+            )
+        )
+        await secondTask.value
+
+        let firstPath = try storage.saveOriginal(from: firstSource, itemID: firstID)
+        await processor.complete(
+            firstID,
+            with: BackgroundRemovalResult(
+                originalPath: firstPath,
+                cutoutPath: nil,
+                thumbnailPath: nil,
+                status: .failed
+            )
+        )
+        await firstTask.value
+
+        XCTAssertEqual(viewModel.result?.originalPath, secondPath)
+        XCTAssertEqual(viewModel.makeClosetItem(existingCodes: [])?.id, secondID)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: secondPath).path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: firstPath).path))
+    }
+
+    private func waitUntilRequested(
+        _ id: UUID,
+        by processor: ControlledBackgroundRemovalService
+    ) async {
+        var wasRequested = false
+        for _ in 0..<100 {
+            wasRequested = await processor.hasRequest(id)
+            if wasRequested { break }
+            await Task.yield()
+        }
+        XCTAssertTrue(wasRequested)
+    }
+
     private func makeTemporaryRoot() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Pyxis-\(UUID().uuidString)", isDirectory: true)
@@ -313,5 +377,23 @@ private struct StubClassificationService: ClothingClassificationProviding {
 
     func classify(imageURL: URL, filename: String?) -> ClothingClassificationResult {
         imageResult
+    }
+}
+
+private actor ControlledBackgroundRemovalService: BackgroundRemovalServiceProtocol {
+    private var continuations: [UUID: CheckedContinuation<BackgroundRemovalResult, Never>] = [:]
+
+    func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult {
+        await withCheckedContinuation { continuation in
+            continuations[itemID] = continuation
+        }
+    }
+
+    func hasRequest(_ itemID: UUID) -> Bool {
+        continuations[itemID] != nil
+    }
+
+    func complete(_ itemID: UUID, with result: BackgroundRemovalResult) {
+        continuations.removeValue(forKey: itemID)?.resume(returning: result)
     }
 }

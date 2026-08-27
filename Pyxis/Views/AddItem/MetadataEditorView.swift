@@ -7,45 +7,93 @@ struct MetadataEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            TextField("DISPLAY NAME", text: $viewModel.displayName)
-            TextField("BRAND", text: $viewModel.brand)
-            TextField("SIZE", text: $viewModel.size)
-            TextField("TAGS", text: $viewModel.tags)
-            TextField("NOTES", text: $viewModel.notes, axis: .vertical)
-
-            Picker("CATEGORY", selection: categoryBinding) {
-                ForEach(ClothingCategory.allCases) { category in
-                    Text(category.rawValue.uppercased()).tag(category)
-                }
+            editorSection("IDENTITY") {
+                labeledField("DISPLAY NAME", text: $viewModel.displayName)
+                labeledField("BRAND", text: $viewModel.brand)
+                labeledField("SIZE", text: $viewModel.size)
             }
 
-            Picker("SUBTYPE", selection: $viewModel.subtype) {
-                ForEach(ClothingSubtype.compatibleSubtypes(for: viewModel.category)) { subtype in
-                    Text(subtype.rawValue.uppercased()).tag(subtype)
-                }
-            }
-
-            Picker("COLOR", selection: $viewModel.primaryColor) {
-                ForEach(ClosetColor.allCases) { color in
-                    Text(color.rawValue.uppercased()).tag(color)
-                }
-            }
-
-            Toggle("FAVORITE", isOn: $viewModel.favorite)
-
-            if !closets.isEmpty {
-                DisclosureGroup("CLOSETS") {
-                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        ForEach(closets) { closet in
-                            Toggle(closet.displayName.uppercased(), isOn: closetBinding(closet))
-                        }
+            editorSection("CLASSIFICATION") {
+                Picker("CATEGORY", selection: categoryBinding) {
+                    ForEach(ClothingCategory.allCases) { category in
+                        Text(category.rawValue.uppercased()).tag(category)
                     }
-                    .padding(.top, PyxisSpacing.sm)
                 }
+
+                Picker("SUBTYPE", selection: $viewModel.subtype) {
+                    ForEach(ClothingSubtype.compatibleSubtypes(for: viewModel.category)) { subtype in
+                        Text(subtype.rawValue.uppercased()).tag(subtype)
+                    }
+                }
+
+                Picker("COLOR", selection: $viewModel.primaryColor) {
+                    ForEach(ClosetColor.allCases) { color in
+                        Text(color.rawValue.uppercased()).tag(color)
+                    }
+                }
+
+                if viewModel.classificationConfidence > 0 || viewModel.colorConfidence > 0 {
+                    Text("AUTO-SUGGESTED · REVIEW BEFORE SAVING")
+                        .font(PyxisTypography.label)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                }
+            }
+
+            editorSection("ORGANIZATION") {
+                labeledField("TAGS · COMMA SEPARATED", text: $viewModel.tags)
+                Toggle("FAVORITE", isOn: $viewModel.favorite)
+
+                if !closets.isEmpty {
+                    DisclosureGroup("CLOSETS") {
+                        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                            ForEach(closets) { closet in
+                                Toggle(closet.displayName.uppercased(), isOn: closetBinding(closet))
+                            }
+                        }
+                        .padding(.top, PyxisSpacing.sm)
+                    }
+                }
+            }
+
+            editorSection("NOTES") {
+                labeledField("NOTES", text: $viewModel.notes, axis: .vertical)
             }
         }
         .font(PyxisTypography.body)
         .textFieldStyle(.plain)
+    }
+
+    private func editorSection<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            Text(title)
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.secondaryText)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PyxisSpacing.md)
+        .background(PyxisColors.field)
+    }
+
+    private func labeledField(
+        _ title: String,
+        text: Binding<String>,
+        axis: Axis = .horizontal
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+            Text(title)
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.secondaryText)
+            TextField("", text: text, axis: axis)
+                .padding(.vertical, PyxisSpacing.xs)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+                }
+                .accessibilityLabel(title.capitalized)
+        }
     }
 
     private var categoryBinding: Binding<ClothingCategory> {
