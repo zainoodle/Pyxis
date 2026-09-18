@@ -10,3 +10,6 @@ DerivedData*/
 .superpowers/
 backend/pyxis-ai-worker/.dev.vars
 config/Pyxis.local.xcconfig
+
+__pycache__/
+*.pyc
