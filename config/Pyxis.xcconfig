@@ -3,3 +3,6 @@ PYXIS_AI_ACCESS_TOKEN =
 
 // Local values override the safe blanks above. The local file is ignored by Git.
 #include? "Pyxis.local.xcconfig"
+
+// Keep release metadata consistent across Debug and Release.
+#include "Version.xcconfig"

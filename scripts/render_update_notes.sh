@@ -27,6 +27,7 @@ for type in added changed deprecated removed fixed security; do
   entries=()
   while IFS= read -r path; do
     [[ -n "$path" ]] || continue
+    grep -Eq '^bump: none$' "$path" && continue
     grep -Eq "^type: $type$" "$path" && entries+=("$path")
   done < <(find changes -maxdepth 1 -type f -name '*.md' ! -name README.md ! -name template.md -print | sort)
   [[ ${#entries[@]} -gt 0 ]] || continue
