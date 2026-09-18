@@ -42,6 +42,9 @@ jobs:
           echo "sha=$base" >> "$GITHUB_OUTPUT"
           echo "commit_sha=$(./scripts/resolve_policy_base.sh "$base" HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Validate version progression
+        run: python3 scripts/version.py check --base "${{ steps.base.outputs.sha }}"
+
       - name: Validate PR title
         if: github.event_name == 'pull_request'
         env:
@@ -88,14 +91,19 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Run static deployment preflight
+        if: ${{ !cancelled() }}
         run: ./scripts/deployment_preflight.sh static
 
-      - name: Build the iOS app
-        run: >-
-          xcodebuild
-          -project Pyxis.xcodeproj
-          -scheme Pyxis
-          -configuration Debug
-          -destination 'generic/platform=iOS Simulator'
-          CODE_SIGNING_ALLOWED=NO
-          build
+      - name: Build the iOS app and verify its version
+        if: ${{ !cancelled() }}
+        run: |
+          xcodebuild \
+            -project Pyxis.xcodeproj \
+            -scheme Pyxis \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/pyxis-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          python3 scripts/version.py check \
+            --app-info "$RUNNER_TEMP/pyxis-build/Build/Products/Debug-iphonesimulator/Pyxis.app/Info.plist"

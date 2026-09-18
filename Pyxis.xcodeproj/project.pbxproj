@@ -10,6 +10,7 @@
 		1A0000010000000000000001 /* Pyxis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pyxis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000010000000000000010 /* Pyxis.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Pyxis.xcconfig; sourceTree = "<group>"; };
 		1A0000010000000000000011 /* Pyxis.local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Pyxis.local.xcconfig.example; sourceTree = "<group>"; };
+		1A0000010000000000000014 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -42,6 +43,7 @@
 			isa = PBXGroup;
 			children = (
 				1A0000010000000000000010 /* Pyxis.xcconfig */,
+				1A0000010000000000000014 /* Version.xcconfig */,
 				1A0000010000000000000011 /* Pyxis.local.xcconfig.example */,
 			);
 			path = config;
@@ -261,7 +263,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2AW3C9R4CX;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Pyxis;
@@ -278,7 +279,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zainoodle.pyxis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -296,7 +296,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2AW3C9R4CX;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Pyxis;
@@ -313,7 +312,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zainoodle.pyxis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

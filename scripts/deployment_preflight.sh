@@ -5,8 +5,6 @@ MODE="${1:-local}"
 PROJECT="Pyxis.xcodeproj"
 SCHEME="Pyxis"
 BUNDLE_ID="com.zainoodle.pyxis"
-VERSION="1.0"
-BUILD_NUMBER="1"
 SUPPORT_EMAIL="zainoodle@gmail.com"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -178,8 +176,7 @@ assert_app_metadata() {
 
   assert_plist_value "$info_plist" ":CFBundleIdentifier" "$BUNDLE_ID"
   assert_plist_value "$info_plist" ":CFBundleDisplayName" "Pyxis"
-  assert_plist_value "$info_plist" ":CFBundleShortVersionString" "$VERSION"
-  assert_plist_value "$info_plist" ":CFBundleVersion" "$BUILD_NUMBER"
+  python3 scripts/version.py check --app-info "$info_plist"
   assert_plist_value "$info_plist" ":LSApplicationCategoryType" "public.app-category.lifestyle"
   assert_plist_value "$info_plist" ":NSCameraUsageDescription" "Take photos of clothing items to save locally in Pyxis."
   assert_plist_value "$info_plist" ":NSPhotoLibraryUsageDescription" "Select clothing photos to save locally in Pyxis."
@@ -214,6 +211,7 @@ run_static_checks() {
   require_command sips
   require_command strings
 
+  python3 scripts/version.py check
   ./scripts/validate_update_notes.sh --all
   ./scripts/validate_privacy_consistency.sh
   lint_metadata

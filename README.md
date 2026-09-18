@@ -37,6 +37,10 @@ Xcode includes `src/` and `assets/` through synchronized groups. Swift Package M
 
 Run core tests with `./scripts/test.sh`, and gateway tests with `npm test --prefix backend/pyxis-ai-worker`.
 
+## Versioning
+
+App versions use `major.minor.patch`; a separate build counter identifies each TestFlight/App Store upload. Both values live in `config/Version.xcconfig`. Run `python3 scripts/version.py next` to see the next release implied by pending notes, then `./scripts/prepare_release.sh auto --dry-run` to preview preparation. See `docs/RELEASE_PROCESS.md` for releases and build-only updates.
+
 ## Requirements
 
 - macOS with Xcode 16 or newer

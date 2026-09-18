@@ -9,6 +9,7 @@
 - Keep app entry points in `src/main/`, business logic in `src/services/`, models in `src/models/`, and shared helpers in `src/utils/`. Follow the existing view and persistence structure.
 - Preserve the local-first experience. Never commit secrets, silently add photo uploads, or change stored data without an upgrade/migration plan.
 - Test changed behavior with relevant existing checks; add regression coverage for bugs. Check visible changes on a simulator or device.
+- Use `major.minor.patch` app versions and an increasing build counter from `config/Version.xcconfig`; prepare changes with `scripts/version.py`, never bump versions for each PR.
 - Maintain one release-note fragment per PR and update it during review. Keep docs aligned with the final change.
 - Report checks as passed, failed, or blocked; never describe unrun checks as passing.
 - Prepare draft PRs with the problem, resulting behavior, verification, and relevant risks. Isaiah decides when to merge or release; do not merge or publish without his instruction.

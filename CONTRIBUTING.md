@@ -37,4 +37,6 @@ The pre-push hook compares the whole branch with its base, not just the latest p
 
 Protect `main` with required PRs, passing `validate` and `quality` checks, resolved conversations, linear history, and no force pushes or deletion. Require zero external approvals while Isaiah is the sole maintainer; he reviews the result and authorizes merging. Use squash merges with the PR title as the commit subject. Codex does not merge or publish without an explicit instruction.
 
+Keep app version/build values in `config/Version.xcconfig`; use `python3 scripts/version.py next` and `./scripts/prepare_release.sh auto`. Routine PRs add a release note without bumping the app version.
+
 Prepare releases in a separate PR. After that PR passes checks and merges, tag the merged commit, test the candidate through TestFlight, and submit to the App Store only with Isaiah's approval. See `docs/RELEASE_PROCESS.md` for commands.
