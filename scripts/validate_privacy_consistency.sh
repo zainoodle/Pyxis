@@ -23,15 +23,15 @@ if rg -ni 'Data Not Collected|No data collected' docs/APP_STORE_SUBMISSION.md; t
   fail "App Store notes cannot claim no collection while standard xAI retention is enabled"
 fi
 
-rg -q 'NSPrivacyCollectedDataTypePhotosorVideos' Pyxis/PrivacyInfo.xcprivacy \
+rg -q 'NSPrivacyCollectedDataTypePhotosorVideos' assets/PrivacyInfo.xcprivacy \
   || fail "privacy manifest must declare photos or videos for optional AI functionality"
-rg -q 'NSPrivacyCollectedDataTypePurposeAppFunctionality' Pyxis/PrivacyInfo.xcprivacy \
+rg -q 'NSPrivacyCollectedDataTypePurposeAppFunctionality' assets/PrivacyInfo.xcprivacy \
   || fail "privacy manifest must limit declared photo use to app functionality"
-rg -q 'UP TO 30 DAYS' Pyxis/Views/AddItem/AddItemFlow.swift \
+rg -q 'UP TO 30 DAYS' src/views/AddItem/AddItemFlow.swift \
   || fail "garment AI disclosure is missing the retention statement"
-rg -q 'UP TO 30 DAYS' Pyxis/Views/OutfitBuilder/AITryOnView.swift \
+rg -q 'UP TO 30 DAYS' src/views/OutfitBuilder/AITryOnView.swift \
   || fail "try-on disclosure is missing the retention statement"
-rg -q 'NOT A SIZE OR FIT GUARANTEE' Pyxis/Views/OutfitBuilder/AITryOnView.swift \
+rg -q 'NOT A SIZE OR FIT GUARANTEE' src/views/OutfitBuilder/AITryOnView.swift \
   || fail "try-on disclosure is missing the fit disclaimer"
 
 printf 'Privacy and AI disclosure surfaces are consistent.\n'

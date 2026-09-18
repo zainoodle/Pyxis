@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat <<'USAGE' >&2
-usage: ./script/new_update_note.sh <type> <area> <summary> [bump]
+usage: ./scripts/new_update_note.sh <type> <area> <summary> [bump]
 
 type     added|changed|deprecated|removed|fixed|security
 area     short kebab-case area, used in the filename and metadata
@@ -37,7 +37,7 @@ done
 
 apply_fragment() {
   local patch_file="$1"
-  "$ROOT_DIR/script/write_update_note.sh" "$patch_file" "$TYPE" "$BUMP" "$AREA" "$SUMMARY"
+  "$ROOT_DIR/scripts/write_update_note.sh" "$patch_file" "$TYPE" "$BUMP" "$AREA" "$SUMMARY"
 }
 
 apply_fragment "$PATHNAME"

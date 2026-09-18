@@ -14,20 +14,18 @@ let package = Package(
     targets: [
         .target(
             name: "PyxisCore",
-            path: "Pyxis",
+            path: "src",
             exclude: [
-                "App",
-                "Assets.xcassets",
-                "DesignSystem",
-                "PrivacyInfo.xcprivacy",
-                "Services/DebugClosetSeedService.swift",
-                "Views"
+                "main",
+                "design-system",
+                "services/DebugClosetSeedService.swift",
+                "views"
             ]
         ),
         .testTarget(
             name: "PyxisTests",
             dependencies: ["PyxisCore"],
-            path: "Tests/PyxisTests"
+            path: "tests/PyxisTests"
         )
     ]
 )

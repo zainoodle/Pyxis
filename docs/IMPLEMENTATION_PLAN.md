@@ -20,17 +20,17 @@ Do not begin this section until architecture approval is given.
 ### Files
 
 - `Package.swift`
-- `Pyxis/App/PyxisApp.swift`
-- `Pyxis/Models/ClosetItem.swift`
-- `Pyxis/Models/ClothingCategory.swift`
-- `Pyxis/Models/ClothingSubtype.swift`
-- `Pyxis/Models/ClosetColor.swift`
-- `Pyxis/Models/Season.swift`
-- `Pyxis/Models/ItemSource.swift`
-- `Pyxis/Persistence/SwiftDataContainer.swift`
-- `Pyxis/Services/ItemCodeGenerator.swift`
-- `Tests/PyxisTests/ItemCodeGeneratorTests.swift`
-- `Tests/PyxisTests/PersistenceTests.swift`
+- `src/main/PyxisApp.swift`
+- `src/models/ClosetItem.swift`
+- `src/models/ClothingCategory.swift`
+- `src/models/ClothingSubtype.swift`
+- `src/models/ClosetColor.swift`
+- `src/models/Season.swift`
+- `src/models/ItemSource.swift`
+- `src/persistence/SwiftDataContainer.swift`
+- `src/services/ItemCodeGenerator.swift`
+- `tests/PyxisTests/ItemCodeGeneratorTests.swift`
+- `tests/PyxisTests/PersistenceTests.swift`
 
 ### Work
 
@@ -62,12 +62,12 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `Pyxis/Services/ImageStorageService.swift`
-- `Pyxis/Services/BackgroundRemovalService.swift`
-- `Pyxis/Utilities/ImageUtilities.swift`
-- `Pyxis/Utilities/FileManagerExtensions.swift`
-- `Tests/PyxisTests/ImageStorageTests.swift`
-- `Tests/PyxisTests/BackgroundRemovalFallbackTests.swift`
+- `src/services/ImageStorageService.swift`
+- `src/services/BackgroundRemovalService.swift`
+- `src/utils/ImageUtilities.swift`
+- `src/utils/FileManagerExtensions.swift`
+- `tests/PyxisTests/ImageStorageTests.swift`
+- `tests/PyxisTests/BackgroundRemovalFallbackTests.swift`
 
 ### Work
 
@@ -99,12 +99,12 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `Pyxis/Services/ColorAnalysisService.swift`
-- `Pyxis/Services/ClothingClassificationService.swift`
-- `Pyxis/Services/FutureAI/OutfitRecommendationService.swift`
-- `Pyxis/Services/FutureAI/PurchaseCompatibilityService.swift`
-- `Pyxis/Services/FutureAI/EmbeddingService.swift`
-- `Tests/PyxisTests/ColorAnalysisTests.swift`
+- `src/services/ColorAnalysisService.swift`
+- `src/services/ClothingClassificationService.swift`
+- `src/services/FutureAI/OutfitRecommendationService.swift`
+- `src/services/FutureAI/PurchaseCompatibilityService.swift`
+- `src/services/FutureAI/EmbeddingService.swift`
+- `tests/PyxisTests/ColorAnalysisTests.swift`
 
 ### Work
 
@@ -135,22 +135,22 @@ Do not begin this section until architecture approval is given.
 
 ### Files
 
-- `Pyxis/DesignSystem/PyxisTypography.swift`
-- `Pyxis/DesignSystem/PyxisColors.swift`
-- `Pyxis/DesignSystem/PyxisSpacing.swift`
-- `Pyxis/DesignSystem/PyxisComponents.swift`
-- `Pyxis/ViewModels/ClosetGridViewModel.swift`
-- `Pyxis/ViewModels/AddItemViewModel.swift`
-- `Pyxis/ViewModels/ItemDetailViewModel.swift`
-- `Pyxis/Views/ClosetGrid/ClosetGridView.swift`
-- `Pyxis/Views/ClosetGrid/ClosetGridItemView.swift`
-- `Pyxis/Views/AddItem/AddItemFlow.swift`
-- `Pyxis/Views/AddItem/ImageImportView.swift`
-- `Pyxis/Views/AddItem/MetadataEditorView.swift`
-- `Pyxis/Views/ItemDetail/ItemDetailView.swift`
-- `Pyxis/Views/Navigation/TopNavigationView.swift`
-- `Pyxis/Views/Search/SearchAndFilterView.swift`
-- `Tests/PyxisTests/FilteringTests.swift`
+- `src/design-system/PyxisTypography.swift`
+- `src/design-system/PyxisColors.swift`
+- `src/design-system/PyxisSpacing.swift`
+- `src/design-system/PyxisComponents.swift`
+- `src/view-models/ClosetGridViewModel.swift`
+- `src/view-models/AddItemViewModel.swift`
+- `src/view-models/ItemDetailViewModel.swift`
+- `src/views/ClosetGrid/ClosetGridView.swift`
+- `src/views/ClosetGrid/ClosetGridItemView.swift`
+- `src/views/AddItem/AddItemFlow.swift`
+- `src/views/AddItem/ImageImportView.swift`
+- `src/views/AddItem/MetadataEditorView.swift`
+- `src/views/ItemDetail/ItemDetailView.swift`
+- `src/views/Navigation/TopNavigationView.swift`
+- `src/views/Search/SearchAndFilterView.swift`
+- `tests/PyxisTests/FilteringTests.swift`
 
 ### Work
 
@@ -194,17 +194,17 @@ Do not begin this section until architecture approval is given.
 
 ### Build/Run Files
 
-- `script/build_and_run.sh`
+- `scripts/build_and_run.sh`
 - `.codex/environments/environment.toml`
 
 ### Work
 
-1. Add `script/build_and_run.sh` after the runnable target exists.
+1. Add `scripts/build_and_run.sh` after the runnable target exists.
 2. Build the `Pyxis` Xcode scheme for a booted iOS Simulator.
 3. Terminate any existing simulator `Pyxis` process before launch.
 4. Install and launch with `xcrun simctl`.
 5. Add `--verify`, `--logs`, and `--debug` support where practical.
-6. Wire `.codex/environments/environment.toml` Run action to `./script/build_and_run.sh`.
+6. Wire `.codex/environments/environment.toml` Run action to `./scripts/build_and_run.sh`.
 7. Run unit tests.
 8. Run the build/run script on macOS.
 9. Complete the manual QA checklist from `docs/REQUIREMENTS_TRACE.md`.
@@ -213,7 +213,7 @@ Do not begin this section until architecture approval is given.
 ### Exit Gate
 
 - `swift test` passes.
-- `./script/build_and_run.sh --verify` succeeds with a booted iOS Simulator.
+- `./scripts/build_and_run.sh --verify` succeeds with a booted iOS Simulator.
 - Manual QA checklist passes or each remaining limitation is documented.
 - Code search confirms:
   - no `URLSession` or networking for MVP functionality,

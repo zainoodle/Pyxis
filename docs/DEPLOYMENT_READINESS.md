@@ -4,13 +4,13 @@ Last audited: 2026-08-27
 
 ## Current v1.1 Verification
 
-- `./script/test.sh` passes with 110 XCTest cases from a fresh temporary SwiftPM scratch directory while using `/Applications/Xcode.app/Contents/Developer` explicitly.
+- `./scripts/test.sh` passes with 110 XCTest cases from a fresh temporary SwiftPM scratch directory while using `/Applications/Xcode.app/Contents/Developer` explicitly.
 - A full iOS 17 source type-check against the installed iPhoneOS SDK passes with no diagnostics.
-- `./script/deployment_preflight.sh static` passes, including the privacy/document consistency validator.
+- `./scripts/deployment_preflight.sh static` passes, including the privacy/document consistency validator.
 - Worker `npm ci`, six Node tests, JavaScript syntax checking, and `npm audit --audit-level=high` pass; the current lockfile reports zero vulnerabilities.
 - Xcode's iOS 26.5 Simulator runtime is installed, and current Debug builds, installs, launches, and process verification pass on iPhone 17e and iPhone 17 Pro Max simulators.
-- `./script/build_and_run.sh --verify` passes repeatedly on the booted iPhone 17e. It now keeps DerivedData outside the iCloud-synced checkout and verifies the host-side Simulator process without relying on unavailable in-runtime `ps` tooling.
-- `./script/deployment_preflight.sh local` passes, including clean tests, a generic unsigned Release iOS build, artifact inspection, and an unsigned Release archive.
+- `./scripts/build_and_run.sh --verify` passes repeatedly on the booted iPhone 17e. It now keeps DerivedData outside the iCloud-synced checkout and verifies the host-side Simulator process without relying on unavailable in-runtime `ps` tooling.
+- `./scripts/deployment_preflight.sh local` passes, including clean tests, a generic unsigned Release iOS build, artifact inspection, and an unsigned Release archive.
 - Current simulator smoke checks pass for empty Closet, Add Item open/cancel, debug import through review, save-original fallback, grid persistence after relaunch, subtype/filter chips and reset, search-specific no-results recovery, native item detail navigation, direct Build handoff, AI unavailable state, Save Fit confirmation, and compact/Pro Max initial layouts.
 - An AX5 Dynamic Type plus Increased Contrast check exposed and then verified the accessibility fallback for the Closet header, search/sort/favorites controls, and single-column filter options. Full VoiceOver and Reduce Motion walkthroughs remain manual gates.
 - The connected iPhone 17 Pro Max is paired and recognized as an eligible destination. Physical-device build/install remains gated on enabling Developer Mode in Settings > Privacy & Security on that phone.
@@ -23,8 +23,8 @@ Last audited: 2026-08-27
 - Closet item and saved-fit save paths populate local memory records with deterministic on-device embeddings.
 - iOS simulator Debug build passed through XcodeBuildMCP with no diagnostics during the earlier release audit.
 - iOS simulator build/install/launch passed through XcodeBuildMCP during the earlier release audit.
-- `./script/build_and_run.sh --verify` passed on a booted iOS Simulator during the earlier release audit and replaced the existing app process.
-- `./script/deployment_preflight.sh local` passes, covering metadata linting, policy scans, privacy-manifest regression scans, whitespace checks, `swift test`, generic Release iOS build, artifact metadata inspection, Release debug-content scans, and unsigned Release archive.
+- `./scripts/build_and_run.sh --verify` passed on a booted iOS Simulator during the earlier release audit and replaced the existing app process.
+- `./scripts/deployment_preflight.sh local` passes, covering metadata linting, policy scans, privacy-manifest regression scans, whitespace checks, `swift test`, generic Release iOS build, artifact metadata inspection, Release debug-content scans, and unsigned Release archive.
 - Generic Release iOS build passes with `CODE_SIGNING_ALLOWED=NO`.
 - Unsigned Release archive creation passes with `CODE_SIGNING_ALLOWED=NO`.
 - The built app and archive include compiled app icon files, `CFBundleIconName = AppIcon`, and `PrivacyInfo.xcprivacy`.
@@ -38,13 +38,13 @@ Last audited: 2026-08-27
 - Screenshot inspection confirmed the launched simulator app presents the Pyxis closet grid and empty state.
 - The app is configured and Release-built as iPhone-only (`UIDeviceFamily = [1]`) so App Store submission does not require unverified iPad screenshots or iPad manual QA.
 - App Store Connect draft metadata, support-page draft, and privacy-policy draft are documented in `docs/APP_STORE_SUBMISSION.md`, `docs/SUPPORT.md`, and `docs/PRIVACY_POLICY.md`.
-- App Store Connect export options are documented in `deployment/ExportOptions-AppStoreConnect.plist`.
+- App Store Connect export options are documented in `config/deployment/ExportOptions-AppStoreConnect.plist`.
 - Connected `Isaiah’s iPhone` was detected through `devicectl` and is paired for development.
 - Debug iPhone device build succeeded for `Isaiah’s iPhone` using team `2AW3C9R4CX`, `Apple Development: zainoodle@gmail.com (8NQ4NJFK43)`, and an automatically provisioned `iOS Team Provisioning Profile: com.zainoodle.pyxis`.
 - The signed Debug app installed and launched successfully on the connected iPhone through `devicectl`.
 - Signed Release archive creation succeeded, but the archive is development-signed with `get-task-allow = true`; it is not yet an App Store/TestFlight distribution export.
-- Local App Store Connect export with `deployment/ExportOptions-AppStoreConnect.plist` was attempted, but Xcode could not authenticate an App Store Connect provider and no App Store export profile for `com.zainoodle.pyxis` was available.
-- `./script/deployment_preflight.sh distribution` currently stops at the same distribution-signing gate because the signed archive is development-signed.
+- Local App Store Connect export with `config/deployment/ExportOptions-AppStoreConnect.plist` was attempted, but Xcode could not authenticate an App Store Connect provider and no App Store export profile for `com.zainoodle.pyxis` was available.
+- `./scripts/deployment_preflight.sh distribution` currently stops at the same distribution-signing gate because the signed archive is development-signed.
 
 ## Fixed During Audit
 
@@ -72,7 +72,7 @@ Last audited: 2026-08-27
 - Removed draft-marker text from the publishable privacy policy.
 - Added an App Store Connect export options template using Xcode's current `app-store-connect` method.
 - Reverified simulator, physical-device build/install, unsigned archive, signed archive, and App Store export gates after wiring on-device memory into save paths.
-- Added `script/deployment_preflight.sh` for repeatable static, local, and distribution readiness checks.
+- Added `scripts/deployment_preflight.sh` for repeatable static, local, and distribution readiness checks.
 - Flattened the 1024px App Store icon source to an opaque RGB PNG and added preflight validation for icon pixel size and alpha.
 - Added a preflight scan for required-reason API usage while the privacy manifest declares no accessed API categories.
 - Added Release artifact scans to prevent debug-only sample import, closet seeding UI, messages, and sample item codes from shipping.
@@ -97,4 +97,4 @@ Last audited: 2026-08-27
 - Complete App Store Connect metadata, age rating, content rights, pricing/availability, export compliance, DSA/trader status, and any region-specific compliance fields.
 - Capture final iPhone App Store screenshots using owned or licensed clothing images.
 - Create/download an Apple Distribution signing identity and App Store distribution provisioning profile for `com.zainoodle.pyxis`; this Mac currently has only the Apple Development identity used for phone testing.
-- Run `./script/deployment_preflight.sh distribution`, then create a distribution-signed archive/export and TestFlight/App Store upload only after the signing team, bundle ID, version, build number, and App Store distribution profile/certificate are confirmed in Xcode and App Store Connect.
+- Run `./scripts/deployment_preflight.sh distribution`, then create a distribution-signed archive/export and TestFlight/App Store upload only after the signing team, bundle ID, version, build number, and App Store distribution profile/certificate are confirmed in Xcode and App Store Connect.

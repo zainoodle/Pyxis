@@ -15,6 +15,6 @@ summary: Make closet capture, navigation, filtering, persistence, and optional A
 
 ## Verification
 
-- Run `./script/test.sh`, the full iOS source type-check, Worker tests/check/audit, and static deployment preflight.
+- Run `./scripts/test.sh`, the full iOS source type-check, Worker tests/check/audit, and static deployment preflight.
 - Current iPhone 17e and iPhone 17 Pro Max Simulator builds and launches pass, as do focused Add, filter, navigation, persistence, AI-unavailable, AX5, and Increased Contrast smoke checks.
 - Physical-device installation remains gated on enabling Developer Mode on the connected iPhone.

@@ -23,40 +23,40 @@ Evidence collected:
 
 High-impact findings:
 
-1. `LocalImageView` synchronously decodes file-backed images in `body` (`Pyxis/Views/Shared/LocalImageView.swift:8-13`). This can hitch the closet grid, outfit carousel, saved-fit strip, and detail screens.
-2. Closet filtering and sorting are recomputed inside the grid view builder (`Pyxis/Views/ClosetGrid/ClosetGridView.swift:93-96`) and the filtering service lowercases/searches every matching item on each pass (`Pyxis/Services/ClosetFilteringService.swift:40-65`).
-3. Navigation and filters rely on horizontally hidden text rows with limited feedback (`Pyxis/Views/Navigation/TopNavigationView.swift:21-63`), and only seven colors are exposed even though the model supports more.
-4. Image import has quiet failure paths and can attempt both URL and image-provider handling for one drop (`Pyxis/Views/AddItem/ImageImportView.swift:42-101`).
-5. Saved fits are discoverable but thin: cards have generic accessibility labels (`Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift:102-104`), the gallery empty state has no next action, and outfit detail has no delete action.
-6. The outfit builder recalculates rows/draft from full `items` in computed properties (`Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift:26-35`) and repeats service calls from `body`.
-7. Fixed tiny monospaced typography creates a premium look, but it risks Dynamic Type/accessibility readability across forms and compact screens (`Pyxis/DesignSystem/PyxisTypography.swift`).
+1. `LocalImageView` synchronously decodes file-backed images in `body` (`src/views/Shared/LocalImageView.swift:8-13`). This can hitch the closet grid, outfit carousel, saved-fit strip, and detail screens.
+2. Closet filtering and sorting are recomputed inside the grid view builder (`src/views/ClosetGrid/ClosetGridView.swift:93-96`) and the filtering service lowercases/searches every matching item on each pass (`src/services/ClosetFilteringService.swift:40-65`).
+3. Navigation and filters rely on horizontally hidden text rows with limited feedback (`src/views/Navigation/TopNavigationView.swift:21-63`), and only seven colors are exposed even though the model supports more.
+4. Image import has quiet failure paths and can attempt both URL and image-provider handling for one drop (`src/views/AddItem/ImageImportView.swift:42-101`).
+5. Saved fits are discoverable but thin: cards have generic accessibility labels (`src/views/OutfitBuilder/SavedFitsStrip.swift:102-104`), the gallery empty state has no next action, and outfit detail has no delete action.
+6. The outfit builder recalculates rows/draft from full `items` in computed properties (`src/views/OutfitBuilder/OutfitBuilderView.swift:26-35`) and repeats service calls from `body`.
+7. Fixed tiny monospaced typography creates a premium look, but it risks Dynamic Type/accessibility readability across forms and compact screens (`src/design-system/PyxisTypography.swift`).
 
 ## File Structure
 
 Create:
 
-- `Pyxis/Views/Shared/AsyncLocalImageView.swift` - asynchronous, downsampled image renderer and loader state for local file URLs.
-- `Pyxis/Utilities/LocalImageCache.swift` - in-memory image cache for display-sized local images shared by grid, carousel, detail, and saved-fit thumbnails.
-- `Pyxis/ViewModels/OutfitBuilderViewModel.swift` - derived builder rows, selections, and draft state.
-- `Tests/PyxisTests/OutfitBuilderViewModelTests.swift` - pure tests for builder derived state where possible.
-- `Tests/PyxisTests/ClosetGridViewModelTests.swift` - tests for derived visible-items update behavior.
+- `src/views/Shared/AsyncLocalImageView.swift` - asynchronous, downsampled image renderer and loader state for local file URLs.
+- `src/utils/LocalImageCache.swift` - in-memory image cache for display-sized local images shared by grid, carousel, detail, and saved-fit thumbnails.
+- `src/view-models/OutfitBuilderViewModel.swift` - derived builder rows, selections, and draft state.
+- `tests/PyxisTests/OutfitBuilderViewModelTests.swift` - pure tests for builder derived state where possible.
+- `tests/PyxisTests/ClosetGridViewModelTests.swift` - tests for derived visible-items update behavior.
 
 Modify:
 
-- `Pyxis/Views/Shared/LocalImageView.swift` - replace synchronous decode implementation or turn into a compatibility wrapper around `AsyncLocalImageView`.
-- `Pyxis/Views/ClosetGrid/ClosetGridView.swift` - consume view-model visible items, add clear filter affordance, avoid filtering in `body`.
-- `Pyxis/ViewModels/ClosetGridViewModel.swift` - own visible-items derivation and active-filter summary.
-- `Pyxis/Services/ClosetFilteringService.swift` - add reusable active-filter helpers and optional searchable-text helper.
-- `Pyxis/Views/Navigation/TopNavigationView.swift` - clarify active filter state and expose all colors through a compact picker/menu.
-- `Pyxis/Views/Search/SearchAndFilterView.swift` - add active filter count/clear action and better compact layout.
-- `Pyxis/Views/AddItem/ImageImportView.swift` - add loading/error state and single-path drop handling.
-- `Pyxis/Views/AddItem/MetadataEditorView.swift` - add labels/hints for auto-filled metadata and improve form grouping.
-- `Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift` - delegate derived state to `OutfitBuilderViewModel`.
-- `Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift` - improve saved-fit labels and accessibility.
-- `Pyxis/Views/OutfitBuilder/SavedFitsGalleryView.swift` - add empty-state action to start building.
-- `Pyxis/Views/OutfitBuilder/OutfitDetailView.swift` - add delete action with confirmation.
-- `Pyxis/Views/ItemDetail/ItemDetailView.swift` - add destructive confirmation and clearer background-removal status.
-- `Pyxis/DesignSystem/PyxisTypography.swift` - introduce scalable variants while preserving the current brand feel.
+- `src/views/Shared/LocalImageView.swift` - replace synchronous decode implementation or turn into a compatibility wrapper around `AsyncLocalImageView`.
+- `src/views/ClosetGrid/ClosetGridView.swift` - consume view-model visible items, add clear filter affordance, avoid filtering in `body`.
+- `src/view-models/ClosetGridViewModel.swift` - own visible-items derivation and active-filter summary.
+- `src/services/ClosetFilteringService.swift` - add reusable active-filter helpers and optional searchable-text helper.
+- `src/views/Navigation/TopNavigationView.swift` - clarify active filter state and expose all colors through a compact picker/menu.
+- `src/views/Search/SearchAndFilterView.swift` - add active filter count/clear action and better compact layout.
+- `src/views/AddItem/ImageImportView.swift` - add loading/error state and single-path drop handling.
+- `src/views/AddItem/MetadataEditorView.swift` - add labels/hints for auto-filled metadata and improve form grouping.
+- `src/views/OutfitBuilder/OutfitBuilderView.swift` - delegate derived state to `OutfitBuilderViewModel`.
+- `src/views/OutfitBuilder/SavedFitsStrip.swift` - improve saved-fit labels and accessibility.
+- `src/views/OutfitBuilder/SavedFitsGalleryView.swift` - add empty-state action to start building.
+- `src/views/OutfitBuilder/OutfitDetailView.swift` - add delete action with confirmation.
+- `src/views/ItemDetail/ItemDetailView.swift` - add destructive confirmation and clearer background-removal status.
+- `src/design-system/PyxisTypography.swift` - introduce scalable variants while preserving the current brand feel.
 - `docs/MANUAL_QA.md` - add checks for performance polish, import errors, saved-fit management, and accessibility.
 
 Do not modify unrelated untracked files. If new untracked files appear before implementation, inspect them and confirm ownership before staging or editing them.
@@ -67,19 +67,19 @@ Do not modify unrelated untracked files. If new untracked files appear before im
 
 **Files:**
 
-- Create: `Pyxis/Utilities/LocalImageCache.swift`
-- Create: `Pyxis/Views/Shared/AsyncLocalImageView.swift`
-- Modify: `Pyxis/Views/Shared/LocalImageView.swift:4-26`
+- Create: `src/utils/LocalImageCache.swift`
+- Create: `src/views/Shared/AsyncLocalImageView.swift`
+- Modify: `src/views/Shared/LocalImageView.swift:4-26`
 - Verify affected callers:
-  - `Pyxis/Views/ClosetGrid/ClosetGridItemView.swift`
-  - `Pyxis/Views/OutfitBuilder/OutfitCarouselItemView.swift`
-  - `Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift`
-  - `Pyxis/Views/ItemDetail/ItemDetailView.swift`
-  - `Pyxis/Views/AddItem/AddItemFlow.swift`
+  - `src/views/ClosetGrid/ClosetGridItemView.swift`
+  - `src/views/OutfitBuilder/OutfitCarouselItemView.swift`
+  - `src/views/OutfitBuilder/SavedFitsStrip.swift`
+  - `src/views/ItemDetail/ItemDetailView.swift`
+  - `src/views/AddItem/AddItemFlow.swift`
 
 - [ ] **Step 1: Add an in-memory image cache**
 
-Create `Pyxis/Utilities/LocalImageCache.swift`. Cache keys include the display pixel target so thumbnails, carousel cells, and detail previews do not accidentally reuse the wrong resolution:
+Create `src/utils/LocalImageCache.swift`. Cache keys include the display pixel target so thumbnails, carousel cells, and detail previews do not accidentally reuse the wrong resolution:
 
 ```swift
 import UIKit
@@ -122,7 +122,7 @@ final class LocalImageCache {
 
 - [ ] **Step 2: Add async local image rendering**
 
-Create `Pyxis/Views/Shared/AsyncLocalImageView.swift`:
+Create `src/views/Shared/AsyncLocalImageView.swift`:
 
 ```swift
 import ImageIO
@@ -225,7 +225,7 @@ struct AsyncLocalImageView: View {
 
 - [ ] **Step 3: Convert `LocalImageView` to a wrapper**
 
-Replace `Pyxis/Views/Shared/LocalImageView.swift` with:
+Replace `src/views/Shared/LocalImageView.swift` with:
 
 ```swift
 import SwiftUI
@@ -258,7 +258,7 @@ Run the app on a simulator only after confirming no other chat owns the simulato
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Pyxis/Utilities/LocalImageCache.swift Pyxis/Views/Shared/AsyncLocalImageView.swift Pyxis/Views/Shared/LocalImageView.swift
+git add src/utils/LocalImageCache.swift src/views/Shared/AsyncLocalImageView.swift src/views/Shared/LocalImageView.swift
 git commit -m "perf: load local clothing images asynchronously"
 ```
 
@@ -266,14 +266,14 @@ git commit -m "perf: load local clothing images asynchronously"
 
 **Files:**
 
-- Modify: `Pyxis/ViewModels/ClosetGridViewModel.swift:1-25`
-- Modify: `Pyxis/Views/ClosetGrid/ClosetGridView.swift:93-136`
-- Modify: `Pyxis/Services/ClosetFilteringService.swift:12-117`
-- Create: `Tests/PyxisTests/ClosetGridViewModelTests.swift`
+- Modify: `src/view-models/ClosetGridViewModel.swift:1-25`
+- Modify: `src/views/ClosetGrid/ClosetGridView.swift:93-136`
+- Modify: `src/services/ClosetFilteringService.swift:12-117`
+- Create: `tests/PyxisTests/ClosetGridViewModelTests.swift`
 
 - [ ] **Step 1: Add filter-state convenience**
 
-Append to `ClosetFilterState` in `Pyxis/Services/ClosetFilteringService.swift`:
+Append to `ClosetFilterState` in `src/services/ClosetFilteringService.swift`:
 
 ```swift
 public var hasActiveFilters: Bool {
@@ -303,7 +303,7 @@ public mutating func reset() {
 
 - [ ] **Step 2: Write view-model tests**
 
-Create `Tests/PyxisTests/ClosetGridViewModelTests.swift`:
+Create `tests/PyxisTests/ClosetGridViewModelTests.swift`:
 
 ```swift
 import XCTest
@@ -404,7 +404,7 @@ Expected: fail because `visibleItems`, `updateVisibleItems(from:)`, `itemFingerp
 
 - [ ] **Step 4: Update `ClosetGridViewModel`**
 
-Replace `Pyxis/ViewModels/ClosetGridViewModel.swift` with:
+Replace `src/view-models/ClosetGridViewModel.swift` with:
 
 ```swift
 import Foundation
@@ -482,7 +482,7 @@ struct ClosetGridItemFingerprint: Equatable {
 
 - [ ] **Step 5: Use derived visible items from the grid**
 
-In `Pyxis/Views/ClosetGrid/ClosetGridView.swift`, remove:
+In `src/views/ClosetGrid/ClosetGridView.swift`, remove:
 
 ```swift
 let filteredItems = viewModel.filteredItems(from: items)
@@ -549,7 +549,7 @@ Expected: both pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add Pyxis/ViewModels/ClosetGridViewModel.swift Pyxis/Views/ClosetGrid/ClosetGridView.swift Pyxis/Services/ClosetFilteringService.swift Tests/PyxisTests/ClosetGridViewModelTests.swift
+git add src/view-models/ClosetGridViewModel.swift src/views/ClosetGrid/ClosetGridView.swift src/services/ClosetFilteringService.swift tests/PyxisTests/ClosetGridViewModelTests.swift
 git commit -m "perf: derive closet grid results outside body"
 ```
 
@@ -557,10 +557,10 @@ git commit -m "perf: derive closet grid results outside body"
 
 **Files:**
 
-- Modify: `Pyxis/Views/Navigation/TopNavigationView.swift:21-83`
-- Modify: `Pyxis/Views/Search/SearchAndFilterView.swift:7-90`
-- Modify: `Pyxis/Views/ClosetGrid/ClosetGridView.swift:21-65`
-- Verify: `Tests/PyxisTests/FilteringTests.swift`
+- Modify: `src/views/Navigation/TopNavigationView.swift:21-83`
+- Modify: `src/views/Search/SearchAndFilterView.swift:7-90`
+- Modify: `src/views/ClosetGrid/ClosetGridView.swift:21-65`
+- Verify: `tests/PyxisTests/FilteringTests.swift`
 
 - [ ] **Step 1: Add a clear action to `SearchAndFilterView`**
 
@@ -692,7 +692,7 @@ Manual checks:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Pyxis/Views/Navigation/TopNavigationView.swift Pyxis/Views/Search/SearchAndFilterView.swift Pyxis/Views/ClosetGrid/ClosetGridView.swift
+git add src/views/Navigation/TopNavigationView.swift src/views/Search/SearchAndFilterView.swift src/views/ClosetGrid/ClosetGridView.swift
 git commit -m "feat: clarify closet filters"
 ```
 
@@ -700,8 +700,8 @@ git commit -m "feat: clarify closet filters"
 
 **Files:**
 
-- Modify: `Pyxis/Views/AddItem/ImageImportView.swift:6-143`
-- Modify: `Pyxis/Views/AddItem/MetadataEditorView.swift:6-36`
+- Modify: `src/views/AddItem/ImageImportView.swift:6-143`
+- Modify: `src/views/AddItem/MetadataEditorView.swift:6-36`
 
 `AddItemFlow` already exposes processing, retry, save, and fallback status through `viewModel.stage`; leave it unchanged in this task unless implementation discovers a concrete compile or UX regression from the import-state changes.
 
@@ -865,7 +865,7 @@ Manual checks:
 - [ ] **Step 7: Commit**
 
 ```bash
-git add Pyxis/Views/AddItem/ImageImportView.swift Pyxis/Views/AddItem/MetadataEditorView.swift
+git add src/views/AddItem/ImageImportView.swift src/views/AddItem/MetadataEditorView.swift
 git commit -m "feat: clarify image import states"
 ```
 
@@ -873,10 +873,10 @@ git commit -m "feat: clarify image import states"
 
 **Files:**
 
-- Modify: `Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift:50-121`
-- Modify: `Pyxis/Views/OutfitBuilder/SavedFitsGalleryView.swift:12-48`
-- Modify: `Pyxis/Views/OutfitBuilder/OutfitDetailView.swift:4-98`
-- Modify: `Tests/PyxisTests/PersistenceTests.swift`
+- Modify: `src/views/OutfitBuilder/SavedFitsStrip.swift:50-121`
+- Modify: `src/views/OutfitBuilder/SavedFitsGalleryView.swift:12-48`
+- Modify: `src/views/OutfitBuilder/OutfitDetailView.swift:4-98`
+- Modify: `tests/PyxisTests/PersistenceTests.swift`
 
 - [ ] **Step 1: Improve saved-fit card accessibility**
 
@@ -996,7 +996,7 @@ Add confirmation to the root view:
 
 - [ ] **Step 4: Add an item-delete confirmation too**
 
-In `ItemDetailView`, replace immediate deletion (`Pyxis/Views/ItemDetail/ItemDetailView.swift:129-134`) with `@State private var isConfirmingDelete = false` and:
+In `ItemDetailView`, replace immediate deletion (`src/views/ItemDetail/ItemDetailView.swift:129-134`) with `@State private var isConfirmingDelete = false` and:
 
 ```swift
 Button("DELETE ITEM") {
@@ -1037,7 +1037,7 @@ Manual checks:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift Pyxis/Views/OutfitBuilder/SavedFitsGalleryView.swift Pyxis/Views/OutfitBuilder/OutfitDetailView.swift Pyxis/Views/ItemDetail/ItemDetailView.swift
+git add src/views/OutfitBuilder/SavedFitsStrip.swift src/views/OutfitBuilder/SavedFitsGalleryView.swift src/views/OutfitBuilder/OutfitDetailView.swift src/views/ItemDetail/ItemDetailView.swift
 git commit -m "feat: improve saved fit management"
 ```
 
@@ -1045,13 +1045,13 @@ git commit -m "feat: improve saved fit management"
 
 **Files:**
 
-- Create: `Pyxis/ViewModels/OutfitBuilderViewModel.swift`
-- Modify: `Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift:4-224`
-- Create: `Tests/PyxisTests/OutfitBuilderViewModelTests.swift`
+- Create: `src/view-models/OutfitBuilderViewModel.swift`
+- Modify: `src/views/OutfitBuilder/OutfitBuilderView.swift:4-224`
+- Create: `tests/PyxisTests/OutfitBuilderViewModelTests.swift`
 
 - [ ] **Step 1: Write view-model tests**
 
-Create `Tests/PyxisTests/OutfitBuilderViewModelTests.swift`:
+Create `tests/PyxisTests/OutfitBuilderViewModelTests.swift`:
 
 ```swift
 import XCTest
@@ -1117,7 +1117,7 @@ Expected: fail because `OutfitBuilderViewModel` and `itemFingerprint(for:)` do n
 
 - [ ] **Step 3: Add the view model**
 
-Create `Pyxis/ViewModels/OutfitBuilderViewModel.swift`:
+Create `src/view-models/OutfitBuilderViewModel.swift`:
 
 ```swift
 import Foundation
@@ -1389,7 +1389,7 @@ Expected: build succeeds.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add Pyxis/ViewModels/OutfitBuilderViewModel.swift Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift Tests/PyxisTests/OutfitBuilderViewModelTests.swift
+git add src/view-models/OutfitBuilderViewModel.swift src/views/OutfitBuilder/OutfitBuilderView.swift tests/PyxisTests/OutfitBuilderViewModelTests.swift
 git commit -m "refactor: derive outfit builder state in view model"
 ```
 
@@ -1397,13 +1397,13 @@ git commit -m "refactor: derive outfit builder state in view model"
 
 **Files:**
 
-- Modify: `Pyxis/DesignSystem/PyxisTypography.swift`
+- Modify: `src/design-system/PyxisTypography.swift`
 - Modify call sites only where build errors require it.
 - Modify: `docs/MANUAL_QA.md`
 
 - [ ] **Step 1: Make font tokens scalable**
 
-Replace `Pyxis/DesignSystem/PyxisTypography.swift` with:
+Replace `src/design-system/PyxisTypography.swift` with:
 
 ```swift
 import SwiftUI
@@ -1419,7 +1419,7 @@ enum PyxisTypography {
 
 - [ ] **Step 2: Add minimum scale only to tight labels**
 
-For `UppercaseNavLabel` in `Pyxis/DesignSystem/PyxisComponents.swift`, add:
+For `UppercaseNavLabel` in `src/design-system/PyxisComponents.swift`, add:
 
 ```swift
 .minimumScaleFactor(0.82)
@@ -1463,7 +1463,7 @@ Expected: build succeeds.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Pyxis/DesignSystem/PyxisTypography.swift Pyxis/DesignSystem/PyxisComponents.swift docs/MANUAL_QA.md
+git add src/design-system/PyxisTypography.swift src/design-system/PyxisComponents.swift docs/MANUAL_QA.md
 git commit -m "polish: add accessibility guardrails"
 ```
 

@@ -15,9 +15,9 @@ This checklist translates the current Xcode project and local-first product scop
 - Minimum iOS version: 17.0
 - Primary category: Lifestyle
 - Signing style: Automatic
-- Privacy manifest: `Pyxis/PrivacyInfo.xcprivacy`
+- Privacy manifest: `assets/PrivacyInfo.xcprivacy`
 - App icon source: 1024 x 1024 opaque PNG with no alpha channel
-- App Store export options template: `deployment/ExportOptions-AppStoreConnect.plist`
+- App Store export options template: `config/deployment/ExportOptions-AppStoreConnect.plist`
 - Privacy label posture: the manifest declares photos/videos for app functionality as unlinked and non-tracking because standard xAI API handling may retain optional AI request/response content for up to 30 days. Reconfirm the exact App Store Connect answers against the release configuration and provider terms at submission time.
 
 ## App Store Connect Metadata Draft
@@ -89,8 +89,8 @@ Do not use private personal photos in public screenshots. Use owned/licensed clo
 - Complete age rating, content rights, pricing/availability, DSA/trader status, export compliance, and any region-specific compliance fields.
 - Run physical iPhone QA with real clothing images.
 - If AI is enabled or mentioned in metadata, verify a production HTTPS gateway, production authorization stronger than the prototype shared token, provider retention, and the exact App Store privacy answers. Otherwise keep AI unavailable and unadvertised.
-- Run `./script/deployment_preflight.sh distribution` and resolve any signing/export failure.
-- Create a distribution-signed Release archive with the intended App Store distribution profile/certificate, then export it with `deployment/ExportOptions-AppStoreConnect.plist`.
+- Run `./scripts/deployment_preflight.sh distribution` and resolve any signing/export failure.
+- Create a distribution-signed Release archive with the intended App Store distribution profile/certificate, then export it with `config/deployment/ExportOptions-AppStoreConnect.plist`.
 - Upload the signed build and wait for App Store Connect processing.
 
 ## Apple References

@@ -7,7 +7,7 @@ notes; released fragments are moved to `archive/<version>/`.
 Create a fragment with:
 
 ```bash
-./script/new_update_note.sh added closet-grid "Add a dotted outfit pinboard"
+./scripts/new_update_note.sh added closet-grid "Add a dotted outfit pinboard"
 ```
 
 Allowed `type` values follow Keep a Changelog: `added`, `changed`, `deprecated`,

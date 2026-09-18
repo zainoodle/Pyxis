@@ -9,7 +9,7 @@ monotonically increasing iOS build numbers.
 Install the repository-local hooks after cloning:
 
 ```bash
-./script/install_git_hooks.sh
+./scripts/install_git_hooks.sh
 ```
 
 The `commit-msg` hook validates commit subjects. The `pre-push` hook verifies
@@ -30,7 +30,7 @@ must follow the policy.
 2. Add an update fragment:
 
    ```bash
-   ./script/new_update_note.sh added outfits "Add a dotted outfit pinboard" minor
+   ./scripts/new_update_note.sh added outfits "Add a dotted outfit pinboard" minor
    ```
 
 3. Replace the generated placeholder bullets with the actual change and its
@@ -54,7 +54,7 @@ breaking change.
 Start from committed tracked changes with valid pending fragments, then run:
 
 ```bash
-./script/prepare_release.sh 1.1.0 2
+./scripts/prepare_release.sh 1.1.0 2
 ```
 
 The command:
@@ -67,8 +67,8 @@ The command:
 Review the generated diff, run the local deployment preflight, and commit:
 
 ```bash
-./script/deployment_preflight.sh local
-git add CHANGELOG.md Pyxis.xcodeproj/project.pbxproj script/deployment_preflight.sh changes/
+./scripts/deployment_preflight.sh local
+git add CHANGELOG.md Pyxis.xcodeproj/project.pbxproj scripts/deployment_preflight.sh changes/
 git commit -m "release: 1.1.0"
 git tag -a v1.1.0 -m "Pyxis 1.1.0"
 ```

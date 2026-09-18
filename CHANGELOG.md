@@ -5,6 +5,6 @@ All notable released changes to Pyxis are recorded here. The format follows
 use semantic versioning.
 
 Pending work is stored as structured files in [`changes/`](changes/) and is
-rendered into this file by `./script/prepare_release.sh`.
+rendered into this file by `./scripts/prepare_release.sh`.
 
 ## [Unreleased]
