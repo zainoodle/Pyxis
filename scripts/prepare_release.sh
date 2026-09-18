@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 usage() {
-  printf 'usage: ./script/prepare_release.sh <major.minor.patch> <build-number>\n' >&2
+  printf 'usage: ./scripts/prepare_release.sh <major.minor.patch> <build-number>\n' >&2
 }
 
 [[ $# -eq 2 ]] || { usage; exit 2; }
@@ -27,10 +27,10 @@ if int(next_build) <= int(current_build):
     raise SystemExit(f"error: build {next_build} must be greater than {current_build}")
 PY
 
-./script/validate_update_notes.sh --all
+./scripts/validate_update_notes.sh --all
 NOTES_FILE="$(mktemp)"
 trap 'rm -f "$NOTES_FILE"' EXIT
-./script/render_update_notes.sh "$VERSION" > "$NOTES_FILE"
+./scripts/render_update_notes.sh "$VERSION" > "$NOTES_FILE"
 
 python3 - "$VERSION" "$BUILD_NUMBER" "$NOTES_FILE" <<'PY'
 from pathlib import Path
@@ -46,7 +46,7 @@ text = re.sub(r"MARKETING_VERSION = [^;]+;", f"MARKETING_VERSION = {version};", 
 text = re.sub(r"CURRENT_PROJECT_VERSION = [^;]+;", f"CURRENT_PROJECT_VERSION = {build};", text)
 project.write_text(text)
 
-preflight = root / "script/deployment_preflight.sh"
+preflight = root / "scripts/deployment_preflight.sh"
 text = preflight.read_text()
 text = re.sub(r'^VERSION="[^"]+"$', f'VERSION="{version}"', text, flags=re.MULTILINE)
 text = re.sub(r'^BUILD_NUMBER="[^"]+"$', f'BUILD_NUMBER="{build}"', text, flags=re.MULTILINE)
@@ -65,4 +65,4 @@ mkdir -p "changes/archive/$VERSION"
 find changes -maxdepth 1 -type f -name '*.md' ! -name README.md ! -name template.md -exec mv {} "changes/archive/$VERSION/" \;
 
 printf 'prepared Pyxis %s build %s\n' "$VERSION" "$BUILD_NUMBER"
-printf 'next: review the diff, run ./script/deployment_preflight.sh local, stage it, then commit as release: %s\n' "$VERSION"
+printf 'next: review the diff, run ./scripts/deployment_preflight.sh local, stage it, then commit as release: %s\n' "$VERSION"

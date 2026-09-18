@@ -25,7 +25,7 @@ trap cleanup EXIT
 
 usage() {
   cat <<'USAGE' >&2
-usage: ./script/deployment_preflight.sh [static|local|distribution]
+usage: ./scripts/deployment_preflight.sh [static|local|distribution]
 
 static        Lint metadata and run source/documentation policy scans.
 local         static checks, Swift tests, unsigned Release build, and unsigned archive.
@@ -98,9 +98,9 @@ expect_no_matches() {
 
 lint_metadata() {
   step "lint plists and asset JSON"
-  plutil -lint deployment/ExportOptions-AppStoreConnect.plist Pyxis/PrivacyInfo.xcprivacy
+  plutil -lint config/deployment/ExportOptions-AppStoreConnect.plist assets/PrivacyInfo.xcprivacy
   python3 -c 'import plistlib, sys
-path = "Pyxis/PrivacyInfo.xcprivacy"
+path = "assets/PrivacyInfo.xcprivacy"
 with open(path, "rb") as handle:
     manifest = plistlib.load(handle)
 expected_empty_arrays = [
@@ -126,9 +126,9 @@ if errors:
     sys.exit(1)' || fail "privacy manifest does not match the local-core and opt-in AI posture"
   while IFS= read -r -d '' json_file; do
     python3 -m json.tool "$json_file" >/dev/null || fail "invalid asset catalog JSON: $json_file"
-  done < <(find Pyxis/Assets.xcassets -name Contents.json -print0)
+  done < <(find assets/Assets.xcassets -name Contents.json -print0)
 
-  local icon_path="Pyxis/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+  local icon_path="assets/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
   [[ -f "$icon_path" ]] || fail "missing 1024px App Store icon source"
 
   local icon_info icon_width icon_height icon_alpha
@@ -144,12 +144,12 @@ scan_policy() {
   expect_no_matches \
     "scan for prohibited analytics and embedded AI secrets" \
     "analytics|telemetry|Firebase|Amplitude|Mixpanel|sk-[A-Za-z0-9_-]{20,}|OPENAI_API_KEY|XAI_API_KEY" \
-    Pyxis Package.swift -g '!PrivacyInfo.xcprivacy'
+    src Package.swift -g '!PrivacyInfo.xcprivacy'
 
   expect_no_matches \
     "scan for required-reason API usage missing from privacy manifest" \
     "UserDefaults|NSUbiquitousKeyValueStore|creationDate|contentModificationDate|contentModificationDateKey|fileModificationDate|modificationDate|volumeAvailableCapacity|volumeAvailableCapacityForImportantUsage|volumeAvailableCapacityForOpportunisticUsage|volumeTotalCapacity|systemFreeSize|systemSize|statfs|statvfs|mach_absolute_time|systemUptime|CACurrentMediaTime" \
-    Pyxis Package.swift -g '!PrivacyInfo.xcprivacy'
+    src Package.swift -g '!PrivacyInfo.xcprivacy'
 
   expect_no_matches \
     "scan publishable deployment docs for placeholders" \
@@ -214,8 +214,8 @@ run_static_checks() {
   require_command sips
   require_command strings
 
-  ./script/validate_update_notes.sh --all
-  ./script/validate_privacy_consistency.sh
+  ./scripts/validate_update_notes.sh --all
+  ./scripts/validate_privacy_consistency.sh
   lint_metadata
   scan_policy
   check_git_whitespace
@@ -224,7 +224,7 @@ run_static_checks() {
 run_local_checks() {
   run_static_checks
 
-  run_logged "clean Swift tests" "$LOG_DIR/swift-test.log" ./script/test.sh
+  run_logged "clean Swift tests" "$LOG_DIR/swift-test.log" ./scripts/test.sh
 
   local developer_dir
   developer_dir="${DEVELOPER_DIR:-$(xcode-select -p 2>/dev/null || true)}"
@@ -294,7 +294,7 @@ run_distribution_checks() {
       -exportArchive \
       -archivePath "$SIGNED_ARCHIVE" \
       -exportPath "$EXPORT_PATH" \
-      -exportOptionsPlist deployment/ExportOptions-AppStoreConnect.plist
+      -exportOptionsPlist config/deployment/ExportOptions-AppStoreConnect.plist
 }
 
 case "$MODE" in

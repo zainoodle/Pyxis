@@ -12,8 +12,8 @@ fail() {
 usage() {
   cat <<'USAGE' >&2
 usage:
-  ./script/validate_update_notes.sh --all
-  ./script/validate_update_notes.sh --base <git-ref> [--head <git-ref>]
+  ./scripts/validate_update_notes.sh --all
+  ./scripts/validate_update_notes.sh --base <git-ref> [--head <git-ref>]
 USAGE
 }
 
@@ -65,7 +65,7 @@ case "$MODE" in
 
     changed_files="$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '^changes/(README|template)\.md$' || true)"
     if [[ -n "$changed_files" && ${#fragments[@]} -eq 0 ]]; then
-      fail "this push changes files but adds no new change fragment; run ./script/new_update_note.sh"
+      fail "this push changes files but adds no new change fragment; run ./scripts/new_update_note.sh"
     fi
     ;;
   *)

@@ -17,4 +17,4 @@ summary: Connect AI garment cleanup and try-on to a protected xAI image gateway.
 
 - `cd backend/pyxis-ai-worker && npm test && npm run check`
 - `swift test`
-- `./script/deployment_preflight.sh local`
+- `./scripts/deployment_preflight.sh local`

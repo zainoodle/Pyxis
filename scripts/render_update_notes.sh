@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 VERSION="${1:-Unreleased}"
 DATE="$(date +%F)"
 
-./script/validate_update_notes.sh --all >/dev/null
+./scripts/validate_update_notes.sh --all >/dev/null
 
 if [[ "$VERSION" == "Unreleased" ]]; then
   printf '## Unreleased\n\n'

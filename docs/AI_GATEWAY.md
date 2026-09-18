@@ -65,15 +65,15 @@ The response should be:
 Create the Git-ignored local configuration:
 
 ```bash
-cp Config/Pyxis.local.xcconfig.example Config/Pyxis.local.xcconfig
+cp config/Pyxis.local.xcconfig.example config/Pyxis.local.xcconfig
 ```
 
-Set these values in `Config/Pyxis.local.xcconfig`:
+Set these values in `config/Pyxis.local.xcconfig`:
 
 - `PYXIS_AI_BASE_URL` to `https:/$()/YOUR-WORKER.workers.dev` (xcconfig syntax; it resolves to the normal `https://` URL)
 - `PYXIS_AI_ACCESS_TOKEN` to the value entered for the Worker's `PYXIS_ACCESS_TOKEN`
 
-Keep `Config/Pyxis.local.xcconfig` private and never stage it. The checked-in defaults remain blank. A missing URL or access token makes the feature fail closed with `AI Studio is not configured yet.`
+Keep `config/Pyxis.local.xcconfig` private and never stage it. The checked-in defaults remain blank. A missing URL or access token makes the feature fail closed with `AI Studio is not configured yet.`
 
 The shared access token prevents an unconfigured public endpoint from being used casually, but it can be extracted from a distributed app. Before a broad public release, replace it with Apple App Attest assertions or short-lived server-issued tokens. The Worker also applies a six-generation-per-minute address limit to protect the xAI pool.
 
@@ -101,7 +101,7 @@ Never use production secrets in automated tests. Worker tests use fake values an
 ## Verification Before TestFlight
 
 1. Run `npm test` and `npm run check` in `backend/pyxis-ai-worker`.
-2. Run `./script/deployment_preflight.sh local` from the repository root.
+2. Run `./scripts/deployment_preflight.sh local` from the repository root.
 3. Confirm `/health` on the deployed Worker.
 4. On a physical iPhone, test one cleanup and try-ons with one, two, and three garments.
 5. Confirm the xAI Usage screen records the expected one, one, one, and two provider calls respectively.

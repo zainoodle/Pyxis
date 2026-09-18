@@ -6,6 +6,37 @@ The optional Fit Passport stores body measurements locally and compares them wit
 
 The macOS prototype has been preserved on the `macos-main` branch. The `main` branch is the iOS version.
 
+## Repository Layout
+
+```text
+Pyxis/
+├── README.md
+├── Package.swift              # Swift package and core test targets
+├── Pyxis.xcodeproj/           # iOS application build configuration
+├── src/
+│   ├── main/                 # App entry point and root view
+│   ├── services/
+│   ├── models/
+│   ├── utils/
+│   ├── persistence/
+│   ├── design-system/
+│   ├── view-models/
+│   └── views/
+├── tests/PyxisTests/          # Swift core tests
+├── scripts/                  # Build, test, release, and validation commands
+├── docs/
+│   └── references/           # Original requirements and reference documents
+├── assets/                   # Asset catalog and bundled privacy manifest
+├── config/
+│   └── deployment/           # App Store export configuration
+├── backend/pyxis-ai-worker/   # Independently deployed gateway and its tests
+└── changes/                  # Structured release notes
+```
+
+Xcode includes `src/` and `assets/` through synchronized groups. Swift Package Manager uses explicit source and test paths in `Package.swift`. Gateway dependencies and configuration stay with its `package.json`, lockfile, and `wrangler.jsonc`; generated dependencies and build output are Git-ignored.
+
+Run core tests with `./scripts/test.sh`, and gateway tests with `npm test --prefix backend/pyxis-ai-worker`.
+
 ## Requirements
 
 - macOS with Xcode 16 or newer
@@ -15,7 +46,7 @@ The macOS prototype has been preserved on the `macos-main` branch. The `main` br
 ## Contributor Notes
 
 - Confirm the project/app name with the user before naming or renaming project surfaces. Suggestions are welcome, but do not decide the name without approval.
-- Install the repository Git hooks with `./script/install_git_hooks.sh`.
+- Install the repository Git hooks with `./scripts/install_git_hooks.sh`.
 - Add a structured file under `changes/` for every pushed update and use Conventional Commit subjects.
 - Follow `docs/RELEASE_PROCESS.md` for version bumps, changelog generation, tags, and release verification.
 
@@ -32,7 +63,7 @@ The macOS prototype has been preserved on the `macos-main` branch. The `main` br
 Boot an iPhone simulator, then run:
 
 ```bash
-./script/build_and_run.sh --verify
+./scripts/build_and_run.sh --verify
 ```
 
 Deployment readiness notes are tracked in `docs/DEPLOYMENT_READINESS.md`.
@@ -44,13 +75,13 @@ Public support and privacy page drafts are in `docs/SUPPORT.md` and `docs/PRIVAC
 Run the local deployment preflight before handing off a build:
 
 ```bash
-./script/deployment_preflight.sh local
+./scripts/deployment_preflight.sh local
 ```
 
 Run the distribution preflight after App Store Connect provider access and an App Store distribution profile are configured:
 
 ```bash
-./script/deployment_preflight.sh distribution
+./scripts/deployment_preflight.sh distribution
 ```
 
 ## Local-First Core and Opt-In AI Studio
@@ -64,7 +95,7 @@ Run the distribution preflight after App Store Connect provider access and an Ap
 Images are stored locally in Application Support. Metadata is stored with SwiftData.
 On-device memory records, including item/fit summaries and local embedding vectors, are keyed, validated, stored with SwiftData, and retrieved in-process.
 
-Deploy `backend/pyxis-ai-worker`, copy `Config/Pyxis.local.xcconfig.example` to the Git-ignored `Config/Pyxis.local.xcconfig`, then set:
+Deploy `backend/pyxis-ai-worker`, copy `config/Pyxis.local.xcconfig.example` to the Git-ignored `config/Pyxis.local.xcconfig`, then set:
 
 - `PYXIS_AI_BASE_URL`: the Worker's HTTPS origin
 - `PYXIS_AI_ACCESS_TOKEN`: the same scoped gateway token stored as the Worker's `PYXIS_ACCESS_TOKEN` secret

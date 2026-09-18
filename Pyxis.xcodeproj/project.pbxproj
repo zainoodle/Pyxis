@@ -13,7 +13,8 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1A0000010000000000000002 /* Pyxis */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Pyxis; sourceTree = "<group>"; };
+		1A0000010000000000000002 /* src */ = {isa = PBXFileSystemSynchronizedRootGroup; path = src; sourceTree = "<group>"; };
+		1A0000010000000000000013 /* assets */ = {isa = PBXFileSystemSynchronizedRootGroup; path = assets; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -30,19 +31,20 @@
 		1A0000010000000000000004 = {
 			isa = PBXGroup;
 			children = (
-				1A0000010000000000000002 /* Pyxis */,
-				1A0000010000000000000012 /* Config */,
+				1A0000010000000000000002 /* src */,
+				1A0000010000000000000013 /* assets */,
+				1A0000010000000000000012 /* config */,
 				1A0000010000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		1A0000010000000000000012 /* Config */ = {
+		1A0000010000000000000012 /* config */ = {
 			isa = PBXGroup;
 			children = (
 				1A0000010000000000000010 /* Pyxis.xcconfig */,
 				1A0000010000000000000011 /* Pyxis.local.xcconfig.example */,
 			);
-			path = Config;
+			path = config;
 			sourceTree = "<group>";
 		};
 		1A0000010000000000000005 /* Products */ = {
@@ -69,7 +71,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				1A0000010000000000000002 /* Pyxis */,
+				1A0000010000000000000002 /* src */,
+				1A0000010000000000000013 /* assets */,
 			);
 			name = Pyxis;
 			packageProductDependencies = (

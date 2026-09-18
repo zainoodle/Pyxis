@@ -33,8 +33,9 @@ jobs:
           # introduced. Start validation at the commit that added the policy
           # only when the comparison base does not already contain it. Once the
           # policy reaches main, every commit in subsequent PRs is validated.
-          if ! git cat-file -e "${base}:script/validate_commit_messages.sh" 2>/dev/null; then
-            policy_commit="$(git log --reverse --format=%H "$base..HEAD" -- script/validate_commit_messages.sh | head -n 1)"
+          if ! git cat-file -e "${base}:scripts/validate_commit_messages.sh" 2>/dev/null && \
+             ! git cat-file -e "${base}:script/validate_commit_messages.sh" 2>/dev/null; then
+            policy_commit="$(git log --reverse --format=%H "$base..HEAD" -- script/validate_commit_messages.sh scripts/validate_commit_messages.sh | head -n 1)"
             if [[ -n "$policy_commit" ]]; then
               base="${policy_commit}^"
             fi
@@ -43,16 +44,16 @@ jobs:
           echo "sha=$base" >> "$GITHUB_OUTPUT"
 
       - name: Validate commit subjects
-        run: ./script/validate_commit_messages.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
+        run: ./scripts/validate_commit_messages.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
 
       - name: Validate update fragments
-        run: ./script/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
+        run: ./scripts/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
 
       - name: Attach push notes to the check summary
         if: always()
         run: |
-          if ./script/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD >/dev/null 2>&1; then
-            ./script/render_push_notes.sh "${{ steps.base.outputs.sha }}" HEAD >> "$GITHUB_STEP_SUMMARY"
+          if ./scripts/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD >/dev/null 2>&1; then
+            ./scripts/render_push_notes.sh "${{ steps.base.outputs.sha }}" HEAD >> "$GITHUB_STEP_SUMMARY"
           else
             echo "## Release notes" >> "$GITHUB_STEP_SUMMARY"
             echo "This push did not include valid update fragments." >> "$GITHUB_STEP_SUMMARY"
@@ -64,7 +65,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Run core tests
-        run: ./script/test.sh
+        run: ./scripts/test.sh
 
       - name: Install Worker dependencies
         working-directory: backend/pyxis-ai-worker
@@ -79,7 +80,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Run static deployment preflight
-        run: ./script/deployment_preflight.sh static
+        run: ./scripts/deployment_preflight.sh static
 
       - name: Build the iOS app
         run: >-

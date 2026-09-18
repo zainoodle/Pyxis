@@ -1,6 +1,6 @@
 # Pyxis Requirements Trace
 
-This file maps the `Instructions.docx` MVP requirements to implementation artifacts and verification evidence.
+This file maps the `docs/references/Instructions.docx` MVP requirements to implementation artifacts and verification evidence.
 
 ## Project Gate
 
@@ -74,12 +74,12 @@ This file maps the `Instructions.docx` MVP requirements to implementation artifa
 
 | Requirement | Planned Artifact | Verification Evidence |
 | --- | --- | --- |
-| Project-local build/run entrypoint | `script/build_and_run.sh` | Script exists and is executable on macOS with Xcode for an iOS Simulator |
+| Project-local build/run entrypoint | `scripts/build_and_run.sh` | Script exists and is executable on macOS with Xcode for an iOS Simulator |
 | Codex Run action wired to script | `.codex/environments/environment.toml` | Environment file contains Run command |
-| Script stops existing app before launch | `script/build_and_run.sh` | Script review; process verification |
-| Script builds iOS target | `script/build_and_run.sh` | `xcodebuild` output on macOS with a booted iOS Simulator |
-| Script launches iOS app on Simulator | `script/build_and_run.sh` | Simulator install/launch verification |
-| Optional `--verify`, `--logs`, `--debug` support | `script/build_and_run.sh` | Manual script invocations on macOS with Xcode |
+| Script stops existing app before launch | `scripts/build_and_run.sh` | Script review; process verification |
+| Script builds iOS target | `scripts/build_and_run.sh` | `xcodebuild` output on macOS with a booted iOS Simulator |
+| Script launches iOS app on Simulator | `scripts/build_and_run.sh` | Simulator install/launch verification |
+| Optional `--verify`, `--logs`, `--debug` support | `scripts/build_and_run.sh` | Manual script invocations on macOS with Xcode |
 
 ## Security And Privacy Requirements
 
@@ -119,4 +119,4 @@ The MVP can be considered complete only when evidence exists for all of the foll
 
 Implementation now targets iOS on `main`. The macOS prototype was preserved on `macos-main`. The iOS app includes an Xcode project, models, SwiftData container, item-code generator, image storage, background-removal service, color analysis, local classification, on-device memory storage and payload generation, future AI protocols, SwiftUI app shell, add flow, item detail, search/filter UI, tests, build/run script, Codex Run action, and manual QA checklist.
 
-Verification note: `swift test` now passes with 97 XCTest cases, including focused sizing-boundary, one-piece outfit, draft-cleanup, on-device memory, single-item wear, and schema-upgrade coverage. A generic Debug iOS Simulator build with signing disabled passes. iOS simulator launch, repeated `./script/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have also passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight validates the 1024px icon, privacy manifest, required-reason API posture, and absence of debug-only sample content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, accessibility at large text sizes, and physical-device signing before App Store/TestFlight distribution.
+Verification note: `swift test` now passes with 97 XCTest cases, including focused sizing-boundary, one-piece outfit, draft-cleanup, on-device memory, single-item wear, and schema-upgrade coverage. A generic Debug iOS Simulator build with signing disabled passes. iOS simulator launch, repeated `./scripts/build_and_run.sh --verify`, generic Release iOS build with signing disabled, and unsigned Release archive creation have also passed on macOS with Xcode. The built app/archive include app icon metadata and `PrivacyInfo.xcprivacy`; deployment preflight validates the 1024px icon, privacy manifest, required-reason API posture, and absence of debug-only sample content. Full hands-on manual QA should still be completed for photo-library import, background-removal quality, accessibility at large text sizes, and physical-device signing before App Store/TestFlight distribution.

@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-[[ $# -eq 2 ]] || { printf 'usage: ./script/render_push_notes.sh <base-ref> <head-ref>\n' >&2; exit 2; }
+[[ $# -eq 2 ]] || { printf 'usage: ./scripts/render_push_notes.sh <base-ref> <head-ref>\n' >&2; exit 2; }
 BASE="$1"
 HEAD="$2"
 
-./script/validate_update_notes.sh --base "$BASE" --head "$HEAD" >/dev/null
+./scripts/validate_update_notes.sh --base "$BASE" --head "$HEAD" >/dev/null
 
 fragments=()
 while IFS= read -r path; do

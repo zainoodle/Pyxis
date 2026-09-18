@@ -1,6 +1,6 @@
 # Pyxis Manual QA
 
-Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` scheme and `./script/build_and_run.sh --verify` launches the app on a booted simulator.
+Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` scheme and `./scripts/build_and_run.sh --verify` launches the app on a booted simulator.
 
 1. Launch Pyxis.
 2. Confirm the first screen is the closet grid.
@@ -44,5 +44,5 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 40. With a large accessibility text size, confirm navigation, sizing fields, filters, builder rows, and saved-fit actions remain readable and tappable. Use VoiceOver to confirm measurement names and selected outfit items are announced.
 41. Tap `WORE TODAY`; confirm the wear count increments and the last-worn date becomes today after closing and reopening the item.
 42. Tap `DELETE ITEM`, cancel the confirmation, and confirm the item remains. Repeat, confirm deletion, and confirm the item and related image files disappear.
-43. Run `./script/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
+43. Run `./scripts/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
 44. Disconnect network and repeat launch/import/save/search to confirm core local behavior remains available.

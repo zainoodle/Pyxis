@@ -137,15 +137,15 @@ If background removal fails, users may still save the item with the original ima
 
 Add the feature in focused units:
 
-- `Pyxis/Models/Outfit.swift`: SwiftData model for saved fits.
-- `Pyxis/Persistence/SwiftDataContainer.swift`: include `Outfit` in the schema.
-- `Pyxis/Services/OutfitBuilderService.swift`: pure logic for grouping items into rows, choosing default selections, advancing row indices, and creating outfit draft data.
-- `Pyxis/ViewModels/OutfitBuilderViewModel.swift`: UI state for selected indices, current draft, saving, and row empty states.
-- `Pyxis/Views/OutfitBuilder/OutfitBuilderView.swift`: screen shell with top controls, stacked rows, and save rail.
-- `Pyxis/Views/OutfitBuilder/OutfitCarouselRow.swift`: reusable bay-window row.
-- `Pyxis/Views/OutfitBuilder/OutfitCarouselItemView.swift`: item rendering, image priority, labels, and accessibility.
-- `Pyxis/Views/OutfitBuilder/SavedFitsStrip.swift`: compact saved-fit surface inside the builder.
-- `Pyxis/Views/Shared/ClosetItemImageResolver.swift`: shared helper for cutout/thumbnail/original URL priority.
+- `src/models/Outfit.swift`: SwiftData model for saved fits.
+- `src/persistence/SwiftDataContainer.swift`: include `Outfit` in the schema.
+- `src/services/OutfitBuilderService.swift`: pure logic for grouping items into rows, choosing default selections, advancing row indices, and creating outfit draft data.
+- `src/view-models/OutfitBuilderViewModel.swift`: UI state for selected indices, current draft, saving, and row empty states.
+- `src/views/OutfitBuilder/OutfitBuilderView.swift`: screen shell with top controls, stacked rows, and save rail.
+- `src/views/OutfitBuilder/OutfitCarouselRow.swift`: reusable bay-window row.
+- `src/views/OutfitBuilder/OutfitCarouselItemView.swift`: item rendering, image priority, labels, and accessibility.
+- `src/views/OutfitBuilder/SavedFitsStrip.swift`: compact saved-fit surface inside the builder.
+- `src/views/Shared/ClosetItemImageResolver.swift`: shared helper for cutout/thumbnail/original URL priority.
 
 The reusable row should not know about SwiftData or saving. It should render item view data and report selection changes. The service should be testable in `PyxisCore` without UI automation.
 
