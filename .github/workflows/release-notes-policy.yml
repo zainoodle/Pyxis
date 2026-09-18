@@ -2,7 +2,9 @@ name: Release notes policy
 
 on:
   push:
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   merge_group:
 
 permissions:
@@ -16,53 +18,59 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Test workflow policies
+        run: python3 -m unittest discover -s tests/workflow -v
+
       - name: Resolve comparison base
         id: base
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base="${{ github.event.pull_request.base.sha }}"
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
-            base="${{ github.event.before }}"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$(git merge-base "$PR_BASE" HEAD)"
+          elif [[ "$EVENT_NAME" == "merge_group" ]]; then
+            base="$QUEUE_BASE"
+          elif [[ -n "$PUSH_BASE" && "$PUSH_BASE" != "0000000000000000000000000000000000000000" ]]; then
+            base="$PUSH_BASE"
           else
-            git fetch origin main --quiet || true
-            base="$(git merge-base HEAD origin/main 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -n 1)"
+            base="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
           fi
-
-          # A long-lived PR can contain commits created before this policy was
-          # introduced. Start validation at the commit that added the policy
-          # only when the comparison base does not already contain it. Once the
-          # policy reaches main, every commit in subsequent PRs is validated.
-          if ! git cat-file -e "${base}:scripts/validate_commit_messages.sh" 2>/dev/null && \
-             ! git cat-file -e "${base}:script/validate_commit_messages.sh" 2>/dev/null; then
-            policy_commit="$(git log --reverse --format=%H "$base..HEAD" -- script/validate_commit_messages.sh scripts/validate_commit_messages.sh | head -n 1)"
-            if [[ -n "$policy_commit" ]]; then
-              base="${policy_commit}^"
-            fi
-          fi
-
           echo "sha=$base" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$(./scripts/resolve_policy_base.sh "$base" HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: ./scripts/validate_commit_messages.sh --subject "$PR_TITLE"
 
       - name: Validate commit subjects
-        run: ./scripts/validate_commit_messages.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
+        run: ./scripts/validate_commit_messages.sh --base "${{ steps.base.outputs.commit_sha }}" --head HEAD
 
       - name: Validate update fragments
         run: ./scripts/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD
 
-      - name: Attach push notes to the check summary
+      - name: Attach PR release notes to the check summary
         if: always()
         run: |
           if ./scripts/validate_update_notes.sh --base "${{ steps.base.outputs.sha }}" --head HEAD >/dev/null 2>&1; then
             ./scripts/render_push_notes.sh "${{ steps.base.outputs.sha }}" HEAD >> "$GITHUB_STEP_SUMMARY"
           else
             echo "## Release notes" >> "$GITHUB_STEP_SUMMARY"
-            echo "This push did not include valid update fragments." >> "$GITHUB_STEP_SUMMARY"
+            echo "This change did not include valid release notes." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   quality:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install preflight dependency
+        run: command -v rg >/dev/null || brew install ripgrep
 
       - name: Run core tests
         run: ./scripts/test.sh

@@ -45,9 +45,10 @@ Run core tests with `./scripts/test.sh`, and gateway tests with `npm test --pref
 
 ## Contributor Notes
 
-- Confirm the project/app name with the user before naming or renaming project surfaces. Suggestions are welcome, but do not decide the name without approval.
+- Follow `AGENTS.md` and `CONTRIBUTING.md` for code standards, PR scope, and review.
+- Codex names PRs and flags work that needs a separate PR. App/product renames still require Isaiah’s approval.
 - Install the repository Git hooks with `./scripts/install_git_hooks.sh`.
-- Add a structured file under `changes/` for every pushed update and use Conventional Commit subjects.
+- Maintain one structured file under `changes/` per PR and use Conventional Commit subjects.
 - Follow `docs/RELEASE_PROCESS.md` for version bumps, changelog generation, tags, and release verification.
 
 ## Run On iPhone

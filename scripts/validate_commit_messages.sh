@@ -13,6 +13,10 @@ validate_subject() {
 }
 
 case "${1:-}" in
+  --subject)
+    [[ $# -eq 2 ]] || exit 2
+    validate_subject "$2"
+    ;;
   --message-file)
     [[ $# -eq 2 ]] || exit 2
     validate_subject "$(sed -n '1p' "$2")"
@@ -31,7 +35,7 @@ case "${1:-}" in
     printf 'ok: validated %d commit subject(s)\n' "$count"
     ;;
   *)
-    printf 'usage: %s --message-file <path> | --base <ref> [--head <ref>]\n' "$0" >&2
+    printf 'usage: %s --subject <title> | --message-file <path> | --base <ref> [--head <ref>]\n' "$0" >&2
     exit 2
     ;;
 esac

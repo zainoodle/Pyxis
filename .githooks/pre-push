@@ -6,18 +6,21 @@ ZERO_SHA='0000000000000000000000000000000000000000'
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" == "$ZERO_SHA" ]] && continue
+  [[ "$local_ref" == refs/heads/* ]] || continue
+  [[ "$remote_ref" != refs/heads/main ]] || {
+    printf 'error: main accepts pull requests only; push a feature branch instead.\n' >&2
+    exit 1
+  }
 
-  if [[ "$remote_sha" == "$ZERO_SHA" ]]; then
-    default_remote_ref="refs/remotes/origin/main"
-    if git show-ref --verify --quiet "$default_remote_ref"; then
-      base="$(git merge-base "$local_sha" "$default_remote_ref")"
-    else
-      base="$(git rev-list --max-parents=0 "$local_sha" | tail -n 1)"
-    fi
-  else
-    base="$remote_sha"
-  fi
-
-  "$ROOT_DIR/scripts/validate_commit_messages.sh" --base "$base" --head "$local_sha"
+  branch="${local_ref#refs/heads/}"
+  base_ref="$(git config --get "branch.$branch.pyxisBase" || true)"
+  base_ref="${base_ref:-refs/remotes/origin/main}"
+  git rev-parse --verify "$base_ref^{commit}" >/dev/null 2>&1 || {
+    printf 'error: fetch the PR base first; cannot resolve %s\n' "$base_ref" >&2
+    exit 1
+  }
+  base="$(git merge-base "$local_sha" "$base_ref")"
+  commit_base="$("$ROOT_DIR/scripts/resolve_policy_base.sh" "$base" "$local_sha")"
+  "$ROOT_DIR/scripts/validate_commit_messages.sh" --base "$commit_base" --head "$local_sha"
   "$ROOT_DIR/scripts/validate_update_notes.sh" --base "$base" --head "$local_sha"
 done
