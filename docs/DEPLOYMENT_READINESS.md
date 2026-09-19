@@ -2,7 +2,13 @@
 
 Last audited: 2026-08-27
 
-## Current v1.1 Verification
+## Outfit on you — current change
+
+The image-only flow, protected local photo storage, versioned consent, StoreKit subscription integration, and server-enforced allowance are implemented. Try-on requires xAI zero-retention processing; garment cleanup still uses standard retention of up to 30 days. Purchase/usage metadata is declared separately in the privacy manifest. Consent preferences declare UserDefaults reason CA92.1. API setup is developer-only.
+
+Local automated and simulator verification is recorded in the try-on release fragment. Live image generation, real StoreKit Sandbox transactions, production Worker deployment, physical-device/accessibility QA, final pricing, and App Store privacy answers remain release gates. The older shared-token cleanup endpoint still has the public-release blocker described in the security audit. Historical checks below do not certify the new feature.
+
+## Earlier v1.1 Verification
 
 - `./scripts/test.sh` passes with 110 XCTest cases from a fresh temporary SwiftPM scratch directory while using `/Applications/Xcode.app/Contents/Developer` explicitly.
 - A full iOS 17 source type-check against the installed iPhoneOS SDK passes with no diagnostics.

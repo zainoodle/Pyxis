@@ -1,46 +1,33 @@
 # Pyxis Privacy Policy
 
-Effective date: 2026-07-16
+Effective date: 2026-09-18
 
 ## Summary
 
-Pyxis is a local-first closet organization app with optional, user-triggered AI image features. Pyxis does not create accounts, run ads, use analytics, sell data, or share data with data brokers.
+Pyxis is a local-first closet app with optional AI image features. Pyxis does not create user accounts, run ads or analytics, sell data, or share data with data brokers.
 
-## Information Pyxis Stores On Device
+## On-device information
 
-Pyxis stores the following information locally on your device:
+Clothing photos, cutouts, thumbnails, item details, closets, saved fits, wear counts, Fit Passport measurements, and on-device memory records stay in the app's local container. Your measurements and unrelated closet contents are never included in try-on requests.
 
-- Clothing photos you choose from your photo library.
-- Transparent cutouts and thumbnails generated from those selected photos.
-- Clothing metadata you enter or edit, such as item names, notes, brand, size, tags, colors, categories, closets, saved fits, and wear counts.
-- On-device memory records used for future local features, including item summaries and local embedding vectors.
+Outfit on you uses a full-body reference and clothing images you select. Remembering the reference is optional. Saved references and previews stay in protected local files excluded from device backups. Unsaved try-on photos are removed when the screen closes; interrupted sessions are cleaned the next time you open try-on. The app remembers your photo-processing consent locally, and you can revoke it from the try-on privacy screen.
 
-This information stays in the app's local container on your device unless you explicitly start one of the optional AI image actions described below.
+## Optional photo processing
 
-## Photo Library Access
+Choosing photos does not upload them. Pyxis re-encodes selected images to remove source metadata before transmission. Generation requires a deliberate action and disclosure of who processes the photos.
 
-Pyxis asks for photo library access so you can save clothing photos locally and choose a person photo for AI try-on. Photos are uploaded only after you explicitly tap `AI DE-WRINKLE` or `GENERATE AI TRY-ON`; the app identifies the uploaded content and the provider retention period before generation. Pyxis downsamples and re-encodes these selected photos before upload, removing their source metadata.
+**Outfit on you:** after you agree, your reference and selected clothing images pass through the Pyxis Cloudflare gateway to xAI to generate a preview. This feature requires zero-retention processing: photo inputs and outputs are not persistently stored by xAI, and Pyxis does not authorize their use for model training. The gateway does not persist photos. A completed result may remain briefly in gateway memory for up to 60 seconds to recover a repeated request. Previews are visual illustrations, not size or fit guarantees.
 
-## Data Collection
+**AI garment cleanup:** this separate optional action uses xAI's standard data controls, under which requests and responses may be retained for up to 30 days. Its disclosure is shown before you generate. Pyxis cannot selectively delete data held under that provider retention process.
 
-Pyxis does not create an account, build an advertising profile, or use analytics. Optional AI image actions transmit the selected garment and/or person photos to the Pyxis gateway and xAI for the sole purpose of returning the requested image. App Store privacy answers must disclose this optional transfer before these features are released publicly.
+## Purchases and usage records
 
-## Third Parties
+Apple processes subscription payments; Pyxis does not receive card details. To verify access and enforce your allowance, the gateway verifies signed purchase information with Apple and stores billing-period, successful-generation counts, and generation identifiers associated with your subscription's transaction identifier. These records are used for app functionality, never advertising or analytics. Records are removed 35 days after the recorded billing period ends unless continued use updates the period. Deleting the app does not cancel an Apple subscription or immediately erase these server records. You can manage or cancel subscriptions in Apple's subscription settings.
 
-Pyxis does not include advertising, analytics, telemetry, or cloud-storage SDKs. Optional AI image actions use a Pyxis-owned Cloudflare gateway and xAI's Images API. The gateway does not persist image bodies. Under xAI's standard API data controls, API requests and responses may be retained for up to 30 days. Contact zainoodle@gmail.com about an AI image request or privacy concern; Pyxis cannot selectively delete data held under the provider's standard temporary retention process.
+## Deleting data
 
-Body measurements entered in the Fit Passport are optional and stored in the app's local database. They are not included in AI image requests, used for medical assessment, or transmitted to retailers. Users can delete the Fit Passport from the sizing screen.
+Remove a remembered reference using the photo's remove control or turn off “Remember my photo on this device.” Delete saved previews from Saved Previews. Delete closet items and fits through their normal app controls. Deleting the app removes its local data from the device. Copies you explicitly share outside Pyxis are controlled by the destination you choose.
 
-## Deleting Data
+## Changes and contact
 
-You can delete closet items and saved app content in Pyxis. Deleting the app also removes data stored in the app's local container from the device.
-
-## Changes
-
-If Pyxis changes its privacy practices, this policy should be updated before the app update is submitted.
-
-## Contact
-
-For privacy questions, contact:
-
-zainoodle@gmail.com
+Privacy changes are reflected here before an app update is submitted. For support, privacy questions, or requests concerning purchase/usage records, contact zainoodle@gmail.com.

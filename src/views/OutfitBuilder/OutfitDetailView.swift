@@ -8,6 +8,7 @@ struct OutfitDetailView: View {
     @Bindable var outfit: Outfit
     @State private var refreshID = UUID()
     @State private var saveErrorMessage: String?
+    @State private var isShowingTryOn = false
     @State private var isConfirmingDeletion = false
     @State private var duplicateConfirmation: String?
 
@@ -79,6 +80,9 @@ struct OutfitDetailView: View {
                             .accessibilityLabel("Some items in this fit are no longer in your closet")
                     }
 
+                    Button("TRY ON ME") { isShowingTryOn = true }
+                        .buttonStyle(MinimalButtonStyle())
+
                     TextField("FIT NAME", text: optionalString($outfit.name))
                         .textFieldStyle(.plain)
                         .font(PyxisTypography.body)
@@ -115,6 +119,7 @@ struct OutfitDetailView: View {
         .padding(PyxisSpacing.md)
         .background(PyxisColors.background)
         .id(refreshID)
+        .sheet(isPresented: $isShowingTryOn) { AITryOnView(items: selectedItems) }
         .confirmationDialog("Delete this saved fit?", isPresented: $isConfirmingDeletion, titleVisibility: .visible) {
             Button("DELETE FIT", role: .destructive, action: deleteFit)
             Button("CANCEL", role: .cancel) {}

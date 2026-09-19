@@ -102,23 +102,33 @@ path = "assets/PrivacyInfo.xcprivacy"
 with open(path, "rb") as handle:
     manifest = plistlib.load(handle)
 expected_empty_arrays = [
-    "NSPrivacyAccessedAPITypes",
     "NSPrivacyTrackingDomains",
 ]
 expected_collection = [{
     "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotosorVideos",
-    "NSPrivacyCollectedDataTypeLinked": False,
+    "NSPrivacyCollectedDataTypeLinked": True,
     "NSPrivacyCollectedDataTypeTracking": False,
     "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
 }]
+expected_collection += [{
+    "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataType" + kind,
+    "NSPrivacyCollectedDataTypeLinked": True,
+    "NSPrivacyCollectedDataTypeTracking": False,
+    "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+} for kind in ["PurchaseHistory", "UserID", "ProductInteraction"]]
 errors = []
+if manifest.get("NSPrivacyAccessedAPITypes") != [{
+    "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+    "NSPrivacyAccessedAPITypeReasons": ["CA92.1"],
+}]:
+    errors.append("UserDefaults must declare app-only consent preferences (CA92.1)")
 if manifest.get("NSPrivacyTracking") is not False:
     errors.append("NSPrivacyTracking must be false")
 for key in expected_empty_arrays:
     if manifest.get(key) != []:
         errors.append(f"{key} must be an empty array")
 if manifest.get("NSPrivacyCollectedDataTypes") != expected_collection:
-    errors.append("NSPrivacyCollectedDataTypes must declare unlinked, non-tracking photos for app functionality")
+    errors.append("NSPrivacyCollectedDataTypes must declare photos and linked purchase/usage metadata for app functionality")
 if errors:
     print("; ".join(errors), file=sys.stderr)
     sys.exit(1)' || fail "privacy manifest does not match the local-core and opt-in AI posture"
@@ -146,7 +156,7 @@ scan_policy() {
 
   expect_no_matches \
     "scan for required-reason API usage missing from privacy manifest" \
-    "UserDefaults|NSUbiquitousKeyValueStore|creationDate|contentModificationDate|contentModificationDateKey|fileModificationDate|modificationDate|volumeAvailableCapacity|volumeAvailableCapacityForImportantUsage|volumeAvailableCapacityForOpportunisticUsage|volumeTotalCapacity|systemFreeSize|systemSize|statfs|statvfs|mach_absolute_time|systemUptime|CACurrentMediaTime" \
+    "NSUbiquitousKeyValueStore|creationDate|contentModificationDate|contentModificationDateKey|fileModificationDate|modificationDate|volumeAvailableCapacity|volumeAvailableCapacityForImportantUsage|volumeAvailableCapacityForOpportunisticUsage|volumeTotalCapacity|systemFreeSize|systemSize|statfs|statvfs|mach_absolute_time|systemUptime|CACurrentMediaTime" \
     src Package.swift -g '!PrivacyInfo.xcprivacy'
 
   expect_no_matches \

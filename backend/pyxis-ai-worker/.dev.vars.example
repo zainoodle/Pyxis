@@ -1,2 +1,7 @@
 XAI_API_KEY=replace-in-local-development-only
 PYXIS_ACCESS_TOKEN=replace-with-a-long-random-token
+# Local/staging test access only. Production rejects Test credentials.
+DEPLOYMENT_ENV=staging
+TRY_ON_TEST_TOKEN=replace-with-a-random-staging-token-at-least-32-characters
+# Set true only AFTER xAI enables team-wide Zero Data Retention.
+XAI_ZDR_CONFIRMED=false

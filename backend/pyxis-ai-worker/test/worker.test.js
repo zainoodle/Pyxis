@@ -66,33 +66,7 @@ test("garment cleanup sends one xAI edit and returns the validated result", asyn
   assert.equal(calls.length, 2);
 });
 
-test("try-on applies more than two garments in sequential xAI batches", async () => {
-  let editCount = 0;
-  const fetchMock = async (input, init) => {
-    if (String(input).includes("/images/edits")) {
-      editCount += 1;
-      const body = JSON.parse(init.body);
-      assert.equal(body.images.length, editCount === 1 ? 3 : 2);
-      return Response.json({ data: [{ url: `https://imgen.x.ai/result-${editCount}.jpeg` }] });
-    }
-    return new Response(JPEG, { headers: { "Content-Type": "image/jpeg" } });
-  };
 
-  const response = await handleRequest(
-    request("/v1/ai/virtual-try-on", [
-      ["person", JPEG],
-      ["garment_1", JPEG],
-      ["garment_2", JPEG],
-      ["garment_3", JPEG]
-    ]),
-    environment(),
-    fetchMock
-  );
-
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-Pyxis-AI-Calls"), "2");
-  assert.equal(editCount, 2);
-});
 
 test("fails closed when rate limiting is missing", async () => {
   const response = await handleRequest(
@@ -102,19 +76,7 @@ test("fails closed when rate limiting is missing", async () => {
   assert.equal(response.status, 503);
 });
 
-test("rejects duplicate or non-sequential garment fields", async () => {
-  const response = await handleRequest(
-    request("/v1/ai/virtual-try-on", [
-      ["person", JPEG],
-      ["garment_1", JPEG],
-      ["garment_1", JPEG]
-    ]),
-    environment(),
-    () => assert.fail("provider must not be called")
-  );
-  assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { error: "Garment fields must be sequential and unique." });
-});
+
 
 const neverFetch = () => assert.fail("provider must not be called");
 const cleanupRequest = () => request("/v1/ai/garment-cleanup", [["source", JPEG]]);
@@ -181,20 +143,7 @@ test("requires the full PNG signature", async () => {
   assert.equal((await handleRequest(upload, environment(), neverFetch)).status, 415);
 });
 
-test("validates every intermediate URL before downloading or continuing try-on", async () => {
-  for (const url of ["http://imgen.x.ai/result", "https://127.0.0.1/result", "https://169.254.169.254/", "file:///etc/passwd", "https://x.ai.evil.example/result", "https://user:pass@imgen.x.ai/result", "https://imgen.x.ai:8443/result", "not a URL"]) {
-    let calls = 0;
-    const response = await handleRequest(request("/v1/ai/virtual-try-on", [
-      ["person", JPEG], ["garment_1", JPEG], ["garment_2", JPEG], ["garment_3", JPEG]
-    ]), environment(), async () => {
-      calls++;
-      assert.equal(calls, 1, "invalid result must never reach another fetch");
-      return Response.json({ data: [{ url }] });
-    });
-    assert.equal(response.status, 502);
-    assert.equal(calls, 1);
-  }
-});
+
 
 test("rejects provider and download redirects without forwarding photos or credentials", async () => {
   for (const redirectAt of [1, 2]) {
@@ -213,30 +162,7 @@ test("rejects provider and download redirects without forwarding photos or crede
   }
 });
 
-test("passes validated image bytes rather than remote URLs to the next edit", async () => {
-  let edits = 0;
-  let downloads = 0;
-  const response = await handleRequest(request("/v1/ai/virtual-try-on", [
-    ["person", JPEG], ...Array.from({ length: 6 }, (_, i) => [`garment_${i + 1}`, JPEG])
-  ]), environment(), async (url, init) => {
-    if (String(url).includes("/images/edits")) {
-      edits++;
-      const body = JSON.parse(init.body);
-      assert.ok(body.images.every(image => image.url.startsWith("data:image/jpeg;base64,")));
-      return Response.json({ data: [{ url: `https://imgen.x.ai/result-${edits}.jpg` }] });
-    }
-    downloads++;
-    assert.equal(init.headers, undefined, "do not send provider credential to image host");
-    return new Response(JPEG, { headers: { "Content-Type": "image/jpeg", "Set-Cookie": "secret=provider", "X-Internal": "private" } });
-  });
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-Pyxis-AI-Calls"), "3");
-  assert.equal(response.headers.get("Set-Cookie"), null);
-  assert.equal(response.headers.get("X-Internal"), null);
-  assert.equal(edits, 3);
-  assert.equal(downloads, 3);
-  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), JPEG);
-});
+
 
 test("bounds provider JSON and downloaded image streams without Content-Length", async () => {
   for (const oversizedAt of [1, 2]) {
@@ -279,8 +205,8 @@ test("preserves inline image results and generic errors without leaking secrets"
   assert.deepEqual(await failure.json(), { error: "AI generation failed. Try again." });
 });
 
-test("authorization and rate limits cover both paid endpoints", async () => {
-  for (const path of ["/v1/ai/garment-cleanup", "/v1/ai/virtual-try-on"]) {
+test("authorization and rate limits protect garment cleanup", async () => {
+  for (const path of ["/v1/ai/garment-cleanup"]) {
     for (const [env, token, status] of [
       [environment(), "", 401],
       [environment({ XAI_API_KEY: undefined }), "client-test-token", 503],
@@ -293,4 +219,8 @@ test("authorization and rate limits cover both paid endpoints", async () => {
       assert.equal(response.headers.get("Access-Control-Allow-Origin"), null);
     }
   }
+});
+
+test("legacy try-on cannot bypass purchase, consent or quota checks", async () => {
+  assert.equal((await handleRequest(request('/v1/ai/virtual-try-on', [['person', JPEG]]), environment(), neverFetch)).status, 410);
 });

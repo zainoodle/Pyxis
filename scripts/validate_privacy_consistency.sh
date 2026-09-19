@@ -29,9 +29,13 @@ rg -q 'NSPrivacyCollectedDataTypePurposeAppFunctionality' assets/PrivacyInfo.xcp
   || fail "privacy manifest must limit declared photo use to app functionality"
 rg -q 'UP TO 30 DAYS' src/views/AddItem/AddItemFlow.swift \
   || fail "garment AI disclosure is missing the retention statement"
-rg -q 'UP TO 30 DAYS' src/views/OutfitBuilder/AITryOnView.swift \
-  || fail "try-on disclosure is missing the retention statement"
-rg -q 'NOT A SIZE OR FIT GUARANTEE' src/views/OutfitBuilder/AITryOnView.swift \
+rg -q 'zero-retention processing' src/models/TryOn.swift \
+  || fail "try-on disclosure must require zero-retention processing"
+rg -q 'not a size or fit guarantee' src/models/TryOn.swift \
   || fail "try-on disclosure is missing the fit disclaimer"
+rg -q 'TryOnPrivacy.disclosure' src/views/OutfitBuilder/TryOnSupportingViews.swift \
+  || fail "try-on privacy sheet must display the shared disclosure"
+rg -q 'X-Pyxis-Consent' backend/pyxis-ai-worker/src/try-on.js \
+  || fail "try-on must enforce explicit consent"
 
 printf 'Privacy and AI disclosure surfaces are consistent.\n'

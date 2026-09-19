@@ -55,16 +55,9 @@ struct OutfitBuilderView: View {
 
                     OutfitAssemblyPreview(selectedPieces: selectedPieces)
 
-                    Button(AIGarmentStudioService.isConfigured ? "TRY THIS FIT ON YOU" : "AI STUDIO UNAVAILABLE") {
-                        isShowingAITryOn = true
-                    }
-                    .buttonStyle(MinimalButtonStyle())
-                    .disabled(selectedPieces.isEmpty || !AIGarmentStudioService.isConfigured)
-                    .accessibilityLabel(
-                        AIGarmentStudioService.isConfigured
-                            ? "Open AI try-on with the selected clothing"
-                            : "AI Studio is unavailable in this build"
-                    )
+                    Button("OUTFIT ON YOU") { isShowingAITryOn = true }
+                        .buttonStyle(MinimalButtonStyle())
+                        .accessibilityLabel("Try clothing on your photo")
 
                     ForEach(rows) { row in
                         if row.items.isEmpty {

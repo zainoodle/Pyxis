@@ -89,27 +89,12 @@ Run the distribution preflight after App Store Connect provider access and an Ap
 ./scripts/deployment_preflight.sh distribution
 ```
 
-## Local-First Core and Opt-In AI Studio
+## Local-first closet and Outfit on you
 
-- No accounts.
-- No analytics or telemetry.
-- Core closet organization, background removal, and saved-fit features work locally.
-- `AI DE-WRINKLE` and `AI TRY-ON` are optional actions that upload only the photos selected for that generation.
-- AI requests go through the Pyxis xAI gateway; never put an xAI provider key in the app.
+The closet, background removal, garment recognition, measurements, and saved fits work on device. Outfit on you adds an optional paid image preview: choose a full-body reference, add up to six pieces from the closet or Photos, correct suggested garment types if needed, and generate. There is no chat interface. You can compare the original and preview, save results locally, and remove your reference or saved previews.
 
-Images are stored locally in Application Support. Metadata is stored with SwiftData.
-On-device memory records, including item/fit summaries and local embedding vectors, are keyed, validated, stored with SwiftData, and retrieved in-process.
+Cloud generation requires explicit consent and xAI zero-retention processing. The provider, model, and credentials are backend concerns; users see photos, privacy choices, and a monthly allowance. Until configured, the app shows a coming-soon state and makes no photo uploads. On-device try-on generation is not bundled in this version; the client service protocol leaves room for a future implementation.
 
-Deploy `backend/pyxis-ai-worker`, copy `config/Pyxis.local.xcconfig.example` to the Git-ignored `config/Pyxis.local.xcconfig`, then set:
+StoreKit supplies subscription pricing and verified purchases. The Worker enforces a configurable monthly allowance (initially 20 successful previews) and idempotent requests. Reference saving is opt-in, protected try-on files are excluded from backups, and purchase/usage metadata is retained separately from photos.
 
-- `PYXIS_AI_BASE_URL`: the Worker's HTTPS origin
-- `PYXIS_AI_ACCESS_TOKEN`: the same scoped gateway token stored as the Worker's `PYXIS_ACCESS_TOKEN` secret
-
-The gateway implements:
-
-- `POST /v1/ai/garment-cleanup` with multipart field `source`
-- `POST /v1/ai/virtual-try-on` with multipart fields `person` and `garment_1...n`
-
-Each endpoint returns image bytes. The included Cloudflare Worker authenticates and rate-limits callers, validates uploads, calls `grok-imagine-image-quality`, and keeps `XAI_API_KEY` server-side. The app downsamples uploads and strips their source metadata before sending them.
-
-See `docs/AI_GATEWAY.md` for secret setup, deployment, testing, and the production-authentication limitation of the initial shared gateway token.
+AI garment cleanup remains an independent optional action with its existing disclosure and prototype authentication. Never embed an xAI provider key in the app. See [AI gateway setup](docs/AI_GATEWAY.md) for staging tests, purchase configuration, privacy requirements, and remaining release gates.
