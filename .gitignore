@@ -8,6 +8,7 @@ DerivedData*/
 *.swp
 *.tmp
 .superpowers/
+backend/pyxis-ai-worker/.wrangler/
 backend/pyxis-ai-worker/.dev.vars
 config/Pyxis.local.xcconfig
 

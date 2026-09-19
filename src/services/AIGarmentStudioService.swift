@@ -48,8 +48,8 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         accessToken: String? = AIGarmentStudioService.configuredAccessToken,
         session: URLSession? = nil
     ) {
-        self.baseURL = baseURL
-        self.accessToken = accessToken
+        self.baseURL = baseURL.flatMap { Self.isValidGatewayURL($0) ? $0 : nil }
+        self.accessToken = accessToken.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         self.session = session ?? Self.makeEphemeralSession()
     }
 
@@ -69,7 +69,7 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
     }
 
     public func makeTryOn(personURL: URL, garmentURLs: [URL]) async throws -> Data {
-        guard !garmentURLs.isEmpty else { throw AIGarmentStudioError.invalidImage }
+        guard !garmentURLs.isEmpty, garmentURLs.count <= 6 else { throw AIGarmentStudioError.invalidImage }
         let images = [("person", personURL)] + garmentURLs.enumerated().map { index, url in
             ("garment_\(index + 1)", url)
         }
@@ -81,7 +81,7 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
             return nil
         }
         guard let url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.scheme == "https", url.host != nil else {
+              isValidGatewayURL(url) else {
             return nil
         }
         return url
@@ -105,9 +105,22 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try Self.multipartBody(images: images, boundary: boundary)
 
-        let (data, response) = try await session.data(for: request)
+        let (bytes, response) = try await session.bytes(for: request, delegate: AITransferDelegate())
+        defer { bytes.task.cancel() }
         guard let http = response as? HTTPURLResponse else {
             throw AIGarmentStudioError.invalidResponse
+        }
+        if let contentLength = http.value(forHTTPHeaderField: "Content-Length") {
+            guard let length = Int(contentLength), length >= 0, length <= Self.maximumResponseBytes else {
+                throw AIGarmentStudioError.invalidResponse
+            }
+        }
+        var data = Data()
+        for try await byte in bytes {
+            guard data.count < Self.maximumResponseBytes else {
+                throw AIGarmentStudioError.invalidResponse
+            }
+            data.append(byte)
         }
         guard (200..<300).contains(http.statusCode) else {
             let payload = try? JSONDecoder().decode(ErrorEnvelope.self, from: data)
@@ -115,12 +128,6 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         }
         guard !data.isEmpty, data.count <= Self.maximumResponseBytes else {
             throw AIGarmentStudioError.invalidResponse
-        }
-
-        if let contentLength = http.value(forHTTPHeaderField: "Content-Length") {
-            guard let length = Int(contentLength), length >= 0, length <= Self.maximumResponseBytes else {
-                throw AIGarmentStudioError.invalidResponse
-            }
         }
 
         if http.value(forHTTPHeaderField: "Content-Type")?.contains("application/json") == true {
@@ -163,6 +170,11 @@ public final class AIGarmentStudioService: AIGarmentStudioProviding, @unchecked 
         return body
     }
 
+    private static func isValidGatewayURL(_ url: URL) -> Bool {
+        url.scheme == "https" && url.host != nil && url.user == nil && url.password == nil
+            && url.query == nil && url.fragment == nil
+    }
+
     private static func makeEphemeralSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.urlCache = nil
@@ -202,5 +214,18 @@ private struct ErrorEnvelope: Decodable { let error: String }
 private extension Data {
     mutating func append(_ string: String) {
         append(Data(string.utf8))
+    }
+}
+
+/// Upload consent covers the configured gateway only, including on HTTP 307/308 responses.
+final class AITransferDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }
