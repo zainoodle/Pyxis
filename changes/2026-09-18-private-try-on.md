@@ -12,6 +12,7 @@ summary: Add private paid outfit previews with photo references, garment selecti
 - Require explicit versioned consent and verified xAI zero-retention processing. Reference saving is opt-in; protected try-on files are excluded from backups and abandoned sessions are removed on next launch.
 - Add StoreKit monthly subscription purchase/restore and server-verified entitlement, durable allowance, idempotency, concurrent-job protection, and refund-on-failure behavior. Initial configurable allowance is 20 successful previews.
 - Add staging-only Debug test access; production rejects test credentials and Release strips the token. Retire the former try-on endpoint to prevent bypassing paid limits.
+- Request inline image delivery for cleanup too, so a shared team-wide ZDR key remains compatible.
 - Storage is additive with a versioned local manifest; existing SwiftData/closet records are unchanged. Future manifest versions fail closed. Purchase/usage metadata is declared in the privacy manifest and expires 35 days after the recorded billing period unless renewed usage updates it.
 - Depends on security hardening PR #5, which depends on versioning PR #4. Existing garment cleanup remains standard-retention (up to 30 days) and retains its separate shared-token release blocker.
 

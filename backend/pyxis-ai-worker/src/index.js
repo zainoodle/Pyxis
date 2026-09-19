@@ -257,7 +257,7 @@ async function editImages(images, prompt, env, fetchImpl, requireZDR = false) {
   const body = {
     model: env.XAI_MODEL || "grok-imagine-image-quality",
     prompt,
-    ...(requireZDR ? { response_format: "b64_json" } : {})
+    response_format: "b64_json" // Also keeps cleanup compatible with a team-wide ZDR key.
   };
   if (images.length === 1) {
     body.image = { type: "image_url", url: images[0] };

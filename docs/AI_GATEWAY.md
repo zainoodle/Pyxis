@@ -25,7 +25,7 @@ Generation multipart fields are `person`, consecutive `garment_1` through `garme
 ## Connect a test API later
 
 1. Install dependencies with `npm ci` in `backend/pyxis-ai-worker`. Run `npm test` and `npm run check`.
-2. Enable **team-wide Zero Data Retention** with xAI. Try-on fails closed without it, even if the environment flag was set incorrectly. Before sending any photos, the Worker checks the account's `x-zero-data-retention` response header; it checks edit responses too. All results must be base64 bytes, never hosted image URLs. See [xAI Zero Data Retention](https://docs.x.ai/developers/security/zero-data-retention).
+2. Enable **team-wide Zero Data Retention** with xAI. Try-on fails closed without it, even if the environment flag was set incorrectly. Before sending any photos, the Worker checks the account's `x-zero-data-retention` response header; it checks edit responses too. All results must be base64 bytes, never hosted image URLs. See [xAI Zero Data Retention](https://docs.x.ai/developers/faq/security).
 3. Sign into Cloudflare with `npx wrangler login --use-keyring`. Use prompt-based secrets; never paste keys into source, chat, or command arguments:
 
 ```bash
