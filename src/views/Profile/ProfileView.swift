@@ -46,18 +46,6 @@ struct ProfileView: View {
                 Text("Your closet, search, fits, and Fit Passport work offline. AI Studio uploads only photos you explicitly choose when it is configured.")
                     .font(PyxisTypography.body)
             }
-
-            Section {
-                VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    Text("PRIVATE BY DEFAULT")
-                        .font(PyxisTypography.body)
-                    Text("No accounts, ads, tracking, or cloud sync. Closet images are stored in protected local app storage.")
-                        .font(PyxisTypography.body)
-                        .foregroundStyle(PyxisColors.secondaryText)
-                }
-            } header: {
-                Text("ABOUT PYXIS")
-            }
         }
         .scrollContentBackground(.hidden)
         .background(PyxisColors.background)
