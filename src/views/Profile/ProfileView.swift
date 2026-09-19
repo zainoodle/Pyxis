@@ -42,9 +42,6 @@ struct ProfileView: View {
                 .accessibilityElement(children: .combine)
             } header: {
                 Text("CAPABILITIES")
-            } footer: {
-                Text("Your closet, search, fits, and Fit Passport work offline. AI Studio uploads only photos you explicitly choose when it is configured.")
-                    .font(PyxisTypography.body)
             }
         }
         .scrollContentBackground(.hidden)
