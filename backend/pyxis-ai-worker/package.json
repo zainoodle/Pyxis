@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/index.js",
+    "check": "node --check src/index.js && node --check src/try-on.js && node --check src/apple-roots.js",
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "4.131.0"
+  },
+  "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0"
   }
 }

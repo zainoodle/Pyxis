@@ -4,8 +4,30 @@
   "main": "src/index.js",
   "compatibility_date": "2026-07-16",
   "workers_dev": true,
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TRY_ON_USAGE",
+        "class_name": "TryOnUsage"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "try-on-v1",
+      "new_sqlite_classes": [
+        "TryOnUsage"
+      ]
+    }
+  ],
   "vars": {
-    "XAI_MODEL": "grok-imagine-image-quality"
+    "XAI_MODEL": "grok-imagine-image-quality",
+    "DEPLOYMENT_ENV": "production",
+    "XAI_ZDR_CONFIRMED": "false",
+    "TRY_ON_MONTHLY_LIMIT": "20"
   },
   "ratelimits": [
     {
@@ -16,5 +38,35 @@
         "period": 60
       }
     }
-  ]
+  ],
+  "env": {
+    "staging": {
+      "name": "pyxis-ai-staging",
+      "vars": {
+        "XAI_MODEL": "grok-imagine-image-quality",
+        "DEPLOYMENT_ENV": "staging",
+        "XAI_ZDR_CONFIRMED": "false",
+        "TRY_ON_MONTHLY_LIMIT": "20",
+        "APPLE_ENVIRONMENT": "Sandbox"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TRY_ON_USAGE",
+            "class_name": "TryOnUsage"
+          }
+        ]
+      },
+      "ratelimits": [
+        {
+          "name": "AI_RATE_LIMITER",
+          "namespace_id": "1002",
+          "simple": {
+            "limit": 6,
+            "period": 60
+          }
+        }
+      ]
+    }
+  }
 }

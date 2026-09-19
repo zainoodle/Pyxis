@@ -1,6 +1,6 @@
 # Pyxis App Store Submission
 
-Last audited: 2026-08-27
+Try-on addendum: 2026-09-18; earlier release evidence remains historical.
 
 This checklist translates the current Xcode project and local-first product scope into App Store Connect fields. Use it after the physical-device QA gates in `docs/MANUAL_QA.md` pass.
 
@@ -18,7 +18,7 @@ This checklist translates the current Xcode project and local-first product scop
 - Privacy manifest: `assets/PrivacyInfo.xcprivacy`
 - App icon source: 1024 x 1024 opaque PNG with no alpha channel
 - App Store export options template: `config/deployment/ExportOptions-AppStoreConnect.plist`
-- Privacy label posture: the manifest declares photos/videos for app functionality as unlinked and non-tracking because standard xAI API handling may retain optional AI request/response content for up to 30 days. Reconfirm the exact App Store Connect answers against the release configuration and provider terms at submission time.
+- Privacy label posture: photos are declared linked and non-tracking because paid try-on requests authenticate a subscription. Garment cleanup retains standard xAI retention up to 30 days; try-on requires zero-retention photos. Purchase history, subscription identifiers, and usage records are also linked and used only for app functionality. App-only consent preferences declare UserDefaults reason CA92.1. Reconcile final App Store Connect answers with the shipped configuration.
 
 ## App Store Connect Metadata Draft
 
@@ -44,17 +44,15 @@ Save clothing photos, remove backgrounds on device, organize pieces into closets
 
 ## App Privacy Answers
 
-Use these draft answers only if optional AI is enabled in the submitted Release build and xAI's standard 30-day retention remains active:
+Draft privacy answers require review against the actual release configuration:
 
-- Tracking: No
-- Data type: Photos or Videos
-- Purpose: App Functionality
-- Linked to identity: No, only after confirming neither the gateway nor provider configuration links requests to an account, device, or other identity
-- Used for tracking: No
-- Third-party SDKs: None
-- Privacy choices URL: manually assess at submission time
+- Tracking: No.
+- Photos or Videos: linked, non-tracking, App Functionality; existing standard-retention cleanup remains disclosed. Try-on uses explicit consent and xAI zero-retention processing.
+- Purchase History, User ID (subscription transaction identifier), Product Interaction (allowance/generation records): linked, non-tracking, App Functionality.
+- Required-reason API: UserDefaults, CA92.1, for app-only photo-processing consent.
+- No advertising or analytics SDKs. Apple handles subscription payments. The backend uses Apple's verification library.
 
-Rationale: the local closet itself does not transmit data. Optional AI sends user-selected person and/or garment photos through the Pyxis gateway to xAI. Apple's current guidance defines collection as off-device transmission that remains accessible longer than needed to service the request in real time; xAI's standard API controls currently retain requests and responses for up to 30 days. The Account Holder or App Manager must verify and enter the final answers in App Store Connect.
+App Store subscription setup requires a monthly auto-renewable product, localized price/title, review information and screenshots, and the published privacy-policy URL. The paywall shows the StoreKit price, monthly allowance, auto-renewal language, restore, manage subscription, Apple standard EULA, and in-app privacy disclosure. Validate purchase, renewal, cancellation, expiration, refund, and restore in Apple Sandbox before submission. See [gateway setup](AI_GATEWAY.md).
 
 If AI is unavailable in the submitted Release build, remove AI claims from all release metadata and reassess the answers from the actual artifact. Do not infer the final label from this draft alone.
 

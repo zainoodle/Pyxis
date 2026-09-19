@@ -2,3 +2,6 @@
 // $() prevents xcconfig from treating the URL's double slash as a comment.
 PYXIS_AI_BASE_URL = https:/$()/YOUR-WORKER.workers.dev
 PYXIS_AI_ACCESS_TOKEN = replace-with-the-worker-access-token
+// Optional staging-only try-on testing; Debug builds only. Never a provider key.
+// Use the staging Worker's TRY_ON_TEST_TOKEN. Release always strips this value.
+PYXIS_TRY_ON_TEST_TOKEN =

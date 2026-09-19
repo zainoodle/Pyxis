@@ -271,6 +271,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select clothing photos to save locally in Pyxis.";
 				INFOPLIST_KEY_PYXIS_AI_BASE_URL = "$(PYXIS_AI_BASE_URL)";
 				INFOPLIST_KEY_PYXIS_AI_ACCESS_TOKEN = "$(PYXIS_AI_ACCESS_TOKEN)";
+				INFOPLIST_KEY_PYXIS_TRY_ON_TEST_TOKEN = "$(PYXIS_TRY_ON_TEST_TOKEN)";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
@@ -304,6 +305,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select clothing photos to save locally in Pyxis.";
 				INFOPLIST_KEY_PYXIS_AI_BASE_URL = "$(PYXIS_AI_BASE_URL)";
 				INFOPLIST_KEY_PYXIS_AI_ACCESS_TOKEN = "$(PYXIS_AI_ACCESS_TOKEN)";
+				INFOPLIST_KEY_PYXIS_TRY_ON_TEST_TOKEN = "";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
