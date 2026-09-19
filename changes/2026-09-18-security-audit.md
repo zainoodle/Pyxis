@@ -17,4 +17,5 @@ summary: Bound AI transfers, validate provider images and redirects, and patch g
 
 - Passed: 18 Worker tests; 10 security regression tests fail against the original Worker.
 - Passed: Worker syntax check, npm audit (zero findings), local Wrangler bundle and HTTP smoke checks, 25 workflow tests, static deployment preflight.
-- Blocked: native tests/build/simulator until Xcode license/setup completes. No production deployment.
+- Passed in GitHub CI: 115 Swift tests and iOS Simulator target build/version verification.
+- Blocked: local simulator launch until Xcode license/setup completes. No production deployment.

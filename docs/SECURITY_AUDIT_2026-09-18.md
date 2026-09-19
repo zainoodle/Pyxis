@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-**Public AI Studio release is blocked by the extractable shared gateway credential.** The local-first architecture substantially limits remote access to closet data. The two paid AI endpoints are the main exposed service. This review found five security findings: **0 Critical, 1 High, 2 Medium, 2 Low**. Four have code remediations; the High authentication finding remains open. Native remediation verification is blocked until Xcode setup is complete. This is a source and local-test review, not a certification of the deployed infrastructure.
+**Public AI Studio release is blocked by the extractable shared gateway credential.** The local-first architecture substantially limits remote access to closet data. The two paid AI endpoints are the main exposed service. This review found five security findings: **0 Critical, 1 High, 2 Medium, 2 Low**. Four have code remediations; the High authentication finding remains open. Native core tests and the iOS build pass in GitHub CI; local simulator/device verification remains blocked by Xcode setup. This is a source and local-test review, not a certification of the deployed infrastructure.
 
 Reviewed baseline: `96d4318` on `codex/app-versioning`; remediation branch: `codex/security-audit`. This PR depends on versioning PR #4, which itself depends on the earlier repository/workflow work. No production service was deployed, no photos were uploaded, and no stored-data schema or app version was changed.
 
@@ -49,13 +49,13 @@ The baseline uses [OWASP Top 10:2025](https://top10.owasp.org/2025/0x00_2025-Int
 - **Remediation:** validate and download every result before reuse; send image data rather than provider URLs into later batches. Require HTTPS on the existing x.ai domain allowlist, reject embedded credentials/nonstandard ports, reject redirects on provider calls and downloads, cap provider JSON at 28 MiB and images at 20 MiB, set deadlines, validate signatures, and return only application-owned headers.
 - **Verification:** tests cover private/link-local/file/HTTP destinations, deceptive hostname suffixes, credentials/ports, invalid intermediate locations, redirect refusal, oversized provider streams, malformed JSON/base64/images, header isolation, inline output, and six garments across three edits. Production DNS/CDN behavior was not exercised.
 
-### SEC-04 — Low: native response limits applied after buffering; redirect exposure — REMEDIATED, NATIVE TESTS BLOCKED
+### SEC-04 — Low: native response limits applied after buffering; redirect exposure — FIXED
 
 - **Location:** `src/services/AIGarmentStudioService.swift`, `generate`, `AITransferDelegate`.
 - **Root cause:** `URLSession.data(for:)` buffered the complete response before checking its 20 MiB limit, and error responses were decoded before that check. Default redirect handling could repost a selected-photo upload after a 307/308 response.
 - **Scenario:** a faulty or compromised configured gateway returns an unbounded body and terminates the app through memory pressure, or redirects an upload to a different destination. A normal outside API caller cannot directly set another device's gateway response.
 - **Remediation:** consume `URLSession.AsyncBytes`, enforce headers and actual bytes before decoding, cancel the task on exit, and reject every redirect. Apply HTTPS/credential/query/fragment checks to injected as well as bundled gateway configuration; reject more than six garments before encoding.
-- **Verification:** regression cases added for oversized success/error bodies, redirect delegate refusal, unsafe configurations, and excessive garment counts. Existing route/authentication/image tests retained. SDK interface inspection confirms the AsyncBytes API, but build/test and real URLSession redirect integration remain blocked by local Xcode setup. Delegate-only coverage is not claimed as an end-to-end redirect test.
+- **Verification:** regression cases added for oversized success/error bodies, redirect delegate refusal, unsafe configurations, and excessive garment counts. Existing route/authentication/image tests retained. All nine AI service tests pass within the 115-test Swift core suite on GitHub CI, and the iOS Simulator target builds successfully. Local launch and real URLSession redirect integration remain blocked by local Xcode setup. Delegate-only coverage is not claimed as an end-to-end redirect test.
 
 ### SEC-05 — Low in this deployment: vulnerable development-tool dependency — FIXED
 
@@ -91,14 +91,17 @@ The baseline uses [OWASP Top 10:2025](https://top10.owasp.org/2025/0x00_2025-Int
 | Workflow unittest suite | PASS — 25 tests |
 | `deployment_preflight.sh static` | PASS — metadata/privacy/policy/whitespace checks |
 | Targeted redacted repository/history secret scan | PASS — no confirmed credential found |
-| Swift core suite | BLOCKED — Xcode license not accepted |
-| iOS build and simulator startup | BLOCKED — Xcode setup/license; simulator tool initially used Command Line Tools |
+| Swift core suite | PASS in GitHub CI — 115 tests, 0 failures; local run remains blocked by the Xcode license |
+| iOS Simulator target build | PASS in GitHub CI — Debug build and app version verification |
+| Local simulator startup | BLOCKED — Xcode setup/license; simulator tool initially used Command Line Tools |
 | Live Cloudflare/xAI, real device, signing | NOT RUN — no production actions or real-photo/provider calls |
+
+CI evidence: [successful run for code commit 46aed5b](https://github.com/zainoodle/Pyxis/actions/runs/35408348412). The subsequent report update changes documentation only.
 
 ## Remaining risks and release requirements
 
 1. Resolve SEC-01 before public AI distribution. Verify deployed rate-limit bindings, source-IP provenance, secret rotation, hard provider budget controls, TLS/HSTS and access logs. The configured Cloudflare address limit is not a global financial quota.
-2. Complete native tests/build/launch after Xcode setup, including actual 307/308 refusal, cancellation during a large chunked response, normal cleanup and one/two/three/six-garment flows. Signed-device/App Attest validation requires real app identity and provisioning.
+2. Complete local simulator/device verification after Xcode setup, including actual 307/308 refusal, cancellation during a large chunked response, normal cleanup and one/two/three/six-garment flows. Signed-device/App Attest validation requires real app identity and provisioning.
 3. Exercise the revised provider-download flow against a staging deployment with approved test images. It adds intermediate downloads and buffers bounded images before returning them; that increases latency/memory versus the old final-only stream. Measure worst-case concurrent requests under Worker memory limits. The x.ai allowlist trusts provider DNS; provider-domain compromise remains outside this patch.
 4. Image signatures and compressed-byte limits do not prove safe decoded dimensions or cover platform image-decoder flaws. Local import/background removal still accepts large user-selected originals. Image-bomb/fuzz testing and current device OS validation remain necessary; no reproducible native decoder exploit was demonstrated.
 5. Try-on person/output files remain in the app temporary directory until OS cleanup, and imported originals can retain metadata locally. Device-lock protection for temporary files and SwiftData sidecars, backup behavior, retention cleanup, and device forensics were not validated. No claim of zero on-device retention or protection from a compromised device is made.
