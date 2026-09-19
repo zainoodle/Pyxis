@@ -95,6 +95,74 @@ final class AIGarmentStudioServiceTests: XCTestCase {
         }
     }
 
+    func testRejectsOversizedResponseWithoutContentLength() async throws {
+        let imageURL = try makeSourceImage()
+        URLProtocolStub.requestHandler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                headerFields: ["Content-Type": "image/jpeg"])!
+            return (response, Self.validJPEG + Data(repeating: 0, count: 20 * 1_024 * 1_024))
+        }
+        do {
+            _ = try await makeService().makePristineGarment(from: imageURL)
+            XCTFail("Expected bounded transfer failure")
+        } catch let error as AIGarmentStudioError {
+            XCTAssertEqual(error, .invalidResponse)
+        }
+    }
+
+    func testRejectsOversizedErrorBeforeDecodingServerMessage() async throws {
+        let imageURL = try makeSourceImage()
+        URLProtocolStub.requestHandler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 502, httpVersion: nil,
+                headerFields: ["Content-Type": "application/json", "Content-Length": "999999999"])!
+            return (response, Data("{\"error\":\"provider details\"}".utf8))
+        }
+        do {
+            _ = try await makeService().makePristineGarment(from: imageURL)
+            XCTFail("Expected bounded error response")
+        } catch let error as AIGarmentStudioError {
+            XCTAssertEqual(error, .invalidResponse)
+        }
+    }
+
+    func testRedirectDelegateNeverRepostsSelectedPhotos() {
+        let original = URL(string: "https://gateway.example/v1/ai/garment-cleanup")!
+        let response = HTTPURLResponse(url: original, statusCode: 307, httpVersion: nil,
+            headerFields: ["Location": "https://other.example/collect"])!
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        let task = session.dataTask(with: original)
+        var callbackInvoked = false
+        AITransferDelegate().urlSession(session, task: task, willPerformHTTPRedirection: response,
+            newRequest: URLRequest(url: URL(string: "https://other.example/collect")!)) { redirected in
+            callbackInvoked = true
+            XCTAssertNil(redirected)
+        }
+        XCTAssertTrue(callbackInvoked)
+    }
+
+    func testRejectsUnsafeGatewayConfigurationAndEmptyTokens() {
+        for address in ["http://gateway.example", "https://user:pass@gateway.example", "https://gateway.example?token=example", "https://gateway.example#fragment"] {
+            let service = AIGarmentStudioService(baseURL: URL(string: address), accessToken: "test-token")
+            XCTAssertFalse(service.isConfigured)
+        }
+        XCTAssertFalse(AIGarmentStudioService(baseURL: URL(string: "https://gateway.example"), accessToken: " ").isConfigured)
+    }
+
+    func testRejectsTooManyGarmentsBeforeUpload() async throws {
+        let imageURL = try makeSourceImage()
+        URLProtocolStub.requestHandler = { _ in
+            XCTFail("Unexpected upload")
+            throw URLError(.badURL)
+        }
+        do {
+            _ = try await makeService().makeTryOn(personURL: imageURL, garmentURLs: Array(repeating: imageURL, count: 7))
+            XCTFail("Expected garment count validation")
+        } catch let error as AIGarmentStudioError {
+            XCTAssertEqual(error, .invalidImage)
+        }
+    }
+
     private func makeService() -> AIGarmentStudioService {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

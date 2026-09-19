@@ -92,8 +92,10 @@ Never use production secrets in automated tests. Worker tests use fake values an
 ## Privacy And Operations
 
 - Pyxis re-encodes selected photos as bounded JPEGs, which removes source metadata before upload.
-- The Worker accepts only JPEG, PNG, or WebP, limits each image to 4 MB, limits a try-on to six garments, and does not log request bodies.
-- Responses use `Cache-Control: no-store`.
+- The Worker accepts only JPEG, PNG, or WebP, checks their signatures, limits each image to 4 MiB, limits a try-on to six garments, and does not log request bodies. It bounds actual multipart bytes at 32 MiB before parsing and rejects unknown fields.
+- Provider JSON is capped at 28 MiB and generated images at 20 MiB. Every intermediate image is downloaded and validated before reuse. Provider calls and image downloads reject redirects and use transfer deadlines; response headers are constructed by the gateway.
+- Responses use `Cache-Control: no-store`. The app limits responses while receiving them and refuses upload redirects. Configure the final HTTPS gateway URL, without a redirecting vanity URL.
+- See [the security audit](SECURITY_AUDIT_2026-09-18.md) for regression evidence, the unresolved shared-token release blocker, and staging/device verification requirements.
 - The gateway does not write photos to KV, R2, D1, or another persistent store.
 - xAI's standard API terms currently allow request and response retention for up to 30 days. The in-app disclosure and privacy policy must stay synchronized with the active provider terms.
 - A repeated outfit may consume multiple xAI calls. Monitor Grok Settings -> Usage before raising the rate limit.
