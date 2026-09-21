@@ -17,6 +17,23 @@ final class TryOnTests: XCTestCase {
     }
     private func photo() throws -> Data { try XCTUnwrap(makeTestImage().jpegDataForTests()) }
 
+    func testProviderSwitchRequiresFreshConsentAndUpdatesDisclosure() async throws {
+        let service = TryOnStub(data: try photo())
+        let model = TryOnViewModel(service: service, storage: try storage(), preferences: preferences())
+        await model.load(); model.acceptConsent()
+        XCTAssertTrue(model.hasConsent)
+        await service.usePC()
+        await model.load()
+        XCTAssertFalse(model.hasConsent)
+        XCTAssertTrue(model.isPrivatePC)
+        XCTAssertEqual(model.disclosure, TryOnPrivacy.pcDisclosure)
+        model.acceptConsent()
+        XCTAssertTrue(model.hasConsent)
+        XCTAssertEqual(model.consentVersion, TryOnPrivacy.pcVersion)
+        await model.load()
+        XCTAssertTrue(model.hasConsent)
+    }
+
     func testReferenceIsOnlyPersistentWhenRememberedAndCanBeRemoved() throws {
         let store = try storage()
         let url = try store.importPhoto(photo())
@@ -146,11 +163,14 @@ private actor TryOnStub: TryOnProviding {
     let data: Data
     let fails: Bool
     let replayExpired: Bool
+    var pc = false
+    func usePC() { pc = true }
     var calls = 0
     var persons: [URL] = []
     var jobs: [UUID] = []
     init(data: Data, fails: Bool = false, replayExpired: Bool = false) { self.data = data; self.fails = fails; self.replayExpired = replayExpired }
     func configuration() async throws -> TryOnConfiguration {
+        pc ? TryOnConfiguration(available: true, limit: 100, consentVersion: TryOnPrivacy.pcVersion, provider: "Private PC", retention: "temporary-local", supportedGarmentCounts: [1]) :
         TryOnConfiguration(available: true, limit: 20, consentVersion: TryOnPrivacy.version, provider: "xAI", retention: "zero")
     }
     func allowance(authorization: String) async throws -> TryOnAllowance {

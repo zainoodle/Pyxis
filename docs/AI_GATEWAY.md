@@ -57,3 +57,7 @@ Durable storage contains only billing-period/usage counters and generation IDs, 
 ## Verification before release
 
 Run Swift and Worker tests, privacy preflight, and both Debug/Release builds. On staging, verify Apple purchase/restore/renew/refund, concurrent and exhausted allowances, poor-network recovery, and generations with one, two, three, and six garments. Inspect xAI usage and ZDR response headers. Test consent refusal/revocation, remembered-photo removal, saved-preview deletion, accessibility, and real photo imports on a physical iPhone. Do not advertise try-on until provider quality, costs, privacy configuration, and purchase flows have passed these checks.
+
+## Personal PC model connection
+
+A separate Debug-only adapter can connect Outfit on you directly to a ComfyUI image-edit model over Tailscale. It uses its own explicit consent contract because ComfyUI writes temporary files on the PC. It does not reuse the xAI zero-retention claim, deploy the Worker, or grant paid production access. See [Private PC image API](PC_IMAGE_API.md) for setup, workflow requirements, privacy, and current verification limits.

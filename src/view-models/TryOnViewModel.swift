@@ -29,22 +29,28 @@ final class TryOnViewModel: ObservableObject {
         self.garments = garments; self.service = service; self.storage = storage; self.preferences = preferences
         personURL = storage?.savedReferenceURL
         rememberPhoto = personURL != nil
-        hasConsent = preferences.string(forKey: Self.consentKey) == TryOnPrivacy.version
+        hasConsent = false
         do { previews = try storage?.previews() ?? [] }
         catch { errorMessage = error.localizedDescription }
     }
     deinit { storage?.endSession() }
+    var consentVersion: String { configuration?.consentVersion ?? TryOnPrivacy.version }
+    var isPrivatePC: Bool { configuration?.isPrivatePC == true }
+    var disclosure: String { configuration?.disclosure ?? TryOnPrivacy.disclosure }
     var canGenerate: Bool {
         configuration?.available == true && personURL != nil && !garments.isEmpty && garments.count <= 6 &&
-        !isGenerating && !isImporting && (allowance?.remaining ?? 0) > 0
+        !isGenerating && !isImporting && (allowance?.remaining ?? 0) > 0 &&
+        (configuration?.supportedGarmentCounts?.contains(garments.count) ?? true)
     }
     var available: Bool { configuration?.available == true }
     func load() async {
         guard service.isConfigured else { return }
         isLoading = true
         defer { isLoading = false }
-        do { configuration = try await service.configuration() }
-        catch { errorMessage = error.localizedDescription }
+        do {
+            configuration = try await service.configuration()
+            hasConsent = preferences.string(forKey: Self.consentKey) == consentVersion
+        } catch { configuration = nil; hasConsent = false; errorMessage = error.localizedDescription }
     }
     func refreshAllowance(authorization: String?) async {
         guard available, let authorization else { allowance = nil; return }
@@ -52,7 +58,7 @@ final class TryOnViewModel: ObservableObject {
         catch { allowance = nil; errorMessage = error.localizedDescription }
     }
     func acceptConsent() {
-        preferences.set(TryOnPrivacy.version, forKey: Self.consentKey); hasConsent = true
+        preferences.set(consentVersion, forKey: Self.consentKey); hasConsent = true
     }
     func revokeConsent() {
         preferences.removeObject(forKey: Self.consentKey); hasConsent = false
@@ -111,7 +117,7 @@ final class TryOnViewModel: ObservableObject {
         let selected = garments
         do {
             let result = try await service.generate(person: personURL, garments: selected, authorization: authorization,
-                consent: TryOnPrivacy.version, jobID: generationID)
+                consent: consentVersion, jobID: generationID)
             allowance = result.allowance
             generatedURL = try await Task.detached(priority: .userInitiated) { try storage.storeGenerated(result.imageData) }.value
             resultID = generationID; resultNames = selected.map(\.name)
@@ -119,8 +125,8 @@ final class TryOnViewModel: ObservableObject {
             generationID = UUID() // A deliberate new variation is a new charge.
         } catch {
             errorMessage = error.localizedDescription
-            if error as? TryOnError == .alreadyGenerated {
-                // The server confirmed completion after its in-memory replay expired.
+            if error as? TryOnError == .alreadyGenerated || error as? TryOnError == .pcJobUnrecoverable {
+                // The server cannot recover this completed or interrupted generation.
                 // A future deliberate tap starts a new preview; never silently regenerate.
                 generationID = UUID()
             }

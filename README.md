@@ -98,3 +98,5 @@ Cloud generation requires explicit consent and xAI zero-retention processing. Th
 StoreKit supplies subscription pricing and verified purchases. The Worker enforces a configurable monthly allowance (initially 20 successful previews) and idempotent requests. Reference saving is opt-in, protected try-on files are excluded from backups, and purchase/usage metadata is retained separately from photos.
 
 AI garment cleanup remains an independent optional action with its existing disclosure and prototype authentication. Never embed an xAI provider key in the app. See [AI gateway setup](docs/AI_GATEWAY.md) for staging tests, purchase configuration, privacy requirements, and remaining release gates.
+
+For a personal Debug connection to a ComfyUI model hosted on your PC over Tailscale, see [Private PC image API](docs/PC_IMAGE_API.md). It has separate photo-processing consent and requires verified image-edit workflows on the PC.

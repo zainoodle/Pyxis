@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TryOnPrivacyView: View {
     @Environment(\.dismiss) private var dismiss
+    var disclosure: String = TryOnPrivacy.disclosure
     let hasConsent: Bool
     let requestsConsent: Bool
     let agree: () -> Void
@@ -12,7 +13,7 @@ struct TryOnPrivacyView: View {
                 VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
                     Image(systemName: "hand.raised").font(.largeTitle)
                     Text(TryOnPrivacy.title).font(PyxisTypography.title)
-                    Text(TryOnPrivacy.disclosure).font(PyxisTypography.body)
+                    Text(disclosure).font(PyxisTypography.body)
                     Text("Only photos selected for a try-on are sent. Your closet and body measurements are not uploaded. Removing a reference photo does not delete previews you have chosen to save.")
                         .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
                     Text("Saved try-on photos are excluded from device backups. You can remove your reference photo or delete saved previews at any time.")

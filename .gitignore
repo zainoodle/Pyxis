@@ -14,3 +14,7 @@ config/Pyxis.local.xcconfig
 
 __pycache__/
 *.pyc
+backend/pyxis-pc-api/.venv/
+backend/pyxis-pc-api/config.local.json
+backend/pyxis-pc-api/*.local.sqlite3*
+backend/pyxis-pc-api/workflows/

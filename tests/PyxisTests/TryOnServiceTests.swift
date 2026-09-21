@@ -70,6 +70,65 @@ final class TryOnServiceTests: XCTestCase {
         }
     }
 
+    func testPrivatePCRequiresTailnetAndNewContractBeforeUploading() async throws {
+        let (url, data) = try photo()
+        let config: [String: Any] = ["available": true, "limit": 100, "provider": "Private PC", "retention": "temporary-local",
+                                   "consentVersion": TryOnPrivacy.pcVersion, "supportedGarmentCounts": [1]]
+        let payload = try JSONSerialization.data(withJSONObject: config)
+        TryOnURLProtocol.handler = { request in
+            if request.url?.path.hasSuffix("config") == true { return (Self.response(request), payload) }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-Pyxis-Consent"), TryOnPrivacy.pcVersion)
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Test private-token")
+            return (Self.response(request, headers: Self.imageHeaders), data)
+        }
+        let network = URLSessionConfiguration.ephemeral
+        network.protocolClasses = [TryOnURLProtocol.self]
+        let pc = TryOnService(baseURL: URL(string: "https://pc.example.ts.net:8443"), session: URLSession(configuration: network))
+        _ = try await pc.generate(person: url, garments: [TryOnGarment(imageURL: url, category: .tops, name: "Shirt")],
+                                 authorization: "Test private-token", consent: TryOnPrivacy.pcVersion, jobID: UUID())
+        do { _ = try await service().configuration(); XCTFail("PC contract requires a tailnet host") }
+        catch { XCTAssertEqual(error as? TryOnError, .unavailable) }
+        TryOnURLProtocol.handler = { _ in XCTFail("Old consent must never upload to PC"); throw URLError(.badURL) }
+        do {
+            _ = try await pc.generate(person: url, garments: [TryOnGarment(imageURL: url, category: .tops, name: "Shirt")],
+                                      authorization: "Test private-token", consent: TryOnPrivacy.version, jobID: UUID())
+            XCTFail("Old xAI consent cannot authorize PC processing")
+        } catch { XCTAssertEqual(error as? TryOnError, .consentRequired) }
+    }
+
+    func testPrivatePCProviderChangeOrUnsupportedCountNeverUploads() async throws {
+        let (url, _) = try photo()
+        for provider in ["xAI", "Private PC"] {
+            let payload = try JSONSerialization.data(withJSONObject: ["available": true, "limit": 100, "provider": provider,
+                "retention": "temporary-local", "consentVersion": TryOnPrivacy.pcVersion, "supportedGarmentCounts": [2]] as [String: Any])
+            TryOnURLProtocol.handler = { request in
+                XCTAssertTrue(request.url!.path.hasSuffix("config"), "Only configuration may be requested")
+                return (Self.response(request), payload)
+            }
+            let network = URLSessionConfiguration.ephemeral
+            network.protocolClasses = [TryOnURLProtocol.self]
+            let pc = TryOnService(baseURL: URL(string: "https://pc.example.ts.net"), session: URLSession(configuration: network))
+            do {
+                _ = try await pc.generate(person: url, garments: [TryOnGarment(imageURL: url, category: .tops, name: "Shirt")],
+                                          authorization: "Test token", consent: TryOnPrivacy.pcVersion, jobID: UUID())
+                XCTFail("Reject provider change or missing workflow before upload")
+            } catch { XCTAssertTrue([TryOnError.unavailable, .consentRequired].contains(error as? TryOnError ?? .invalidResponse)) }
+        }
+    }
+
+    func testUnrecoverablePCJobHasAccurateError() async throws {
+        let (url, _) = try photo()
+        TryOnURLProtocol.handler = { request in
+            (HTTPURLResponse(url: request.url!, statusCode: 409, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!,
+             Data("{\"error\":\"Check the PC\",\"code\":\"pc_job_unrecoverable\"}".utf8))
+        }
+        do {
+            _ = try await service().generate(person: url, garments: [TryOnGarment(imageURL: url, category: .tops, name: "Shirt")],
+                authorization: "Test token", consent: TryOnPrivacy.version, jobID: UUID())
+            XCTFail("Must explain uncertain PC completion")
+        } catch { XCTAssertEqual(error as? TryOnError, .pcJobUnrecoverable) }
+    }
+
     private func service() -> TryOnService {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [TryOnURLProtocol.self]
