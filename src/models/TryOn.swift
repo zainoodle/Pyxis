@@ -17,8 +17,14 @@ public struct TryOnConfiguration: Codable, Equatable, Sendable {
     public var provider: String
     public var retention: String
     public var productID: String?
+    public var supportedGarmentCounts: [Int]? = nil
+    public var isPrivatePC: Bool { provider == "Private PC" && consentVersion == TryOnPrivacy.pcVersion && retention == "temporary-local" }
+    public var disclosure: String { isPrivatePC ? TryOnPrivacy.pcDisclosure : TryOnPrivacy.disclosure }
     public var supportsPrivacyContract: Bool {
-        consentVersion == TryOnPrivacy.version && provider == "xAI" && retention == "zero"
+        #if DEBUG
+        if isPrivatePC { return true }
+        #endif
+        return consentVersion == TryOnPrivacy.version && provider == "xAI" && retention == "zero"
     }
 }
 
@@ -43,13 +49,15 @@ public struct SavedTryOn: Identifiable, Codable, Equatable, Sendable {
 
 public enum TryOnPrivacy {
     public static let version = "try-on-xai-zdr-v1"
+    public static let pcVersion = "try-on-pc-local-v1"
+    public static let pcDisclosure = "Your reference photo and selected clothing images are sent over your private Tailscale connection to your PC, where ComfyUI creates the preview. Photos are written temporarily on that PC and can be accessed by its owner. The API removes its files after a completed job; interrupted jobs may leave files that need to be removed on the PC. Local workflows must be reviewed to ensure they do not send photos to cloud providers. This personal connection does not use an App Store subscription. Saved previews stay on this device."
     public static let title = "Your photos, used for your try-on"
     public static let disclosure = "Your reference photo and selected clothing images are sent through Pyxis to xAI to create your preview. Pyxis requires zero-retention processing: photo inputs and outputs are not persistently stored by xAI, and we do not authorize their use for model training. Pyxis keeps purchase and usage records to manage your allowance. Saved photos and previews stay on this device."
     public static let fitDisclaimer = "A visual preview, not a size or fit guarantee."
 }
 
 public enum TryOnError: LocalizedError, Equatable {
-    case unavailable, invalidResponse, consentRequired, purchaseRequired, invalidImage, limitReached, storageVersion, alreadyGenerated
+    case unavailable, invalidResponse, consentRequired, purchaseRequired, invalidImage, limitReached, storageVersion, alreadyGenerated, pcJobUnrecoverable
     case server(String)
     public var errorDescription: String? {
         switch self {
@@ -60,6 +68,7 @@ public enum TryOnError: LocalizedError, Equatable {
         case .invalidImage: return "This photo could not be opened. Choose another image."
         case .limitReached: return "You have used this month’s try-ons. Your saved previews are still available."
         case .alreadyGenerated: return "Your previous preview finished but could not be recovered. Starting another uses one more try-on."
+        case .pcJobUnrecoverable: return "Your PC request ran or was interrupted and cannot be recovered. Check ComfyUI before starting another preview."
         case .storageVersion: return "These previews were saved by a newer version of Pyxis. Update the app to open them."
         case .server(let message): return message
         }

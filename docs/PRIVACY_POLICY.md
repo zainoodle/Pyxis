@@ -31,3 +31,7 @@ Remove a remembered reference using the photo's remove control or turn off “Re
 ## Changes and contact
 
 Privacy changes are reflected here before an app update is submitted. For support, privacy questions, or requests concerning purchase/usage records, contact zainoodle@gmail.com.
+
+### Personal development connection to a PC
+
+Debug builds may optionally use a private Tailscale connection for try-on processing on a configured PC. This requires separate permission from xAI processing. ComfyUI writes temporary selected photos and results on the PC, where its owner can access them. Completed API jobs remove their own files; interrupted jobs may leave files requiring manual cleanup. Reviewed local workflows must not upload photos to cloud providers. This mode does not use App Store purchases and is not enabled in Release builds. See [PC image API](PC_IMAGE_API.md).

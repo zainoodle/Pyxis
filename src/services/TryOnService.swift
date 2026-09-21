@@ -9,10 +9,17 @@ public protocol TryOnProviding: Sendable {
 }
 
 public final class TryOnService: TryOnProviding, @unchecked Sendable {
+    public static var configuredBaseURL: URL? {
+        #if DEBUG
+        if let value = Bundle.main.object(forInfoDictionaryKey: "PYXIS_PC_BASE_URL") as? String,
+           !value.isEmpty, !value.contains("$(") { return URL(string: value) }
+        #endif
+        return AIGarmentStudioService.configuredBaseURL
+    }
     private let baseURL: URL?
     private let session: URLSession
     public var isConfigured: Bool { baseURL != nil }
-    public init(baseURL: URL? = AIGarmentStudioService.configuredBaseURL, session: URLSession? = nil) {
+    public init(baseURL: URL? = TryOnService.configuredBaseURL, session: URLSession? = nil) {
         self.baseURL = baseURL.flatMap {
             $0.scheme == "https" && $0.host != nil && $0.user == nil && $0.password == nil && $0.query == nil && $0.fragment == nil ? $0 : nil
         }
@@ -25,6 +32,11 @@ public final class TryOnService: TryOnProviding, @unchecked Sendable {
         let (data, _) = try await transfer(request("config"), maximum: 64000)
         let config = try JSONDecoder().decode(TryOnConfiguration.self, from: data)
         guard config.supportsPrivacyContract, (1...100).contains(config.limit) else { throw TryOnError.unavailable }
+        if config.isPrivatePC {
+            guard baseURL?.host?.hasSuffix(".ts.net") == true,
+                  let counts = config.supportedGarmentCounts, !counts.isEmpty,
+                  counts.allSatisfy({ (1...6).contains($0) }) else { throw TryOnError.unavailable }
+        }
         return config
     }
     public func allowance(authorization: String) async throws -> TryOnAllowance {
@@ -37,7 +49,21 @@ public final class TryOnService: TryOnProviding, @unchecked Sendable {
         return allowance
     }
     public func generate(person: URL, garments: [TryOnGarment], authorization: String, consent: String, jobID: UUID) async throws -> TryOnResult {
-        guard consent == TryOnPrivacy.version else { throw TryOnError.consentRequired }
+        var validConsent = consent == TryOnPrivacy.version
+        #if DEBUG
+        if consent == TryOnPrivacy.pcVersion {
+            // Fetch the current contract before reading/uploading photos. A provider switch requires fresh consent.
+            let config = try await configuration()
+            validConsent = config.isPrivatePC && config.available && config.supportedGarmentCounts?.contains(garments.count) == true && authorization.hasPrefix("Test ")
+        }
+        #endif
+        guard validConsent else { throw TryOnError.consentRequired }
+        #if DEBUG
+        if baseURL?.host?.hasSuffix(".ts.net") == true && consent != TryOnPrivacy.pcVersion {
+            // Never transmit under an old xAI disclosure to the private PC endpoint.
+            throw TryOnError.consentRequired
+        }
+        #endif
         guard !garments.isEmpty, garments.count <= 6 else { throw TryOnError.invalidImage }
         let boundary = "Pyxis-\(UUID().uuidString)"
         var req = try request("generate")
@@ -91,6 +117,7 @@ public final class TryOnService: TryOnProviding, @unchecked Sendable {
         }
         guard (200..<300).contains(http.statusCode) else {
             let failure = try? JSONDecoder().decode(ServerError.self, from: data)
+            if failure?.code == "pc_job_unrecoverable" { throw TryOnError.pcJobUnrecoverable }
             if failure?.code == "already_generated" { throw TryOnError.alreadyGenerated }
             throw TryOnError.server(failure?.error ?? "Try-on could not finish. Please try again.")
         }

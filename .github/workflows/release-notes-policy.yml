@@ -78,6 +78,16 @@ jobs:
       - name: Run core tests
         run: ./scripts/test.sh
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install and test private PC API
+        working-directory: backend/pyxis-pc-api
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -v
+
       - name: Install Worker dependencies
         working-directory: backend/pyxis-ai-worker
         run: npm ci
@@ -104,6 +114,15 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/pyxis-build" \
             CODE_SIGNING_ALLOWED=NO \
+            PYXIS_PC_BASE_URL=https://ci-fixture.ts.net \
+            PYXIS_TRY_ON_TEST_TOKEN=ci-fixture-not-a-real-secret-1234 \
             build
           python3 scripts/version.py check \
             --app-info "$RUNNER_TEMP/pyxis-build/Build/Products/Debug-iphonesimulator/Pyxis.app/Info.plist"
+          python3 - "$RUNNER_TEMP/pyxis-build/Build/Products/Debug-iphonesimulator/Pyxis.app/Info.plist" <<'PY'
+          import plistlib, sys
+          with open(sys.argv[1], 'rb') as file:
+              info = plistlib.load(file)
+          assert info['PYXIS_PC_BASE_URL'] == 'https://ci-fixture.ts.net'
+          assert info['PYXIS_TRY_ON_TEST_TOKEN'] == 'ci-fixture-not-a-real-secret-1234'
+          PY

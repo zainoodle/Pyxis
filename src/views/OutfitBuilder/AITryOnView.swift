@@ -65,7 +65,7 @@ struct AITryOnView: View {
             .sheet(item: $sheet) { destination in
                 switch destination {
                 case .consent, .privacy:
-                    TryOnPrivacyView(hasConsent: model.hasConsent, requestsConsent: destination == .consent,
+                    TryOnPrivacyView(disclosure: model.disclosure, hasConsent: model.hasConsent, requestsConsent: destination == .consent,
                         agree: {
                             model.acceptConsent(); sheet = nil
                             Task { await model.generate(authorization: purchase.authorization) }
@@ -83,9 +83,9 @@ struct AITryOnView: View {
                 }
             }
             .confirmationDialog("Generate another preview?", isPresented: $confirmsAnother, titleVisibility: .visible) {
-                Button("GENERATE · 1 TRY-ON") { startGeneration() }
+                Button(model.isPrivatePC ? "GENERATE ON PC" : "GENERATE · 1 TRY-ON") { startGeneration() }
                 Button("CANCEL", role: .cancel) {}
-            } message: { Text("This uses one more try-on. Save this preview first if you want to keep it.") }
+            } message: { Text(model.isPrivatePC ? "Save this preview first if you want to keep it." : "This uses one more try-on. Save this preview first if you want to keep it.") }
         }
         .tint(PyxisColors.text)
     }
@@ -177,6 +177,19 @@ struct AITryOnView: View {
         } else if !model.available {
             Text("Try-on is coming soon. You can prepare your photos and view any saved previews.")
                 .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
+        } else if model.isPrivatePC {
+            VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                Text("PRIVATE PC").font(PyxisTypography.label)
+                Text("Your PC must be on and connected to Tailscale. No subscription is used.")
+                    .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
+                if let counts = model.configuration?.supportedGarmentCounts, !counts.contains(model.garments.count) {
+                    Text("This PC currently supports outfits with \(counts.map(String.init).joined(separator: ", ")) clothing pieces.")
+                        .font(PyxisTypography.label)
+                }
+                if purchase.authorization == nil {
+                    Text("Private PC access is not configured in this build.").font(PyxisTypography.label)
+                }
+            }
         } else if let allowance = model.allowance {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(allowance.remaining) OF \(allowance.limit) TRY-ONS REMAINING").font(PyxisTypography.label)
@@ -226,7 +239,7 @@ struct AITryOnView: View {
                 Text("Keep Pyxis open. Outfits with several pieces take longer.")
                     .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
             } else {
-                Button(model.generatedURL == nil ? "TRY ON · 1 TRY-ON" : "GENERATE ANOTHER · 1 TRY-ON") {
+                Button(model.isPrivatePC ? (model.generatedURL == nil ? "TRY ON WITH PC" : "GENERATE ANOTHER ON PC") : (model.generatedURL == nil ? "TRY ON · 1 TRY-ON" : "GENERATE ANOTHER · 1 TRY-ON")) {
                     if model.generatedURL != nil { confirmsAnother = true } else { startGeneration() }
                 }.buttonStyle(MinimalButtonStyle()).disabled(!model.canGenerate || purchase.authorization == nil)
                     .accessibilityIdentifier("try-on-generate")

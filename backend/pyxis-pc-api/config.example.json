@@ -1,0 +1,9 @@
+{
+  "comfy_root": "C:/AI/ComfyUI",
+  "comfy_port": 8188,
+  "local_workflows_reviewed": false,
+  "workflows": {
+    "cleanup": "workflows/cleanup.api.json",
+    "try-on-1": "workflows/try-on-1.api.json"
+  }
+}
