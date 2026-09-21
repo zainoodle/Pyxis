@@ -8,7 +8,9 @@ The production Cloudflare/xAI service remains available separately. A Cloudflare
 
 ## Current verification boundary
 
-The adapter and client are implemented and tested with synthetic images and a local fake ComfyUI HTTP server. **Installation on the actual PC, its API-export workflows, and real garment-edit quality are not yet verified.** During setup, Tailscale reached the PC, but the available SSH credential was rejected and the Synth Telegram bot returned a provider-authentication error. Its earlier messages mention ComfyUI/Qwen image generation. Text-to-image support alone does not establish person/garment editing capability.
+The adapter and client are implemented and tested with synthetic images and a local fake ComfyUI HTTP server. On September 21, 2026, the Windows PC was reached through the existing tailnet SSH bridge. Its ComfyUI install is `C:\AI\ComfyUI_Qwen` on loopback port 8188, with local Qwen Image 2.1 weights (`qwen_image_2.1_int8_convrot`, `qwen3vl_8b_w4a8`, and `qwen_image_2.1_vae_bf16`). A reviewed one-person, one-garment API workflow completed one synthetic geometric job through the loopback API in 22.83 seconds, returned a JPEG, and removed that job's input and output files. A wrong token was refused. From the Mac, Tailscale Serve on HTTPS port 8443 reached the API's health route. The existing HTTPS 443 mapping was left unchanged.
+
+Real person or garment photos, try-on fidelity, garment counts above one, the cleanup workflow, and the physical iPhone flow are not verified. The synthetic result was a generated picture, not a faithful transfer of the placeholder garment. Starting ComfyUI pauses the PC's local language-model server because both need the same GPU memory; stopping the image services restores that server. Do not treat this run as a quality or cost benchmark.
 
 ## PC setup
 
@@ -100,4 +102,4 @@ The following screenshots use a temporary synthetic configuration, not the real 
 .\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
-From the repository root, run `./scripts/test.sh` and `./scripts/deployment_preflight.sh static`. Before using real photos, verify authentication rejection, unsupported counts, model-offline behavior, synthetic generation, and removal of the generated job files on the PC. Then check a real opt-in try-on on a physical device, with Tailscale connected, including app backgrounding and poor-network recovery. No live PC or real-person quality claim follows from mock tests.
+From the repository root, run `./scripts/test.sh` and `./scripts/deployment_preflight.sh static`. Before using real photos, verify authentication rejection, unsupported counts, model-offline behavior, synthetic generation, and removal of the generated job files on the PC. Then check a real opt-in try-on on a physical device, with Tailscale connected, including app backgrounding and poor-network recovery. A synthetic PC job does not establish real-person or garment fidelity.
