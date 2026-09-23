@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct OutfitCarouselRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let row: OutfitRow
     let selectedIndex: Int?
     let selectIndex: (Int) -> Void
@@ -75,12 +76,12 @@ struct OutfitCarouselRow: View {
                         .scaleEffect(offset == 0 ? 1 : 0.82)
                         .opacity(opacity(for: offset))
                         .rotation3DEffect(
-                            .degrees(Double(offset) * -16),
+                            .degrees(reduceMotion ? 0 : Double(offset) * -16),
                             axis: (x: 0, y: 1, z: 0)
                         )
                         .offset(x: CGFloat(offset) * itemSpacing)
                         .zIndex(offset == 0 ? 10 : Double(5 - abs(offset)))
-                        .animation(.snappy(duration: 0.28), value: selectedIndex)
+                        .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: selectedIndex)
                     }
                 }
             }
