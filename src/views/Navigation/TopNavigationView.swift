@@ -25,10 +25,17 @@ struct TopNavigationView: View {
                     navigationActions
                 }
             } else {
-                HStack(spacing: PyxisSpacing.md) {
-                    brand
-                    Spacer(minLength: PyxisSpacing.sm)
-                    navigationActions
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PyxisSpacing.md) {
+                        brand
+                        Spacer(minLength: PyxisSpacing.sm)
+                        navigationActions
+                    }
+
+                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                        brand
+                        navigationActions
+                    }
                 }
             }
         }
@@ -43,7 +50,6 @@ struct TopNavigationView: View {
             .font(PyxisTypography.title)
             .foregroundStyle(PyxisColors.text)
             .lineLimit(1)
-            .minimumScaleFactor(0.8)
     }
 
     private var navigationActions: some View {
@@ -191,11 +197,15 @@ private struct ClosetFilterSheet: View {
     }
 
     private var doneButton: some View {
-        Button("DONE") {
+        Button {
             dismiss()
+        } label: {
+            Text("DONE")
+                .font(PyxisTypography.label)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .font(PyxisTypography.label)
         .accessibilityLabel("Close filters")
     }
 
