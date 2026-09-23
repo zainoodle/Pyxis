@@ -7,6 +7,7 @@ import UIKit
 struct OutfitBuilderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @State private var selections: [OutfitSlot: Int] = [:]
     @State private var notes = ""
@@ -75,6 +76,10 @@ struct OutfitBuilderView: View {
                             )
                         }
                     }
+
+                    if dynamicTypeSize.isAccessibilitySize {
+                        notesField
+                    }
                 }
                 .padding(.vertical, PyxisSpacing.md)
             }
@@ -140,15 +145,20 @@ struct OutfitBuilderView: View {
 
     private var saveRail: some View {
         VStack(spacing: PyxisSpacing.sm) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: PyxisSpacing.md) {
-                    notesField
-                    saveButton
-                }
+            if dynamicTypeSize.isAccessibilitySize {
+                saveButton
+                    .frame(maxWidth: .infinity)
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PyxisSpacing.md) {
+                        notesField
+                        saveButton
+                    }
 
-                VStack(spacing: PyxisSpacing.sm) {
-                    notesField
-                    saveButton
+                    VStack(spacing: PyxisSpacing.sm) {
+                        notesField
+                        saveButton
+                    }
                 }
             }
 
@@ -380,6 +390,7 @@ private struct OutfitAssemblyPreview: View {
 }
 
 private struct ClosetReadinessView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let rows: [OutfitRow]
     let draft: OutfitDraft
 
@@ -398,12 +409,29 @@ private struct ClosetReadinessView: View {
                 .font(PyxisTypography.label)
                 .foregroundStyle(missingSlots.isEmpty ? PyxisColors.text : PyxisColors.secondaryText)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PyxisSpacing.md) {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: PyxisSpacing.sm) {
+                    ForEach(rows) { row in
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(row.slot.title)
+                            Spacer(minLength: PyxisSpacing.sm)
+                            Text("\(row.items.count)")
+                        }
+                        .font(PyxisTypography.label)
+                        .foregroundStyle(row.items.isEmpty ? PyxisColors.inactiveText : PyxisColors.secondaryText)
+                    }
+                }
+            } else {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 110, maximum: 180), alignment: .leading)],
+                    alignment: .leading,
+                    spacing: PyxisSpacing.xs
+                ) {
                     ForEach(rows) { row in
                         Text("\(row.slot.title) \(row.items.count)")
                             .font(PyxisTypography.label)
                             .foregroundStyle(row.items.isEmpty ? PyxisColors.inactiveText : PyxisColors.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
