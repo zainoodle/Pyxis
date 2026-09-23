@@ -170,11 +170,6 @@ struct AddItemFlow: View {
                         .font(PyxisTypography.body)
                         .foregroundStyle(PyxisColors.inactiveText)
                         .multilineTextAlignment(.center)
-                } else {
-                    Text("AI STUDIO IS UNAVAILABLE IN THIS BUILD. LOCAL CUTOUTS AND SAVING STILL WORK OFFLINE.")
-                        .font(PyxisTypography.body)
-                        .foregroundStyle(PyxisColors.inactiveText)
-                        .multilineTextAlignment(.center)
                 }
             }
         }
@@ -235,8 +230,8 @@ struct AddItemFlow: View {
                 Text("ORIGINAL ONLY")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
-                Text("\(message) THE ORIGINAL PHOTO WILL BE SAVED IF YOU CONTINUE.")
-                    .font(PyxisTypography.body)
+                Text(message.uppercased())
+                    .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
                     .multilineTextAlignment(.center)
             }

@@ -54,6 +54,7 @@ struct SavedFitCard: View {
     let outfit: Outfit
     let items: [ClosetItem]
     let isRecent: Bool
+    var isGallery = false
 
     private var selectedItems: [ClosetItem] {
         outfit.itemIDs.compactMap { itemID in
@@ -62,32 +63,36 @@ struct SavedFitCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                HStack(spacing: PyxisSpacing.xs) {
-                    ForEach(selectedItems.prefix(3)) { item in
-                        SavedFitItemImage(item: item)
+        Group {
+            if isGallery {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PyxisSpacing.md) {
+                        itemImages
+                        fitDetails
+                        Spacer(minLength: 0)
+                        disclosureIcon
+                    }
+
+                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                        itemImages
+                        HStack {
+                            fitDetails
+                            Spacer(minLength: 0)
+                            disclosureIcon
+                        }
                     }
                 }
-                .frame(height: 70)
-
-                Text(outfit.name?.uppercased() ?? outfit.dateCreated.formatted(date: .numeric, time: .omitted))
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.text)
-                    .lineLimit(1)
-
-                Text("\(selectedItems.count) PIECES")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-
-                if isRecent {
-                    Text("SAVED")
-                        .font(PyxisTypography.label)
-                        .foregroundStyle(PyxisColors.secondaryText)
-                        .transition(.opacity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PyxisSpacing.md)
+            } else {
+                VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+                    itemImages
+                    fitDetails
                 }
+                .frame(width: 150, alignment: .leading)
+                .padding(PyxisSpacing.sm)
+            }
         }
-        .frame(width: 150, alignment: .leading)
-        .padding(PyxisSpacing.sm)
         .background(PyxisColors.field)
         .overlay(alignment: .topTrailing) {
             if isRecent {
@@ -101,6 +106,42 @@ struct SavedFitCard: View {
         .scaleEffect(isRecent ? 1.02 : 1)
         .animation(.easeOut(duration: 0.18), value: isRecent)
         .accessibilityLabel("Open saved fit \(outfit.name ?? outfit.dateCreated.formatted(date: .abbreviated, time: .omitted)), \(selectedItems.count) pieces")
+    }
+
+    private var itemImages: some View {
+        HStack(spacing: PyxisSpacing.xs) {
+            ForEach(selectedItems.prefix(3)) { item in
+                SavedFitItemImage(item: item)
+            }
+        }
+        .frame(height: 70)
+    }
+
+    private var fitDetails: some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            Text(outfit.name?.uppercased() ?? outfit.dateCreated.formatted(date: .numeric, time: .omitted))
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.text)
+                .lineLimit(isGallery ? 2 : 1)
+
+            Text("\(selectedItems.count) PIECES")
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.secondaryText)
+
+            if isRecent {
+                Text("SAVED")
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var disclosureIcon: some View {
+        Image(systemName: "chevron.right")
+            .font(PyxisTypography.label)
+            .foregroundStyle(PyxisColors.inactiveText)
+            .accessibilityHidden(true)
     }
 }
 
