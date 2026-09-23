@@ -73,6 +73,7 @@ Boot an iPhone simulator, then run:
 
 Deployment readiness notes are tracked in `docs/DEPLOYMENT_READINESS.md`.
 App Store Connect submission notes are tracked in `docs/APP_STORE_SUBMISSION.md`.
+The keychain-free internal TestFlight route is in `docs/XCODE_CLOUD_TESTFLIGHT.md`.
 Public support and privacy page drafts are in `docs/SUPPORT.md` and `docs/PRIVACY_POLICY.md`.
 
 ## Deployment Preflight
