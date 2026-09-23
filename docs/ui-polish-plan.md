@@ -64,3 +64,9 @@ First batch: C1–C4. These are confined to the rendered Closet screen and share
 | Filter sheet, chip removal, keyboard, VoiceOver and gestures | iPhone 17 Pro | Controls work and stay reachable | Runtime UI snapshot reports no interaction targets despite a visible app frame | Blocked | XcodeBuildMCP build and capture work through an explicit Xcode path; interaction targets remain unavailable |
 
 Completed: C1–C4 implementation and default/large-type visual checks. PR #6 removes the verbose Profile copy shown in the baseline screenshot. After PRs #4 and #6 merge, rebase this branch onto `main`, rerun checks and interactive QA. Remaining priorities: B1, B2, A1, P1, and cross-screen interaction/accessibility review. B2 overlaps open PR #7 and P1 overlaps open PR #6, so those should be addressed after their respective branches settle.
+
+## App-wide continuation
+
+The subsequent pass inspected Closet, Build, Fits, Profile, Item Detail, and Add Item in a combined simulator build. Profile's long explanatory copy is removed in PR #6. The [Fits gallery](ui-evidence/secondary-fits-after.png) now uses the available width, including at the largest accessibility text size. The [Add Item error state](ui-evidence/secondary-add-item-after.png) keeps the actionable failure message and leaves the item fields reachable; compare the [previous state](ui-evidence/secondary-add-item-before.png). These changes are in the secondary UI PR based on the Closet PR, so the app can be previewed with both.
+
+Build readiness and reduced-motion work belong to a separate PR based on the open try-on/API chain, because it changes files that chain already owns. The remaining review targets are keyboard interaction in Add Item, empty states, and VoiceOver on device. The CLI simulator gestures verified tab navigation and scroll reachability; a full VoiceOver pass has not run.
