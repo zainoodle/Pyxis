@@ -9,7 +9,8 @@ struct UppercaseNavLabel: View {
             .font(PyxisTypography.nav)
             .foregroundStyle(isActive ? PyxisColors.text : PyxisColors.secondaryText)
             .lineLimit(1)
-            .frame(minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
     }
 }
 

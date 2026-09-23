@@ -22,7 +22,8 @@ struct ClosetGridItemView: View {
                 Text(displayName.uppercased())
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
             }
         }
         .frame(minWidth: 150, minHeight: 230)
