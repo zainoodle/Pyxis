@@ -5,7 +5,6 @@ import UIKit
 #endif
 
 struct OutfitBuilderView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
@@ -21,11 +20,9 @@ struct OutfitBuilderView: View {
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
-    private let showsCloseButton: Bool
 
-    init(initialItemID: UUID? = nil, showsCloseButton: Bool = true) {
+    init(initialItemID: UUID? = nil) {
         self.initialItemID = initialItemID
-        self.showsCloseButton = showsCloseButton
         self._focusedItemID = State(initialValue: initialItemID)
     }
 
@@ -48,51 +45,69 @@ struct OutfitBuilderView: View {
 
     var body: some View {
         VStack(spacing: PyxisSpacing.lg) {
-            header
+            PrimaryPageHeader()
 
-            ScrollView {
-                VStack(spacing: PyxisSpacing.lg) {
-                    ClosetReadinessView(rows: rows, draft: draft)
+            if items.isEmpty {
+                VStack(spacing: PyxisSpacing.md) {
+                    Text("YOUR CLOSET IS EMPTY")
+                        .font(PyxisTypography.body)
+                        .foregroundStyle(PyxisColors.secondaryText)
 
-                    OutfitAssemblyPreview(selectedPieces: selectedPieces)
+                    Button("ADD YOUR FIRST ITEM") {
+                        isShowingAddFlow = true
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, PyxisSpacing.xl)
+            } else {
+                ScrollView {
+                    VStack(spacing: PyxisSpacing.lg) {
+                        ClosetReadinessView(rows: rows, draft: draft)
 
-                    Button("OUTFIT ON YOU") { isShowingAITryOn = true }
-                        .buttonStyle(MinimalButtonStyle())
-                        .accessibilityLabel("Try clothing on your photo")
+                        OutfitAssemblyPreview(selectedPieces: selectedPieces)
 
-                    ForEach(rows) { row in
-                        if row.items.isEmpty {
-                            MissingOutfitRow(slot: row.slot) {
-                                pendingAddSlot = row.slot
-                                isShowingAddFlow = true
+                        Button("OUTFIT ON YOU") { isShowingAITryOn = true }
+                            .buttonStyle(MinimalButtonStyle())
+                            .accessibilityLabel("Try clothing on your photo")
+
+                        ForEach(rows) { row in
+                            if row.items.isEmpty {
+                                MissingOutfitRow(slot: row.slot) {
+                                    pendingAddSlot = row.slot
+                                    isShowingAddFlow = true
+                                }
+                            } else {
+                                OutfitCarouselRow(
+                                    row: row,
+                                    selectedIndex: selections[row.slot],
+                                    selectIndex: { select(row.slot, index: $0) },
+                                    advance: { offset in advance(row.slot, by: offset) },
+                                    openItem: { selectedItem = $0 }
+                                )
                             }
-                        } else {
-                            OutfitCarouselRow(
-                                row: row,
-                                selectedIndex: selections[row.slot],
-                                selectIndex: { select(row.slot, index: $0) },
-                                advance: { offset in advance(row.slot, by: offset) },
-                                openItem: { selectedItem = $0 }
-                            )
+                        }
+
+                        if dynamicTypeSize.isAccessibilitySize {
+                            notesField
                         }
                     }
-
-                    if dynamicTypeSize.isAccessibilitySize {
-                        notesField
-                    }
+                    .padding(.vertical, PyxisSpacing.md)
                 }
-                .padding(.vertical, PyxisSpacing.md)
             }
         }
-        .padding(PyxisSpacing.md)
+        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.bottom, PyxisSpacing.md)
         .background(PyxisColors.background)
         .safeAreaInset(edge: .bottom) {
-            saveRail
-                .padding(PyxisSpacing.md)
-                .background(PyxisColors.background)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(PyxisColors.hairline).frame(height: 1)
-                }
+            if !items.isEmpty {
+                saveRail
+                    .padding(PyxisSpacing.md)
+                    .background(PyxisColors.background)
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+                    }
+            }
         }
         .onAppear(perform: reconcileSelections)
         .onChange(of: initialItemID) { _, newValue in
@@ -116,30 +131,6 @@ struct OutfitBuilderView: View {
         }
         .sheet(isPresented: $isShowingAITryOn) {
             AITryOnView(items: selectedPieces.map(\.item))
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
-                Text("BUILD")
-                    .font(PyxisTypography.title)
-                    .foregroundStyle(PyxisColors.text)
-                Text("STACK YOUR CLOSET")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-            }
-
-            Spacer()
-
-            if showsCloseButton {
-                Button("CLOSE") {
-                    dismiss()
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel("Close outfit builder")
-            }
         }
     }
 

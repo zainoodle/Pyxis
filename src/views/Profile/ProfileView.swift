@@ -4,22 +4,40 @@ struct ProfileView: View {
     @State private var selectedClosetID: UUID?
 
     var body: some View {
-        List {
-            NavigationLink {
-                ClosetManagementView(selectedClosetID: $selectedClosetID)
-            } label: {
-                settingsRow("MANAGE CLOSETS", systemImage: "folder")
-            }
+        VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
+            PrimaryPageHeader()
 
-            NavigationLink {
-                SizingProfileView(showsCloseButton: false)
-            } label: {
-                settingsRow("FIT PASSPORT", systemImage: "ruler")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("ORGANIZE")
+                        .font(PyxisTypography.label)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.bottom, PyxisSpacing.sm)
+
+                    NavigationLink {
+                        ClosetManagementView(selectedClosetID: $selectedClosetID)
+                    } label: {
+                        settingsRow("MANAGE CLOSETS", systemImage: "folder")
+                    }
+
+                    Rectangle()
+                        .fill(PyxisColors.hairline.opacity(0.35))
+                        .frame(height: 1)
+
+                    NavigationLink {
+                        SizingProfileView()
+                    } label: {
+                        settingsRow("FIT PASSPORT", systemImage: "ruler")
+                    }
+                }
+                .padding(.top, PyxisSpacing.md)
             }
         }
-        .scrollContentBackground(.hidden)
+        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.bottom, PyxisSpacing.md)
         .background(PyxisColors.background)
-        .navigationTitle("PROFILE")
+        .navigationBarHidden(true)
     }
 
     private func settingsRow(_ title: String, systemImage: String) -> some View {
@@ -29,6 +47,16 @@ struct ProfileView: View {
                 .foregroundStyle(PyxisColors.secondaryText)
             Text(title)
                 .font(PyxisTypography.body)
+
+            Spacer(minLength: PyxisSpacing.sm)
+
+            Image(systemName: "chevron.right")
+                .font(PyxisTypography.label)
+                .foregroundStyle(PyxisColors.inactiveText)
+                .accessibilityHidden(true)
         }
+        .frame(minHeight: 60)
+        .contentShape(Rectangle())
+        .buttonStyle(.plain)
     }
 }

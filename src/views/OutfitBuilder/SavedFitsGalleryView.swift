@@ -2,49 +2,38 @@ import SwiftData
 import SwiftUI
 
 struct SavedFitsGalleryView: View {
-    @Environment(\.dismiss) private var dismiss
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
     let buildAction: (() -> Void)?
-    let showsCloseButton: Bool
 
-    init(buildAction: (() -> Void)? = nil, showsCloseButton: Bool = true) {
+    init(buildAction: (() -> Void)? = nil) {
         self.buildAction = buildAction
-        self.showsCloseButton = showsCloseButton
     }
 
     var body: some View {
         VStack(spacing: PyxisSpacing.lg) {
-            HStack {
-                Text("FITS")
-                    .font(PyxisTypography.title)
-                Spacer()
-                if showsCloseButton {
-                    Button("CLOSE") {
-                        dismiss()
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityLabel("Close saved fits")
-                }
-            }
+            PrimaryPageHeader()
 
             if outfits.isEmpty {
-                Spacer()
-                Text("NO SAVED FITS")
-                    .font(PyxisTypography.body)
-                    .foregroundStyle(PyxisColors.inactiveText)
-                if let buildAction {
-                    Button("BUILD A FIT") {
-                        dismiss()
-                        buildAction()
+                VStack(spacing: PyxisSpacing.md) {
+                    Text("NO SAVED FITS")
+                        .font(PyxisTypography.body)
+                        .foregroundStyle(PyxisColors.inactiveText)
+                    if let buildAction {
+                        Button("BUILD A FIT", action: buildAction)
+                            .buttonStyle(MinimalButtonStyle())
                     }
-                    .buttonStyle(MinimalButtonStyle())
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, PyxisSpacing.xl)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: PyxisSpacing.md) {
+                    LazyVStack(alignment: .leading, spacing: PyxisSpacing.md) {
+                        Text("SAVED OUTFITS")
+                            .font(PyxisTypography.label)
+                            .foregroundStyle(PyxisColors.secondaryText)
+                            .accessibilityAddTraits(.isHeader)
+
                         ForEach(outfits) { outfit in
                             NavigationLink {
                                 OutfitDetailView(outfit: outfit)
@@ -58,7 +47,8 @@ struct SavedFitsGalleryView: View {
                 }
             }
         }
-        .padding(PyxisSpacing.md)
+        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.bottom, PyxisSpacing.md)
         .background(PyxisColors.background)
     }
 }

@@ -17,7 +17,7 @@ struct PyxisRootView: View {
             .tag(AppSection.closet)
 
             NavigationStack {
-                OutfitBuilderView(initialItemID: builderFocusItemID, showsCloseButton: false)
+                OutfitBuilderView(initialItemID: builderFocusItemID)
                     .navigationBarHidden(true)
             }
             .tabItem { tabLabel(.build) }
@@ -25,8 +25,7 @@ struct PyxisRootView: View {
 
             NavigationStack {
                 SavedFitsGalleryView(
-                    buildAction: { selectedSection = .build },
-                    showsCloseButton: false
+                    buildAction: { selectedSection = .build }
                 )
                 .navigationBarHidden(true)
             }

@@ -1,55 +1,32 @@
 import SwiftUI
 
 struct TopNavigationView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var filterState: ClosetFilterState
     let closets: [Closet]
+    let showsFilters: Bool
     let addAction: () -> Void
     @State private var isShowingFilters = false
 
     init(
         filterState: Binding<ClosetFilterState>,
         closets: [Closet] = [],
+        showsFilters: Bool = true,
         addAction: @escaping () -> Void
     ) {
         self._filterState = filterState
         self.closets = closets
+        self.showsFilters = showsFilters
         self.addAction = addAction
     }
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    brand
-                    navigationActions
-                }
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PyxisSpacing.md) {
-                        brand
-                        Spacer(minLength: PyxisSpacing.sm)
-                        navigationActions
-                    }
-
-                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        brand
-                        navigationActions
-                    }
-                }
-            }
+        PrimaryPageHeader {
+            navigationActions
         }
         .sheet(isPresented: $isShowingFilters) {
             ClosetFilterSheet(filterState: $filterState, closets: closets)
                 .presentationDetents([.medium, .large])
         }
-    }
-
-    private var brand: some View {
-        Text("PYXIS")
-            .font(PyxisTypography.title)
-            .foregroundStyle(PyxisColors.text)
-            .lineLimit(1)
     }
 
     private var navigationActions: some View {
@@ -61,23 +38,25 @@ struct TopNavigationView: View {
             .keyboardShortcut("n", modifiers: .command)
             .accessibilityLabel("Add new item")
 
-            Button {
-                isShowingFilters = true
-            } label: {
-                UppercaseNavLabel(
-                    title: filterState.activeFilterCount == 0
-                        ? "Filters"
-                        : "Filters \(filterState.activeFilterCount)",
-                    isActive: filterState.hasActiveFilters
+            if showsFilters {
+                Button {
+                    isShowingFilters = true
+                } label: {
+                    UppercaseNavLabel(
+                        title: filterState.activeFilterCount == 0
+                            ? "Filters"
+                            : "Filters \(filterState.activeFilterCount)",
+                        isActive: filterState.hasActiveFilters
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open closet filters")
+                .accessibilityValue(
+                    filterState.activeFilterCount == 0
+                        ? "No active filters"
+                        : "\(filterState.activeFilterCount) active filters"
                 )
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open closet filters")
-            .accessibilityValue(
-                filterState.activeFilterCount == 0
-                    ? "No active filters"
-                    : "\(filterState.activeFilterCount) active filters"
-            )
         }
     }
 }
