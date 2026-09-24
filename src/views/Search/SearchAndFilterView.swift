@@ -8,27 +8,23 @@ struct SearchAndFilterView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            searchField
+
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    searchField
                     sortPicker
                     favoritesToggle
                 }
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: PyxisSpacing.md) {
-                        searchField
                         sortPicker
                         favoritesToggle
                     }
                     .fixedSize(horizontal: true, vertical: false)
 
                     VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        HStack(spacing: PyxisSpacing.md) {
-                            searchField
-                            sortPicker
-                        }
-
+                        sortPicker
                         favoritesToggle
                     }
                 }
@@ -62,7 +58,7 @@ struct SearchAndFilterView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
-            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 180)
+            .frame(maxWidth: .infinity)
             .frame(minHeight: 44)
             .accessibilityLabel("Search closet")
     }
@@ -75,11 +71,7 @@ struct SearchAndFilterView: View {
         }
         .labelsHidden()
         .tint(PyxisColors.text)
-        .frame(
-            minWidth: dynamicTypeSize.isAccessibilitySize ? nil : 128,
-            maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 128,
-            alignment: .leading
-        )
+        .frame(minWidth: dynamicTypeSize.isAccessibilitySize ? nil : 128, alignment: .leading)
         .frame(minHeight: 44)
     }
 
@@ -93,12 +85,12 @@ struct SearchAndFilterView: View {
 
                 Text("FAVORITES")
                     .font(PyxisTypography.label)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .lineLimit(2)
             }
             .foregroundStyle(filterState.favoritesOnly ? PyxisColors.surface : PyxisColors.secondaryText)
             .padding(.horizontal, PyxisSpacing.sm)
             .padding(.vertical, PyxisSpacing.sm)
+            .frame(minHeight: 44)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(filterState.favoritesOnly ? PyxisColors.text : PyxisColors.field)
@@ -184,7 +176,7 @@ private struct ActiveFilterChip: View {
             .font(PyxisTypography.label)
             .foregroundStyle(PyxisColors.secondaryText)
             .padding(.horizontal, PyxisSpacing.sm)
-            .frame(minHeight: 36)
+            .frame(minHeight: 44)
             .background(PyxisColors.field)
             .overlay { Capsule().stroke(PyxisColors.hairline, lineWidth: 1) }
             .clipShape(Capsule())

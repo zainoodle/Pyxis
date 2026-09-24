@@ -44,15 +44,12 @@ struct SavedFitsGalleryView: View {
                 Spacer()
             } else {
                 ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 180, maximum: 240), spacing: PyxisSpacing.lg)],
-                        spacing: PyxisSpacing.lg
-                    ) {
+                    LazyVStack(spacing: PyxisSpacing.md) {
                         ForEach(outfits) { outfit in
                             NavigationLink {
                                 OutfitDetailView(outfit: outfit)
                             } label: {
-                                SavedFitCard(outfit: outfit, items: items, isRecent: false)
+                                SavedFitCard(outfit: outfit, items: items, isRecent: false, isGallery: true)
                             }
                             .buttonStyle(.plain)
                         }
