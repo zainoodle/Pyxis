@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct SizingProfileView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BodyProfile.dateUpdated, order: .reverse) private var profiles: [BodyProfile]
 
@@ -14,50 +13,35 @@ struct SizingProfileView: View {
     @State private var recommendation: SizeRecommendation?
     @State private var message: String?
     @State private var isConfirmingDelete = false
-    let showsCloseButton: Bool
-
-    init(showsCloseButton: Bool = true) {
-        self.showsCloseButton = showsCloseButton
-    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PyxisSpacing.xl) {
-                    intro
-                    profileFields
-                    sizeChecker
-                    privacy
-                }
-                .padding(PyxisSpacing.md)
+        ScrollView {
+            VStack(alignment: .leading, spacing: PyxisSpacing.xl) {
+                intro
+                profileFields
+                sizeChecker
+                privacy
             }
-            .background(PyxisColors.background)
-            .navigationTitle("MY SIZE")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if showsCloseButton {
-                        Button("CLOSE") { dismiss() }
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("SAVE") { saveProfile() }
-                }
+            .padding(PyxisSpacing.md)
+        }
+        .background(PyxisColors.background)
+        .navigationTitle("FIT PASSPORT")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("SAVE") { saveProfile() }
             }
-            .onAppear(perform: loadProfile)
-            .onChange(of: system) { oldSystem, newSystem in
-                convertDisplayedValues(from: oldSystem, to: newSystem)
-            }
+        }
+        .onAppear(perform: loadProfile)
+        .onChange(of: system) { oldSystem, newSystem in
+            convertDisplayedValues(from: oldSystem, to: newSystem)
         }
     }
 
     private var intro: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            Text("FIT PASSPORT")
-                .font(PyxisTypography.title)
-            Text("SAVE ONLY WHAT YOU KNOW. PYXIS COMPARES YOUR MEASUREMENTS WITH A RETAILER'S OWN SIZE CHART—IT DOES NOT ASSIGN ONE UNIVERSAL SIZE.")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
-        }
+        Text("SAVE ONLY WHAT YOU KNOW. PYXIS COMPARES YOUR MEASUREMENTS WITH A RETAILER'S OWN SIZE CHART—IT DOES NOT ASSIGN ONE UNIVERSAL SIZE.")
+            .font(PyxisTypography.label)
+            .foregroundStyle(PyxisColors.secondaryText)
     }
 
     private var profileFields: some View {

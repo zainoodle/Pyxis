@@ -20,25 +20,6 @@ struct OutfitDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-            HStack {
-                Text(outfit.name?.uppercased() ?? "FIT DETAIL")
-                    .font(PyxisTypography.title)
-
-                Spacer()
-
-                Button("WORN") {
-                    markWornToday()
-                }
-                .buttonStyle(MinimalButtonStyle())
-
-                Button("CLOSE") {
-                    saveAndDismiss()
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel("Close fit detail")
-            }
-
             if let saveErrorMessage {
                 InlineErrorMessage(message: saveErrorMessage)
             }
@@ -118,6 +99,15 @@ struct OutfitDetailView: View {
         }
         .padding(PyxisSpacing.md)
         .background(PyxisColors.background)
+        .navigationTitle(outfit.name?.uppercased() ?? "FIT DETAIL")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("BACK", action: saveAndDismiss)
+                    .accessibilityLabel("Save fit and go back")
+            }
+        }
         .id(refreshID)
         .sheet(isPresented: $isShowingTryOn) { AITryOnView(items: selectedItems) }
         .confirmationDialog("Delete this saved fit?", isPresented: $isConfirmingDeletion, titleVisibility: .visible) {

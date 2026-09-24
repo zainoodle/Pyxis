@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct ClosetManagementView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
@@ -14,18 +13,6 @@ struct ClosetManagementView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-                HStack {
-                    Text("CLOSETS")
-                        .font(PyxisTypography.title)
-                    Spacer()
-                    Button("CLOSE") {
-                        dismiss()
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityLabel("Close closet management")
-                }
-
                 createRow
 
                 if let message {
@@ -62,6 +49,8 @@ struct ClosetManagementView: View {
             .padding(PyxisSpacing.md)
         }
         .background(PyxisColors.background)
+        .navigationTitle("MANAGE CLOSETS")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var createRow: some View {

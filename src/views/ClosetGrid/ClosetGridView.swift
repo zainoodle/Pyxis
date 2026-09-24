@@ -25,9 +25,9 @@ struct ClosetGridView: View {
             TopNavigationView(
                 filterState: $viewModel.filterState,
                 closets: closets,
+                showsFilters: !items.isEmpty,
                 addAction: { isShowingAddFlow = true }
             )
-            .padding(.top, PyxisSpacing.lg)
 
             if let savedItemPrompt {
                 SavedItemBuildPrompt(item: savedItemPrompt) {
@@ -40,11 +40,13 @@ struct ClosetGridView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            SearchAndFilterView(
-                filterState: $viewModel.filterState,
-                closets: closets,
-                isSearchFocused: $isSearchFocused
-            )
+            if !items.isEmpty {
+                SearchAndFilterView(
+                    filterState: $viewModel.filterState,
+                    closets: closets,
+                    isSearchFocused: $isSearchFocused
+                )
+            }
 
             content
         }
