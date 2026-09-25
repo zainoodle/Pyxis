@@ -71,6 +71,7 @@ struct ItemDetailView: View {
             )
                 .frame(maxWidth: 330)
                 .frame(height: 420)
+                .background(PyxisColors.imageCanvas, in: RoundedRectangle(cornerRadius: 10))
 
             ItemCodeLabel(code: item.itemCode)
 

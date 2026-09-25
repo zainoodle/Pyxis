@@ -18,6 +18,7 @@ struct OutfitCarouselItemView: View {
                 LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
                     .padding(.horizontal, PyxisSpacing.sm)
+                    .background(PyxisColors.imageCanvas, in: RoundedRectangle(cornerRadius: 8))
 
                 ItemCodeLabel(code: item.itemCode)
 

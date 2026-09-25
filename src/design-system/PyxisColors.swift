@@ -26,7 +26,8 @@ enum PyxisColors {
     static let inactiveText = adaptive(light: 0x706B5E, dark: 0x93989A)
     static let hairline = adaptive(light: 0x948C7D, dark: 0x555B60)
     static let field = adaptive(light: 0xF7F6F0, dark: 0x22262A)
-    static let galleryCanvas = adaptive(light: 0xDAD7D0, dark: 0x4B4D4D)
+    static let imageCanvas = adaptive(light: 0xDAD7D0, dark: 0x4B4D4D)
+    static let galleryCanvas = imageCanvas
     static let shadow = adaptive(light: 0x000000, dark: 0x000000).opacity(0.12)
     static let error = adaptive(light: 0x8C1A14, dark: 0xFF9A8F)
 
