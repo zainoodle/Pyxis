@@ -50,6 +50,8 @@ struct SavedFitsGalleryView: View {
                             .foregroundStyle(PyxisColors.secondaryText)
                     }
 
+                    SuggestedLooksView(items: items, outfits: outfits)
+
                     if !savedOutfits.isEmpty {
                         searchField
                         filters
