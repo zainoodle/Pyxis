@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ClosetGridItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let item: ClosetItem
 
     private var imageURL: URL? {
@@ -13,9 +14,10 @@ struct ClosetGridItemView: View {
     var body: some View {
         VStack(spacing: PyxisSpacing.sm) {
             LocalImageView(url: imageURL, revision: imageRevision)
-                .frame(height: 178)
+                .frame(height: colorScheme == .dark ? 166 : 178)
                 .padding(.horizontal, PyxisSpacing.sm)
-                .background(PyxisColors.imageCanvas)
+                .brightness(colorScheme == .dark ? 0.10 : 0)
+                .background(colorScheme == .dark ? PyxisColors.background : PyxisColors.imageCanvas)
 
             ItemCodeLabel(code: item.itemCode)
 
@@ -27,8 +29,8 @@ struct ClosetGridItemView: View {
                     .multilineTextAlignment(.center)
             }
         }
-        .frame(minWidth: 150, minHeight: 230)
-        .padding(.vertical, PyxisSpacing.md)
+        .frame(minWidth: 150, minHeight: colorScheme == .dark ? 213 : 230)
+        .padding(.vertical, colorScheme == .dark ? PyxisSpacing.sm : PyxisSpacing.md)
         .padding(.horizontal, PyxisSpacing.sm)
         .catalogTileBackground()
         .contentShape(Rectangle())

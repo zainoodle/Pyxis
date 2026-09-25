@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SearchAndFilterView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var filterState: ClosetFilterState
     let closets: [Closet]
@@ -45,7 +46,8 @@ struct SearchAndFilterView: View {
 
             TextField("SEARCH", text: $filterState.searchText)
                 .textFieldStyle(.plain)
-                .font(PyxisTypography.body)
+                .font(colorScheme == .dark ? PyxisTypography.editorialBody : PyxisTypography.body)
+                .tracking(colorScheme == .dark ? 1.3 : 0)
                 .focused(isSearchFocused)
         }
             .padding(.horizontal, PyxisSpacing.sm)
@@ -59,7 +61,7 @@ struct SearchAndFilterView: View {
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 44)
+            .frame(minHeight: colorScheme == .dark ? 52 : 44)
             .accessibilityLabel("Search closet")
     }
 

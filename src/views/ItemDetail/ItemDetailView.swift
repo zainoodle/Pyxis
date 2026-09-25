@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct ItemDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
@@ -69,9 +70,11 @@ struct ItemDetailView: View {
                 url: viewModel.displayURL(for: item),
                 revision: viewModel.imageRevision
             )
+                .brightness(colorScheme == .dark ? 0.10 : 0)
                 .frame(maxWidth: 330)
                 .frame(height: 420)
-                .background(PyxisColors.imageCanvas, in: RoundedRectangle(cornerRadius: 10))
+                .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
+                            in: RoundedRectangle(cornerRadius: 10))
 
             ItemCodeLabel(code: item.itemCode)
 
@@ -107,7 +110,8 @@ struct ItemDetailView: View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             HStack {
                 Text("DETAIL")
-                    .font(PyxisTypography.title)
+                    .font(colorScheme == .dark ? PyxisTypography.editorialTitle : PyxisTypography.title)
+                    .tracking(colorScheme == .dark ? 1.5 : 0)
                 Spacer()
                 if showsCloseButton {
                     Button("CLOSE") {

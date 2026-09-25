@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct SuggestedLooksView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let items: [ClosetItem]
@@ -28,7 +29,8 @@ struct SuggestedLooksView: View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             HStack(alignment: .firstTextBaseline) {
                 Text("PICKED FOR YOU")
-                    .font(PyxisTypography.title)
+                    .font(colorScheme == .dark ? PyxisTypography.editorialTitle : PyxisTypography.title)
+                    .tracking(colorScheme == .dark ? 2 : 0)
                     .foregroundStyle(PyxisColors.text)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
@@ -41,13 +43,18 @@ struct SuggestedLooksView: View {
             if let featured {
                 OutfitFlatLayView(items: featured.items)
                     .frame(height: dynamicTypeSize.isAccessibilitySize ? 220 : 235)
-                    .background(PyxisColors.galleryCanvas, in: RoundedRectangle(cornerRadius: 12))
+                    .background {
+                        if colorScheme == .light {
+                            RoundedRectangle(cornerRadius: 12).fill(PyxisColors.galleryCanvas)
+                        }
+                    }
                     .accessibilityLabel("Suggested look made from \(featured.items.map { $0.displayName ?? $0.itemCode }.joined(separator: ", "))")
 
                 HStack(alignment: .top, spacing: PyxisSpacing.md) {
                     VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                         Text(featured.title)
-                            .font(.system(.title2, design: .monospaced, weight: .medium))
+                            .font(colorScheme == .dark ? PyxisTypography.editorialTitle : .system(.title2, design: .monospaced, weight: .medium))
+                            .tracking(colorScheme == .dark ? 1.5 : 0)
                             .foregroundStyle(PyxisColors.text)
                         Text(featured.summary)
                             .font(PyxisTypography.body)
@@ -95,7 +102,11 @@ struct SuggestedLooksView: View {
                                 VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                                     OutfitFlatLayView(items: look.items)
                                         .frame(height: 142)
-                                        .background(PyxisColors.galleryCanvas, in: RoundedRectangle(cornerRadius: 9))
+                                        .background {
+                                            if colorScheme == .light {
+                                                RoundedRectangle(cornerRadius: 9).fill(PyxisColors.galleryCanvas)
+                                            }
+                                        }
                                     Text(look.title)
                                         .font(PyxisTypography.label)
                                         .foregroundStyle(PyxisColors.text)

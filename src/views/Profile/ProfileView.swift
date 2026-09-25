@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("pyxis.appearance") private var appearance = PyxisAppearance.system.rawValue
     @State private var selectedClosetID: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-            PrimaryPageHeader()
+            PrimaryPageHeader(title: "PROFILE")
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("ORGANIZE")
-                        .font(PyxisTypography.label)
+                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
+                        .tracking(colorScheme == .dark ? 1.5 : 0)
                         .foregroundStyle(PyxisColors.secondaryText)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, PyxisSpacing.sm)
@@ -33,18 +35,42 @@ struct ProfileView: View {
                     }
 
                     Text("APPEARANCE")
-                        .font(PyxisTypography.label)
+                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
+                        .tracking(colorScheme == .dark ? 1.5 : 0)
                         .foregroundStyle(PyxisColors.secondaryText)
                         .padding(.top, PyxisSpacing.lg)
                         .padding(.bottom, PyxisSpacing.sm)
 
-                    Picker("APPEARANCE", selection: $appearance) {
-                        ForEach(PyxisAppearance.allCases) { option in
-                            Text(option.title).tag(option.rawValue)
+                    if colorScheme == .dark {
+                        HStack(spacing: PyxisSpacing.sm) {
+                            ForEach(PyxisAppearance.allCases) { option in
+                                Button { appearance = option.rawValue } label: {
+                                    Text(option.title)
+                                        .font(PyxisTypography.editorialLabel)
+                                        .tracking(1.5)
+                                        .foregroundStyle(appearance == option.rawValue ? PyxisColors.background : PyxisColors.secondaryText)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                        .background(appearance == option.rawValue ? PyxisColors.text : PyxisColors.field,
+                                                    in: RoundedRectangle(cornerRadius: 8))
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(PyxisColors.hairline, lineWidth: 1)
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(appearance == option.rawValue ? .isSelected : [])
+                            }
                         }
+                        .accessibilityLabel("App appearance")
+                    } else {
+                        Picker("APPEARANCE", selection: $appearance) {
+                            ForEach(PyxisAppearance.allCases) { option in
+                                Text(option.title).tag(option.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityLabel("App appearance")
                     }
-                    .pickerStyle(.segmented)
-                    .accessibilityLabel("App appearance")
                 }
                 .padding(.top, PyxisSpacing.md)
             }
@@ -61,7 +87,8 @@ struct ProfileView: View {
                 .frame(width: 24)
                 .foregroundStyle(PyxisColors.secondaryText)
             Text(title)
-                .font(PyxisTypography.body)
+                .font(colorScheme == .dark ? PyxisTypography.editorialBody : PyxisTypography.body)
+                .tracking(colorScheme == .dark ? 1.2 : 0)
 
             Spacer(minLength: PyxisSpacing.sm)
 

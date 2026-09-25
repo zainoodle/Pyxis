@@ -6,6 +6,7 @@ import UIKit
 #endif
 
 struct OutfitBuilderView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
@@ -48,8 +49,8 @@ struct OutfitBuilderView: View {
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.lg) {
-            PrimaryPageHeader()
+        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
+            PrimaryPageHeader(title: "BUILD")
 
             if items.isEmpty {
                 VStack(spacing: PyxisSpacing.md) {
@@ -66,7 +67,7 @@ struct OutfitBuilderView: View {
                 .padding(.top, PyxisSpacing.xl)
             } else {
                 ScrollView {
-                    VStack(spacing: PyxisSpacing.lg) {
+                    VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
                         ClosetReadinessView(rows: rows, draft: draft)
 
                         OutfitStageView(
@@ -114,7 +115,9 @@ struct OutfitBuilderView: View {
         .safeAreaInset(edge: .bottom) {
             if !items.isEmpty {
                 saveRail
-                    .padding(PyxisSpacing.md)
+                    .padding(.horizontal, PyxisSpacing.md)
+                    .padding(.top, PyxisSpacing.md)
+                    .padding(.bottom, colorScheme == .dark ? 32 : PyxisSpacing.md)
                     .background(PyxisColors.background)
                     .overlay(alignment: .top) {
                         Rectangle().fill(PyxisColors.hairline).frame(height: 1)
@@ -337,6 +340,7 @@ struct OutfitBuilderView: View {
 }
 
 private struct OutfitStageView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let rows: [OutfitRow]
     let selections: [OutfitSlot: Int]
@@ -353,7 +357,8 @@ private struct OutfitStageView: View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             HStack {
                 Text("THE STAGE")
-                    .font(PyxisTypography.label)
+                    .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
+                    .tracking(colorScheme == .dark ? 1.6 : 0)
                     .foregroundStyle(PyxisColors.text)
 
                 Spacer()
@@ -366,7 +371,11 @@ private struct OutfitStageView: View {
             GeometryReader { geometry in
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
-                        .fill(PyxisColors.field)
+                        .fill(colorScheme == .dark ? PyxisColors.surface : PyxisColors.field)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(PyxisColors.hairline.opacity(colorScheme == .dark ? 0.8 : 0), lineWidth: 1)
+                        }
                     Circle()
                         .stroke(PyxisColors.hairline.opacity(0.28), lineWidth: 1)
                         .frame(width: 280, height: 280)
@@ -388,12 +397,13 @@ private struct OutfitStageView: View {
                                     LocalImageView(url: imageURL(for: item), revision: imageRevision(for: item))
                                         .frame(width: 80, height: 96)
                                         .padding(7)
-                                        .background(Color(red: 0.94, green: 0.93, blue: 0.90), in: RoundedRectangle(cornerRadius: 14))
+                                        .brightness(colorScheme == .dark ? 0.10 : 0)
+                                        .background(colorScheme == .dark ? PyxisColors.field : Color(red: 0.94, green: 0.93, blue: 0.90), in: RoundedRectangle(cornerRadius: 14))
                                         .overlay {
                                             RoundedRectangle(cornerRadius: 14)
                                                 .stroke(index == activeIndex ? PyxisColors.text : PyxisColors.hairline.opacity(0.5), lineWidth: 1)
                                         }
-                                        .shadow(color: PyxisColors.shadow, radius: 12, y: 7)
+                                        .shadow(color: colorScheme == .dark ? .white.opacity(0.08) : PyxisColors.shadow, radius: 12, y: 7)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("Select \(item.itemCode) for \(row.slot.title.lowercased())")
@@ -470,7 +480,14 @@ private struct OutfitStageView: View {
                             .foregroundStyle(activeSlot == row.slot ? PyxisColors.background : PyxisColors.text)
                             .padding(.horizontal, PyxisSpacing.md)
                             .frame(minHeight: 40)
-                            .background(activeSlot == row.slot ? PyxisColors.text : PyxisColors.field, in: Capsule())
+                            .background {
+                                if colorScheme == .dark {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(activeSlot == row.slot ? PyxisColors.text : PyxisColors.field)
+                                } else {
+                                    Capsule().fill(activeSlot == row.slot ? PyxisColors.text : PyxisColors.field)
+                                }
+                            }
                     }
                 }
             }

@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct ClosetGridView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
@@ -21,7 +22,7 @@ struct ClosetGridView: View {
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.lg) {
+        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
             TopNavigationView(
                 filterState: $viewModel.filterState,
                 closets: closets,
@@ -122,7 +123,7 @@ struct ClosetGridView: View {
             Spacer()
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: PyxisSpacing.xl) {
+                LazyVGrid(columns: columns, spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl) {
                     ForEach(filteredItems) { item in
                         NavigationLink {
                             ItemDetailView(item: item, showsCloseButton: false) { buildItem in

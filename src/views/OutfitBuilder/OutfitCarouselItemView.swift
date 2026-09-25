@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct OutfitCarouselItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let item: ClosetItem
     let isSelected: Bool
     let action: () -> Void
@@ -18,7 +19,9 @@ struct OutfitCarouselItemView: View {
                 LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
                     .padding(.horizontal, PyxisSpacing.sm)
-                    .background(PyxisColors.imageCanvas, in: RoundedRectangle(cornerRadius: 8))
+                    .brightness(colorScheme == .dark ? 0.10 : 0)
+                    .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
+                                in: RoundedRectangle(cornerRadius: 8))
 
                 ItemCodeLabel(code: item.itemCode)
 
