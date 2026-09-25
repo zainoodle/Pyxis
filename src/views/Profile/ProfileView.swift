@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @AppStorage("pyxis.appearance") private var appearance = PyxisAppearance.system.rawValue
     @State private var selectedClosetID: UUID?
 
     var body: some View {
@@ -30,6 +31,20 @@ struct ProfileView: View {
                     } label: {
                         settingsRow("FIT PASSPORT", systemImage: "ruler")
                     }
+
+                    Text("APPEARANCE")
+                        .font(PyxisTypography.label)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .padding(.top, PyxisSpacing.lg)
+                        .padding(.bottom, PyxisSpacing.sm)
+
+                    Picker("APPEARANCE", selection: $appearance) {
+                        ForEach(PyxisAppearance.allCases) { option in
+                            Text(option.title).tag(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("App appearance")
                 }
                 .padding(.top, PyxisSpacing.md)
             }

@@ -1,13 +1,44 @@
 import SwiftUI
+import UIKit
+
+enum PyxisAppearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+    var title: String { rawValue.uppercased() }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
 
 enum PyxisColors {
-    static let background = Color.white
-    static let surface = Color.white
-    static let text = Color(red: 0.08, green: 0.075, blue: 0.065)
-    static let secondaryText = Color(red: 0.36, green: 0.34, blue: 0.30)
-    static let inactiveText = Color(red: 0.44, green: 0.42, blue: 0.37)
-    static let hairline = Color(red: 0.58, green: 0.55, blue: 0.49)
-    static let field = Color(red: 0.97, green: 0.965, blue: 0.94)
-    static let shadow = Color.black.opacity(0.055)
-    static let error = Color(red: 0.55, green: 0.10, blue: 0.08)
+    static let background = adaptive(light: 0xFFFFFF, dark: 0x101113)
+    static let surface = adaptive(light: 0xFFFFFF, dark: 0x17191C)
+    static let text = adaptive(light: 0x141311, dark: 0xF7F6F2)
+    static let secondaryText = adaptive(light: 0x5C574D, dark: 0xB5B8B9)
+    static let inactiveText = adaptive(light: 0x706B5E, dark: 0x93989A)
+    static let hairline = adaptive(light: 0x948C7D, dark: 0x555B60)
+    static let field = adaptive(light: 0xF7F6F0, dark: 0x22262A)
+    static let imageCanvas = adaptive(light: 0xDAD7D0, dark: 0x4B4D4D)
+    static let shadow = adaptive(light: 0x000000, dark: 0x000000).opacity(0.12)
+    static let error = adaptive(light: 0x8C1A14, dark: 0xFF9A8F)
+
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        Color(uiColor: UIColor { traits in
+            let value = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(
+                red: CGFloat((value >> 16) & 0xFF) / 255,
+                green: CGFloat((value >> 8) & 0xFF) / 255,
+                blue: CGFloat(value & 0xFF) / 255,
+                alpha: 1
+            )
+        })
+    }
 }
