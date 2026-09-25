@@ -15,6 +15,7 @@ struct ClosetGridItemView: View {
             LocalImageView(url: imageURL, revision: imageRevision)
                 .frame(height: 178)
                 .padding(.horizontal, PyxisSpacing.sm)
+                .background(PyxisColors.imageCanvas)
 
             ItemCodeLabel(code: item.itemCode)
 
