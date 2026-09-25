@@ -6,13 +6,13 @@ struct PyxisApp: App {
     var body: some Scene {
         WindowGroup {
             StartupHostView()
-                .preferredColorScheme(.light)
         }
     }
 }
 
 @MainActor
 private struct StartupHostView: View {
+    @AppStorage("pyxis.appearance") private var appearance = PyxisAppearance.system.rawValue
     @State private var modelContainer: ModelContainer?
     @State private var didFail = false
     @State private var retryID = UUID()
@@ -43,6 +43,7 @@ private struct StartupHostView: View {
                 didFail = true
             }
         }
+        .preferredColorScheme(PyxisAppearance(rawValue: appearance)?.colorScheme)
     }
 }
 
