@@ -21,7 +21,6 @@ struct OutfitBuilderView: View {
     @State private var isShowingAITryOn = false
     @State private var stagePhotoItem: PhotosPickerItem?
     @State private var stagePhoto: UIImage?
-    @State private var stageSlot: OutfitSlot = .top
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
@@ -71,13 +70,9 @@ struct OutfitBuilderView: View {
                         ClosetReadinessView(rows: rows, draft: draft)
 
                         OutfitStageView(
-                            rows: rows,
-                            selections: selections,
                             selectedPieces: selectedPieces,
                             photo: stagePhoto,
-                            photoItem: $stagePhotoItem,
-                            activeSlot: $stageSlot,
-                            select: select
+                            photoItem: $stagePhotoItem
                         )
 
                         Button("OUTFIT ON YOU") { isShowingAITryOn = true }
@@ -225,10 +220,6 @@ struct OutfitBuilderView: View {
 
     private func reconcileSelections() {
         let defaults = service.defaultSelections(for: rows)
-        if !rows.contains(where: { $0.slot == stageSlot && !$0.items.isEmpty }),
-           let firstAvailable = rows.first(where: { !$0.items.isEmpty }) {
-            stageSlot = firstAvailable.slot
-        }
         for row in rows {
             guard !row.items.isEmpty else {
                 selections[row.slot] = nil
@@ -341,17 +332,9 @@ struct OutfitBuilderView: View {
 
 private struct OutfitStageView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let rows: [OutfitRow]
-    let selections: [OutfitSlot: Int]
     let selectedPieces: [(slot: OutfitSlot, item: ClosetItem)]
     let photo: UIImage?
     @Binding var photoItem: PhotosPickerItem?
-    @Binding var activeSlot: OutfitSlot
-    let select: (OutfitSlot, Int) -> Void
-
-    private var activeRow: OutfitRow? { rows.first { $0.slot == activeSlot && !$0.items.isEmpty } }
-    private var activeIndex: Int { selections[activeSlot] ?? 0 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
@@ -368,97 +351,39 @@ private struct OutfitStageView: View {
                     .foregroundStyle(PyxisColors.inactiveText)
             }
 
-            GeometryReader { geometry in
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(colorScheme == .dark ? PyxisColors.surface : PyxisColors.field)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(PyxisColors.hairline.opacity(colorScheme == .dark ? 0.8 : 0), lineWidth: 1)
-                        }
-                    Circle()
-                        .stroke(PyxisColors.hairline.opacity(0.28), lineWidth: 1)
-                        .frame(width: 280, height: 280)
-                        .offset(y: -4)
-                    Circle()
-                        .stroke(PyxisColors.hairline.opacity(0.18), lineWidth: 1)
-                        .frame(width: 210, height: 210)
-                        .offset(y: -4)
-
-                    if let row = activeRow {
-                        ForEach(Array(row.items.enumerated()), id: \.element.id) { index, item in
-                            let distance = wrappedDistance(index, from: activeIndex, count: row.items.count)
-                            if abs(distance) <= 2 {
-                                Button {
-                                    withAnimation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8)) {
-                                        select(row.slot, index)
-                                    }
-                                } label: {
-                                    LocalImageView(url: imageURL(for: item), revision: imageRevision(for: item))
-                                        .frame(width: 80, height: 96)
-                                        .padding(7)
-                                        .brightness(colorScheme == .dark ? 0.10 : 0)
-                                        .background(colorScheme == .dark ? PyxisColors.field : Color(red: 0.94, green: 0.93, blue: 0.90), in: RoundedRectangle(cornerRadius: 14))
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .stroke(index == activeIndex ? PyxisColors.text : PyxisColors.hairline.opacity(0.5), lineWidth: 1)
-                                        }
-                                        .shadow(color: colorScheme == .dark ? .white.opacity(0.08) : PyxisColors.shadow, radius: 12, y: 7)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Select \(item.itemCode) for \(row.slot.title.lowercased())")
-                                .offset(x: CGFloat(distance) * geometry.size.width * 0.28,
-                                        y: CGFloat(abs(distance)) * 30 - 45)
-                                .scaleEffect(distance == 0 ? 1.12 : 0.82)
-                                .rotation3DEffect(.degrees(Double(distance) * -24), axis: (x: 0, y: 1, z: 0))
-                                .zIndex(distance == 0 ? 2 : 0)
-                            }
-                        }
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(colorScheme == .dark ? PyxisColors.surface : PyxisColors.field)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(PyxisColors.hairline.opacity(colorScheme == .dark ? 0.8 : 0), lineWidth: 1)
                     }
 
-                    Ellipse()
-                        .fill(PyxisColors.text.opacity(0.08))
-                        .frame(width: 230, height: 38)
-                        .offset(y: 127)
-                    Ellipse()
-                        .stroke(PyxisColors.hairline.opacity(0.65), lineWidth: 1)
-                        .frame(width: 240, height: 44)
-                        .offset(y: 129)
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
 
                     if let photo {
                         Image(uiImage: photo)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 146, height: 238)
-                            .clipShape(RoundedRectangle(cornerRadius: 76))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 76)
-                                    .stroke(PyxisColors.background.opacity(0.8), lineWidth: 4)
-                            }
-                            .offset(y: 5)
-                            .zIndex(3)
+                            .frame(width: 132, height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: 72))
                     } else {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 112, weight: .ultraLight))
+                        Image(systemName: "person")
+                            .font(.system(size: 90, weight: .ultraLight))
                             .foregroundStyle(PyxisColors.secondaryText)
-                            .frame(width: 146, height: 222)
-                            .background(PyxisColors.background.opacity(0.82), in: RoundedRectangle(cornerRadius: 76))
-                            .offset(y: 5)
-                            .zIndex(3)
+                            .frame(width: 132, height: 180)
+                            .accessibilityLabel("Add your photo to the stage")
                     }
+
+                    Ellipse()
+                        .fill(PyxisColors.text.opacity(colorScheme == .dark ? 0.12 : 0.08))
+                        .frame(width: 150, height: 16)
+                        .padding(.top, 2)
+                    Spacer().frame(height: 10)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 30).onEnded { value in
-                    guard let row = activeRow, !row.items.isEmpty else { return }
-                    let step = value.translation.width < 0 ? 1 : -1
-                    let next = (activeIndex + step + row.items.count) % row.items.count
-                    withAnimation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8)) {
-                        select(row.slot, next)
-                    }
-                })
             }
-            .frame(height: 310)
+            .frame(height: 230)
 
             HStack(spacing: PyxisSpacing.sm) {
                 PhotosPicker(selection: $photoItem, matching: .images) {
@@ -466,52 +391,11 @@ private struct OutfitStageView: View {
                         .font(PyxisTypography.label)
                 }
                 .buttonStyle(MinimalButtonStyle())
-                Spacer()
-                Text("SWIPE TO SPIN")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-            }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PyxisSpacing.sm) {
-                    ForEach(rows.filter { !$0.items.isEmpty }) { row in
-                        Button(row.slot.title) { activeSlot = row.slot }
-                            .font(PyxisTypography.label)
-                            .foregroundStyle(activeSlot == row.slot ? PyxisColors.background : PyxisColors.text)
-                            .padding(.horizontal, PyxisSpacing.md)
-                            .frame(minHeight: 40)
-                            .background {
-                                if colorScheme == .dark {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(activeSlot == row.slot ? PyxisColors.text : PyxisColors.field)
-                                } else {
-                                    Capsule().fill(activeSlot == row.slot ? PyxisColors.text : PyxisColors.field)
-                                }
-                            }
-                    }
-                }
             }
             Text("PHOTO STAYS ON THIS DEVICE. USE OUTFIT ON YOU FOR A TRY-ON PREVIEW.")
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
         }
-        .animation(.snappy(duration: 0.28), value: selectedPieces.map { $0.item.id })
-    }
-
-    private func wrappedDistance(_ index: Int, from selected: Int, count: Int) -> Int {
-        let forward = (index - selected + count) % count
-        return forward <= count / 2 ? forward : forward - count
-    }
-
-    private func imageURL(for item: ClosetItem) -> URL? {
-        guard let storage = ImageStorageService.shared else {
-            return nil
-        }
-        return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
-    }
-
-    private func imageRevision(for item: ClosetItem) -> Int {
-        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
     }
 }
 

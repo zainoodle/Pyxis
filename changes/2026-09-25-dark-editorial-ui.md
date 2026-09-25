@@ -9,7 +9,8 @@ summary: Bring the dark appearance across Closet, Build, Fits, and Profile in li
 
 - Add a near-black palette, spaced monospaced headings, outlined controls, and a flat four-section navigation bar in dark appearance.
 - Lead Fits with saved outfit flat lays and working search, color, season, favorite, and sort controls; place locally generated looks after the saved collection.
-- Lighten dark garment cutouts for contrast and carry the same styling into Closet, item and fit details, the spinning Build stage, and Profile.
+- Lighten dark garment cutouts for contrast and carry the same styling into Closet, item and fit details, a restrained avatar stage in Build, and Profile.
+- Keep clothing selection in the rows below the stage so the avatar area stays clear.
 - Keep the light appearance and existing local data unchanged. No font download, migration, or photo upload is needed.
 
 ## Verification
