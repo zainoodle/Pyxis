@@ -114,7 +114,7 @@ struct OutfitDetailView: View {
             }
         }
         .padding(PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .navigationTitle(outfit.name?.uppercased() ?? "FIT DETAIL")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

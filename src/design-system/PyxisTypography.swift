@@ -1,16 +1,16 @@
 import SwiftUI
 
 enum PyxisTypography {
-    static let nav = Font.system(.caption, design: .monospaced, weight: .medium)
-    static let code = Font.system(.caption2, design: .monospaced)
-    static let body = Font.system(.body, design: .monospaced)
-    static let label = Font.system(.caption, design: .monospaced)
-    static let title = Font.system(.title3, design: .monospaced, weight: .medium)
+    static let nav = Font.custom("IBMPlexMono-Medium", size: 12, relativeTo: .caption)
+    static let code = Font.custom("IBMPlexMono-Regular", size: 11, relativeTo: .caption2)
+    static let body = Font.custom("IBMPlexMono-Regular", size: 15, relativeTo: .body)
+    static let label = Font.custom("IBMPlexMono-Regular", size: 12, relativeTo: .caption)
+    static let title = Font.custom("IBMPlexMono-Medium", size: 20, relativeTo: .title3)
 
-    static let editorialBrand = Font.system(size: 23, weight: .light, design: .monospaced)
-    static let editorialTitle = Font.system(size: 21, weight: .regular, design: .monospaced)
-    static let editorialBody = Font.system(size: 13, weight: .regular, design: .monospaced)
-    static let editorialLabel = Font.system(size: 11, weight: .regular, design: .monospaced)
-    static let editorialMicro = Font.system(size: 9, weight: .regular, design: .monospaced)
-    static let editorialNav = Font.system(size: 10, weight: .regular, design: .monospaced)
+    static let editorialBrand = Font.custom("IBMPlexMono-Light", size: 28, relativeTo: .title)
+    static let editorialTitle = Font.custom("IBMPlexMono-Light", size: 21, relativeTo: .title3)
+    static let editorialBody = Font.custom("IBMPlexMono-Regular", size: 13, relativeTo: .body)
+    static let editorialLabel = Font.custom("IBMPlexMono-Regular", size: 12, relativeTo: .caption)
+    static let editorialMicro = Font.custom("IBMPlexMono-Regular", size: 10, relativeTo: .caption2)
+    static let editorialNav = Font.custom("IBMPlexMono-Regular", size: 10, relativeTo: .caption)
 }

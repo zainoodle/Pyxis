@@ -48,6 +48,7 @@ struct MinimalButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
+            .editorialGlow(cornerRadius: 8, strength: configuration.isPressed ? 0.4 : 0.7)
             .opacity(configuration.isPressed ? 0.55 : 1)
             .contentShape(Rectangle())
     }
@@ -73,7 +74,7 @@ private struct CatalogTileBackground: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(colorScheme == .dark ? PyxisColors.background : PyxisColors.surface)
+            .background(colorScheme == .dark ? Color.clear : PyxisColors.surface)
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(PyxisColors.hairline)

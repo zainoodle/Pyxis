@@ -35,15 +35,16 @@ struct PrimaryPageHeader<Actions: View>: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: colorScheme == .dark ? 56 : 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: colorScheme == .dark ? 68 : 44, alignment: .leading)
         .padding(.top, colorScheme == .dark ? PyxisSpacing.sm : PyxisSpacing.lg)
     }
 
     private var brand: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("PYXIS")
                 .font(colorScheme == .dark ? PyxisTypography.editorialBrand : PyxisTypography.title)
-                .tracking(colorScheme == .dark ? 4 : 0)
+                .tracking(colorScheme == .dark ? 4.5 : 0)
+                .shadow(color: colorScheme == .dark ? .white.opacity(0.24) : .clear, radius: 12)
                 .foregroundStyle(PyxisColors.text)
                 .lineLimit(1)
                 .accessibilityAddTraits(.isHeader)

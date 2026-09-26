@@ -93,9 +93,9 @@ struct SavedFitsGalleryView: View {
                 .padding(.vertical, PyxisSpacing.md)
             }
         }
-        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
         .padding(.bottom, PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
     }
 
     private var darkBody: some View {
@@ -136,13 +136,15 @@ struct SavedFitsGalleryView: View {
                     SuggestedLooksView(items: items, outfits: outfits)
                         .padding(.top, PyxisSpacing.lg)
                 }
-                .padding(.top, 8)
+                .padding(.top, 12)
+                .padding(.horizontal, 8)
                 .padding(.bottom, PyxisSpacing.md)
             }
+            .padding(.horizontal, -8)
             .scrollIndicators(.hidden)
         }
-        .padding(.horizontal, PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
+        .editorialCanvas()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let buildAction {
                 Button(action: buildAction) {
@@ -159,6 +161,7 @@ struct SavedFitsGalleryView: View {
                     .padding(.horizontal, 18)
                     .frame(height: 50)
                     .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
+                    .editorialGlow(cornerRadius: 9, strength: 1.4)
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 28)
@@ -175,7 +178,8 @@ struct SavedFitsGalleryView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 18, weight: .ultraLight))
                 .accessibilityHidden(true)
-            TextField("SEARCH FITS", text: $query.searchText)
+            TextField("SEARCH FITS", text: $query.searchText,
+                      prompt: Text("SEARCH FITS").foregroundColor(PyxisColors.secondaryText))
                 .font(PyxisTypography.editorialBody)
                 .tracking(1.8)
                 .textFieldStyle(.plain)
@@ -200,6 +204,7 @@ struct SavedFitsGalleryView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 11).stroke(PyxisColors.hairline, lineWidth: 1)
         }
+        .editorialGlow(cornerRadius: 11)
     }
 
     private var darkFilters: some View {
@@ -228,7 +233,10 @@ struct SavedFitsGalleryView: View {
                     darkChipLabel(query.season?.rawValue.uppercased() ?? "SEASON", active: query.season != nil)
                 }
             }
+            .padding(.vertical, 8)
         }
+        .scrollClipDisabled()
+        .padding(.vertical, -8)
     }
 
     private var darkSortBar: some View {
@@ -267,6 +275,7 @@ struct SavedFitsGalleryView: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1)
             }
+            .editorialGlow(cornerRadius: 8, strength: active ? 1.1 : 0.5)
     }
 
     private func darkSortButton(_ title: String, sort: OutfitGallerySort) -> some View {
@@ -388,7 +397,7 @@ struct SavedFitsGalleryView: View {
         Text(title)
             .font(PyxisTypography.label)
             .foregroundStyle(active ? PyxisColors.background : PyxisColors.text)
-            .padding(.horizontal, PyxisSpacing.md)
+            .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
             .frame(minHeight: 44)
             .background(active ? PyxisColors.text : PyxisColors.field, in: Capsule())
     }
@@ -481,8 +490,6 @@ struct OutfitFlatLayView: View {
                     LocalImageView(url: imageURL(for: item), revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000))
                         .frame(width: geometry.size.width * width(for: index),
                                height: geometry.size.height * height(for: index))
-                        .brightness(colorScheme == .dark ? 0.10 : 0)
-                        .shadow(color: colorScheme == .dark ? .white.opacity(0.18) : .clear, radius: 8)
                         .position(x: geometry.size.width * x(for: index),
                                   y: geometry.size.height * y(for: index))
                 }

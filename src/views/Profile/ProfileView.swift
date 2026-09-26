@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("pyxis.appearance") private var appearance = PyxisAppearance.system.rawValue
     @State private var selectedClosetID: UUID?
 
@@ -42,7 +43,7 @@ struct ProfileView: View {
                         .padding(.bottom, PyxisSpacing.sm)
 
                     if colorScheme == .dark {
-                        HStack(spacing: PyxisSpacing.sm) {
+                        appearanceLayout {
                             ForEach(PyxisAppearance.allCases) { option in
                                 Button { appearance = option.rawValue } label: {
                                     Text(option.title)
@@ -58,6 +59,7 @@ struct ProfileView: View {
                                         }
                                 }
                                 .buttonStyle(.plain)
+                                .editorialGlow(cornerRadius: 8, strength: appearance == option.rawValue ? 1.1 : 0.5)
                                 .accessibilityAddTraits(appearance == option.rawValue ? .isSelected : [])
                             }
                         }
@@ -75,10 +77,16 @@ struct ProfileView: View {
                 .padding(.top, PyxisSpacing.md)
             }
         }
-        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
         .padding(.bottom, PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .navigationBarHidden(true)
+    }
+
+    private var appearanceLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: PyxisSpacing.sm))
+            : AnyLayout(HStackLayout(spacing: PyxisSpacing.sm))
     }
 
     private func settingsRow(_ title: String, systemImage: String) -> some View {

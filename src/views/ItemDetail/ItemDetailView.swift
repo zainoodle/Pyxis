@@ -49,7 +49,7 @@ struct ItemDetailView: View {
             }
             .padding(PyxisSpacing.md)
         }
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .navigationTitle(item.itemCode)
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
@@ -70,7 +70,6 @@ struct ItemDetailView: View {
                 url: viewModel.displayURL(for: item),
                 revision: viewModel.imageRevision
             )
-                .brightness(colorScheme == .dark ? 0.10 : 0)
                 .frame(maxWidth: 330)
                 .frame(height: 420)
                 .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,

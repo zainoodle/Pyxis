@@ -104,13 +104,13 @@ struct OutfitBuilderView: View {
                 }
             }
         }
-        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
         .padding(.bottom, PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .safeAreaInset(edge: .bottom) {
             if !items.isEmpty {
                 saveRail
-                    .padding(.horizontal, PyxisSpacing.md)
+                    .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
                     .padding(.top, PyxisSpacing.md)
                     .padding(.bottom, colorScheme == .dark ? 32 : PyxisSpacing.md)
                     .background(PyxisColors.background)
@@ -201,11 +201,14 @@ struct OutfitBuilderView: View {
     }
 
     private var notesField: some View {
-        TextField("FIT NOTES", text: $notes, axis: .vertical)
+        TextField("FIT NOTES", text: $notes,
+                  prompt: Text("FIT NOTES").foregroundColor(PyxisColors.secondaryText), axis: .vertical)
             .font(PyxisTypography.body)
             .textFieldStyle(.plain)
             .padding(PyxisSpacing.md)
-            .background(PyxisColors.field)
+            .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
+            .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
+            .editorialGlow(cornerRadius: 8, strength: 0.6)
     }
 
     private var saveButton: some View {

@@ -19,7 +19,6 @@ struct OutfitCarouselItemView: View {
                 LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
                     .padding(.horizontal, PyxisSpacing.sm)
-                    .brightness(colorScheme == .dark ? 0.10 : 0)
                     .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
                                 in: RoundedRectangle(cornerRadius: 8))
 

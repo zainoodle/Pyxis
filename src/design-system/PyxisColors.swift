@@ -19,14 +19,14 @@ enum PyxisAppearance: String, CaseIterable, Identifiable {
 }
 
 enum PyxisColors {
-    static let background = adaptive(light: 0xFFFFFF, dark: 0x090909)
-    static let surface = adaptive(light: 0xFFFFFF, dark: 0x151515)
-    static let text = adaptive(light: 0x141311, dark: 0xF7F6F2)
-    static let secondaryText = adaptive(light: 0x5C574D, dark: 0xAAAAAA)
-    static let inactiveText = adaptive(light: 0x706B5E, dark: 0x7B7B7B)
-    static let hairline = adaptive(light: 0x948C7D, dark: 0x3F3F3F)
-    static let field = adaptive(light: 0xF7F6F0, dark: 0x1B1B1B)
-    static let imageCanvas = adaptive(light: 0xDAD7D0, dark: 0x242424)
+    static let background = adaptive(light: 0xFFFFFF, dark: 0x232325)
+    static let surface = adaptive(light: 0xFFFFFF, dark: 0x29292B)
+    static let text = adaptive(light: 0x141311, dark: 0xF5F3EF)
+    static let secondaryText = adaptive(light: 0x5C574D, dark: 0xB7B4B0)
+    static let inactiveText = adaptive(light: 0x706B5E, dark: 0xA5A29D)
+    static let hairline = adaptive(light: 0x948C7D, dark: 0x59595B)
+    static let field = adaptive(light: 0xF7F6F0, dark: 0x2F2F31)
+    static let imageCanvas = adaptive(light: 0xDAD7D0, dark: 0x2A2A2C)
     static let galleryCanvas = imageCanvas
     static let shadow = adaptive(light: 0x000000, dark: 0x000000).opacity(0.12)
     static let error = adaptive(light: 0x8C1A14, dark: 0xFF9A8F)
