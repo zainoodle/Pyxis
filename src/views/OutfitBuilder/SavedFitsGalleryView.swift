@@ -2,10 +2,13 @@ import SwiftData
 import SwiftUI
 
 struct SavedFitsGalleryView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
     @State private var query = OutfitGalleryQuery()
+    @State private var favoriteError: String?
     let buildAction: (() -> Void)?
 
     private var visibleOutfits: [Outfit] {
@@ -24,6 +27,16 @@ struct SavedFitsGalleryView: View {
     }
 
     var body: some View {
+        Group {
+            if colorScheme == .dark {
+                darkBody
+            } else {
+                lightBody
+            }
+        }
+    }
+
+    private var lightBody: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
             PrimaryPageHeader {
                 if let buildAction {
@@ -80,9 +93,237 @@ struct SavedFitsGalleryView: View {
                 .padding(.vertical, PyxisSpacing.md)
             }
         }
-        .padding(.horizontal, PyxisSpacing.md)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
         .padding(.bottom, PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
+    }
+
+    private var darkBody: some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            PrimaryPageHeader(title: "FITS") {
+                Text("LOCAL FIRST\nYOUR STYLE\nALWAYS YOURS")
+                    .font(PyxisTypography.editorialMicro)
+                    .tracking(1.1)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(2)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    darkSearchField
+                    darkFilters
+                    darkSortBar
+
+                    if let favoriteError {
+                        InlineErrorMessage(message: favoriteError)
+                    }
+
+                    if savedOutfits.isEmpty {
+                        emptyState("NO SAVED FITS", detail: "BUILD A FIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
+                    } else if visibleOutfits.isEmpty {
+                        emptyState("NO MATCHING FITS", detail: "TRY ANOTHER SEARCH OR CLEAR YOUR FILTERS")
+                        Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
+                            .buttonStyle(MinimalButtonStyle())
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 18) {
+                            ForEach(visibleOutfits) { outfit in
+                                darkFitTile(outfit)
+                            }
+                        }
+                    }
+
+                    SuggestedLooksView(items: items, outfits: outfits)
+                        .padding(.top, PyxisSpacing.lg)
+                }
+                .padding(.top, 12)
+                .padding(.horizontal, 8)
+                .padding(.bottom, PyxisSpacing.md)
+            }
+            .padding(.horizontal, -8)
+            .scrollIndicators(.hidden)
+        }
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
+        .editorialCanvas()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let buildAction {
+                Button(action: buildAction) {
+                    HStack {
+                        Spacer()
+                        Text("BUILD FIT")
+                            .font(PyxisTypography.editorialBody)
+                            .tracking(2.5)
+                        Spacer()
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .ultraLight))
+                    }
+                    .foregroundStyle(PyxisColors.background)
+                    .padding(.horizontal, 18)
+                    .frame(height: 50)
+                    .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
+                    .editorialGlow(cornerRadius: 9, strength: 1.4)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 28)
+                .padding(.top, 10)
+                .padding(.bottom, 32)
+                .frame(maxWidth: .infinity)
+                .background(PyxisColors.background)
+            }
+        }
+    }
+
+    private var darkSearchField: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .ultraLight))
+                .accessibilityHidden(true)
+            TextField("SEARCH FITS", text: $query.searchText,
+                      prompt: Text("SEARCH FITS").foregroundColor(PyxisColors.secondaryText))
+                .font(PyxisTypography.editorialBody)
+                .tracking(1.8)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+            Menu {
+                Button("FAVORITES ONLY") { query.favoritesOnly.toggle() }
+                Button("RECENT FIRST") { query.sort = .recent }
+                Button("MOST WORN FIRST") { query.sort = .mostWorn }
+                Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 19, weight: .ultraLight))
+                    .frame(width: 36, height: 42)
+            }
+            .accessibilityLabel("More fit filters")
+        }
+        .foregroundStyle(PyxisColors.text)
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .frame(height: 54)
+        .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 11))
+        .overlay {
+            RoundedRectangle(cornerRadius: 11).stroke(PyxisColors.hairline, lineWidth: 1)
+        }
+        .editorialGlow(cornerRadius: 11)
+    }
+
+    private var darkFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 9) {
+                darkChip("ALL", active: !query.favoritesOnly && query.color == nil && query.season == nil) {
+                    query.favoritesOnly = false
+                    query.color = nil
+                    query.season = nil
+                }
+                darkChip("FAVORITES", active: query.favoritesOnly) { query.favoritesOnly.toggle() }
+                Menu {
+                    Button("ALL COLORS") { query.color = nil }
+                    ForEach(ClosetColor.allCases.filter { $0 != .unknown }) { color in
+                        Button(color.rawValue.uppercased()) { query.color = color }
+                    }
+                } label: {
+                    darkChipLabel(query.color?.rawValue.uppercased() ?? "COLOR", active: query.color != nil)
+                }
+                Menu {
+                    Button("ALL SEASONS") { query.season = nil }
+                    ForEach(Season.allCases) { season in
+                        Button(season.rawValue.uppercased()) { query.season = season }
+                    }
+                } label: {
+                    darkChipLabel(query.season?.rawValue.uppercased() ?? "SEASON", active: query.season != nil)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .scrollClipDisabled()
+        .padding(.vertical, -8)
+    }
+
+    private var darkSortBar: some View {
+        HStack(spacing: 22) {
+            darkSortButton("RECENT", sort: .recent)
+            darkSortButton("MOST WORN", sort: .mostWorn)
+            Button("FAVORITES") { query.favoritesOnly.toggle() }
+                .foregroundStyle(query.favoritesOnly ? PyxisColors.text : PyxisColors.inactiveText)
+                .font(PyxisTypography.editorialLabel)
+                .tracking(1.1)
+            Spacer(minLength: 0)
+            Text("\(visibleOutfits.count) FITS")
+                .font(PyxisTypography.editorialMicro)
+                .tracking(1)
+                .foregroundStyle(PyxisColors.secondaryText)
+        }
+        .frame(height: 42)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+        }
+    }
+
+    private func darkChip(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) { darkChipLabel(title, active: active) }
+            .buttonStyle(.plain)
+    }
+
+    private func darkChipLabel(_ title: String, active: Bool) -> some View {
+        Text(title)
+            .font(PyxisTypography.editorialLabel)
+            .tracking(1.5)
+            .foregroundStyle(active ? PyxisColors.background : PyxisColors.secondaryText)
+            .padding(.horizontal, 15)
+            .frame(minHeight: 40)
+            .background(active ? PyxisColors.text : PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1)
+            }
+            .editorialGlow(cornerRadius: 8, strength: active ? 1.1 : 0.5)
+    }
+
+    private func darkSortButton(_ title: String, sort: OutfitGallerySort) -> some View {
+        Button { query.sort = sort } label: {
+            Text(title)
+                .font(PyxisTypography.editorialLabel)
+                .tracking(1)
+                .foregroundStyle(query.sort == sort ? PyxisColors.text : PyxisColors.inactiveText)
+                .frame(height: 42)
+                .overlay(alignment: .bottom) {
+                    if query.sort == sort {
+                        Rectangle().fill(PyxisColors.text).frame(height: 1)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func darkFitTile(_ outfit: Outfit) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            NavigationLink {
+                OutfitDetailView(outfit: outfit)
+            } label: {
+                OutfitGalleryTile(outfit: outfit, items: items)
+            }
+            .buttonStyle(.plain)
+
+            Button { toggleFavorite(outfit) } label: {
+                Image(systemName: outfit.favorite ? "heart.fill" : "heart")
+                    .font(.system(size: 20, weight: .ultraLight))
+                    .foregroundStyle(PyxisColors.text)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(outfit.favorite ? "Remove favorite" : "Favorite fit")
+        }
+    }
+
+    private func toggleFavorite(_ outfit: Outfit) {
+        outfit.favorite.toggle()
+        do {
+            try modelContext.save()
+            favoriteError = nil
+        } catch {
+            modelContext.rollback()
+            favoriteError = PersistenceErrorMessage.saveFailed(error)
+        }
     }
 
     private var searchField: some View {
@@ -156,7 +397,7 @@ struct SavedFitsGalleryView: View {
         Text(title)
             .font(PyxisTypography.label)
             .foregroundStyle(active ? PyxisColors.background : PyxisColors.text)
-            .padding(.horizontal, PyxisSpacing.md)
+            .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
             .frame(minHeight: 44)
             .background(active ? PyxisColors.text : PyxisColors.field, in: Capsule())
     }
@@ -188,6 +429,7 @@ struct SavedFitsGalleryView: View {
 }
 
 private struct OutfitGalleryTile: View {
+    @Environment(\.colorScheme) private var colorScheme
     let outfit: Outfit
     let items: [ClosetItem]
 
@@ -198,21 +440,27 @@ private struct OutfitGalleryTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
             OutfitFlatLayView(items: pieces)
-                .frame(height: 208)
-                .background(PyxisColors.galleryCanvas, in: RoundedRectangle(cornerRadius: 9))
+                .frame(height: colorScheme == .dark ? 180 : 208)
+                .background {
+                    if colorScheme == .light {
+                        RoundedRectangle(cornerRadius: 9).fill(PyxisColors.galleryCanvas)
+                    }
+                }
 
             HStack(alignment: .top, spacing: PyxisSpacing.xs) {
                 VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
                     Text(outfit.name?.uppercased() ?? outfit.dateCreated.formatted(date: .numeric, time: .omitted))
-                        .font(PyxisTypography.label)
+                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
+                        .tracking(colorScheme == .dark ? 1.1 : 0)
                         .foregroundStyle(PyxisColors.text)
                         .lineLimit(2)
                     Text("\(pieces.count) PIECES · WORN \(outfit.wearCount)×")
-                        .font(PyxisTypography.code)
+                        .font(colorScheme == .dark ? PyxisTypography.editorialMicro : PyxisTypography.code)
+                        .tracking(colorScheme == .dark ? 0.7 : 0)
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
                 Spacer(minLength: 0)
-                if outfit.favorite {
+                if outfit.favorite && colorScheme == .light {
                     Image(systemName: "heart.fill")
                         .font(PyxisTypography.label)
                         .foregroundStyle(PyxisColors.text)
@@ -227,6 +475,7 @@ private struct OutfitGalleryTile: View {
 }
 
 struct OutfitFlatLayView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let items: [ClosetItem]
 
     var body: some View {

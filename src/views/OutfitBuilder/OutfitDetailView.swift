@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct OutfitDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
@@ -32,6 +33,21 @@ struct OutfitDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
+                    if colorScheme == .dark {
+                        OutfitFlatLayView(items: selectedItems)
+                            .frame(height: 285)
+                            .accessibilityLabel("Pieces in \(outfit.name ?? "saved fit")")
+                        Text("\(selectedItems.count) PIECES · WORN \(outfit.wearCount)×")
+                            .font(PyxisTypography.editorialLabel)
+                            .tracking(1.4)
+                            .foregroundStyle(PyxisColors.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, PyxisSpacing.sm)
+                            .overlay(alignment: .bottom) {
+                                Rectangle().fill(PyxisColors.hairline).frame(height: 1)
+                            }
+                    }
+
                     VStack(spacing: PyxisSpacing.sm) {
                         ForEach(selectedItems) { item in
                             HStack(spacing: PyxisSpacing.md) {
@@ -98,7 +114,7 @@ struct OutfitDetailView: View {
             }
         }
         .padding(PyxisSpacing.md)
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .navigationTitle(outfit.name?.uppercased() ?? "FIT DETAIL")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

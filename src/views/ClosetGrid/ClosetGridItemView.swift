@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ClosetGridItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let item: ClosetItem
 
     private var imageURL: URL? {
@@ -11,25 +12,27 @@ struct ClosetGridItemView: View {
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.sm) {
+        VStack(alignment: colorScheme == .dark ? .leading : .center, spacing: PyxisSpacing.sm) {
             LocalImageView(url: imageURL, revision: imageRevision)
-                .frame(height: 178)
+                .frame(height: colorScheme == .dark ? 166 : 178)
                 .padding(.horizontal, PyxisSpacing.sm)
-                .background(PyxisColors.imageCanvas)
-
-            ItemCodeLabel(code: item.itemCode)
+                .background(colorScheme == .dark ? Color.clear : PyxisColors.imageCanvas)
 
             if let displayName = item.displayName, !displayName.isEmpty {
                 Text(displayName.uppercased())
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
+                    .font(colorScheme == .dark ? PyxisTypography.editorialBody : PyxisTypography.label)
+                    .foregroundStyle(colorScheme == .dark ? PyxisColors.text : PyxisColors.secondaryText)
                     .lineLimit(2)
-                    .multilineTextAlignment(.center)
+                    .multilineTextAlignment(colorScheme == .dark ? .leading : .center)
+                    .tracking(colorScheme == .dark ? 0.8 : 0)
             }
+
+            ItemCodeLabel(code: item.itemCode)
+                .opacity(colorScheme == .dark ? 0.65 : 1)
         }
-        .frame(minWidth: 150, minHeight: 230)
-        .padding(.vertical, PyxisSpacing.md)
-        .padding(.horizontal, PyxisSpacing.sm)
+        .frame(minWidth: 150, minHeight: colorScheme == .dark ? 213 : 230)
+        .padding(.vertical, colorScheme == .dark ? PyxisSpacing.sm : PyxisSpacing.md)
+        .padding(.horizontal, colorScheme == .dark ? 0 : PyxisSpacing.sm)
         .catalogTileBackground()
         .contentShape(Rectangle())
         .accessibilityLabel("\(item.itemCode) \(item.displayName ?? item.subtype.rawValue)")

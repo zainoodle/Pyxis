@@ -2,6 +2,8 @@ import SwiftData
 import SwiftUI
 
 struct ClosetGridView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
@@ -12,16 +14,17 @@ struct ClosetGridView: View {
     @FocusState private var isSearchFocused: Bool
     private let buildAction: (UUID?) -> Void
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 158, maximum: 210), spacing: PyxisSpacing.lg)
-    ]
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: PyxisSpacing.md),
+              count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
+    }
 
     init(buildAction: @escaping (UUID?) -> Void = { _ in }) {
         self.buildAction = buildAction
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.lg) {
+        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
             TopNavigationView(
                 filterState: $viewModel.filterState,
                 closets: closets,
@@ -50,9 +53,9 @@ struct ClosetGridView: View {
 
             content
         }
-        .padding(.horizontal, PyxisSpacing.md)
-        .padding(.bottom, PyxisSpacing.xl)
-        .background(PyxisColors.background)
+        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
+        .padding(.bottom, colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl)
+        .editorialCanvas()
         .toolbar {
             Button("ADD") {
                 isShowingAddFlow = true
@@ -122,7 +125,7 @@ struct ClosetGridView: View {
             Spacer()
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: PyxisSpacing.xl) {
+                LazyVGrid(columns: columns, spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl) {
                     ForEach(filteredItems) { item in
                         NavigationLink {
                             ItemDetailView(item: item, showsCloseButton: false) { buildItem in

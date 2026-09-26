@@ -20,7 +20,7 @@ struct TopNavigationView: View {
     }
 
     var body: some View {
-        PrimaryPageHeader {
+        PrimaryPageHeader(title: "CLOSET") {
             navigationActions
         }
         .sheet(isPresented: $isShowingFilters) {
