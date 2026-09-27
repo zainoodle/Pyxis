@@ -14,6 +14,7 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 10. Confirm the stable `ADD PHOTO → CLEAN IMAGE → REVIEW DETAILS` indicator advances and the original preview appears.
 11. Confirm background removal starts without blocking the UI and the labeled review form remains visible.
 12. Confirm the cutout automatically fills its frame with a small margin and needs no approval step. If the mask is empty, tiny, or covers nearly the whole image, confirm `ORIGINAL ONLY` appears and the original can still be saved.
+    Tap `IMPROVE CUTOUT` in Add Item and on a saved item. Confirm accepted results use the same framing and refresh the preview; rejected results retain the current cutout and thumbnail. Repeat after rotating, and confirm the stored original remains readable.
 13. With a photo where hands or arms sit beside the garment, confirm small detached body fragments are excluded; with a pair of shoes, confirm both pieces remain.
 14. With `PYXIS_AI_BASE_URL` configured, tap `AI DE-WRINKLE`, confirm the disclosure appears before the action, and verify the generated result replaces the cutout preview while the original remains stored.
 15. Build a fit, tap `TRY THIS FIT ON YOU`, choose a full-body photo, generate, and confirm the person and selected garments are sent only after tapping the generate button. Confirm offline/backend failures remain retryable.

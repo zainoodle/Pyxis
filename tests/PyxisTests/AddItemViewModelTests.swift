@@ -317,6 +317,62 @@ final class AddItemViewModelTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: firstPath).path))
     }
 
+    func testImproveCutoutPreservesAcceptedDraftWhenReviewFails() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.png", root: root, format: .png)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(
+            imageStorage: storage,
+            backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage)
+        )
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage()
+        let previous = try XCTUnwrap(viewModel.result)
+        let itemID = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: [])?.id)
+        let cutoutData = try Data(contentsOf: source)
+        let cutoutPath = try storage.saveCutoutPNG(cutoutData, itemID: itemID)
+        let accepted = BackgroundRemovalResult(
+            originalPath: previous.originalPath, cutoutPath: cutoutPath,
+            thumbnailPath: previous.thumbnailPath, status: .succeeded
+        )
+        viewModel.result = accepted
+        viewModel.stage = .processed
+        let thumbnailsBefore = try FileManager.default.contentsOfDirectory(atPath: storage.thumbnailsURL.path)
+
+        await viewModel.retry()
+
+        XCTAssertEqual(viewModel.result, accepted)
+        XCTAssertEqual(viewModel.stage, .processed)
+        XCTAssertNotNil(viewModel.processingMessage)
+        XCTAssertEqual(viewModel.makeClosetItem(existingCodes: [])?.id, itemID)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: cutoutPath)), cutoutData)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: storage.thumbnailsURL.path), thumbnailsBefore)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: accepted.originalPath).path))
+    }
+
+    func testRepeatedImprovementsUseStoredOriginalAndRefreshPreview() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.png", root: root, format: .png)
+        let storage = try ImageStorageService(rootURL: root)
+        let processor = AcceptedCutoutService(storage: storage)
+        let viewModel = AddItemViewModel(imageStorage: storage, backgroundRemovalService: processor)
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage()
+        try FileManager.default.removeItem(at: source)
+        let originalRevision = viewModel.imageRevision
+
+        for _ in 0..<2 {
+            let previous = try XCTUnwrap(viewModel.result)
+            await viewModel.retry()
+            let improved = try XCTUnwrap(viewModel.result)
+            XCTAssertEqual(improved.status, .succeeded)
+            XCTAssertEqual(viewModel.selectedImageURL, storage.url(for: improved.originalPath))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: improved.originalPath).path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: storage.url(for: previous.originalPath).path))
+        }
+        XCTAssertEqual(viewModel.imageRevision, originalRevision + 2)
+    }
+
     private func waitUntilRequested(
         _ id: UUID,
         by processor: ControlledBackgroundRemovalService
@@ -395,5 +451,22 @@ private actor ControlledBackgroundRemovalService: BackgroundRemovalServiceProtoc
 
     func complete(_ itemID: UUID, with result: BackgroundRemovalResult) {
         continuations.removeValue(forKey: itemID)?.resume(returning: result)
+    }
+}
+
+private struct AcceptedCutoutService: BackgroundRemovalServiceProtocol {
+    let storage: ImageStorageService
+
+    func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult {
+        do {
+            let original = try storage.saveOriginal(from: originalURL, itemID: itemID)
+            let cutout = try storage.saveCutoutPNG(Data(contentsOf: originalURL), itemID: itemID)
+            let thumbnail = try storage.makeThumbnail(from: storage.url(for: cutout), itemID: itemID)
+            return BackgroundRemovalResult(
+                originalPath: original, cutoutPath: cutout, thumbnailPath: thumbnail, status: .succeeded
+            )
+        } catch {
+            return BackgroundRemovalResult(originalPath: "", cutoutPath: nil, thumbnailPath: nil, status: .failed)
+        }
     }
 }

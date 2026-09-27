@@ -57,7 +57,6 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
             do {
                 let originalPath = try imageStorage.saveOriginal(from: originalURL, itemID: itemID)
                 let originalStoredURL = imageStorage.url(for: originalPath)
-                let thumbnailPath = try? imageStorage.makeThumbnail(from: originalStoredURL, itemID: itemID)
 
                 do {
                     let cutoutData = try Self.makeTransparentCutoutPNG(
@@ -73,14 +72,18 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                     return BackgroundRemovalResult(
                         originalPath: originalPath,
                         cutoutPath: cutoutPath,
-                        thumbnailPath: thumbnailFromCutout ?? thumbnailPath,
+                        thumbnailPath: thumbnailFromCutout ?? Self.fallbackThumbnail(
+                            from: originalStoredURL, itemID: itemID, storage: imageStorage
+                        ),
                         status: .succeeded
                     )
                 } catch {
                     return BackgroundRemovalResult(
                         originalPath: originalPath,
                         cutoutPath: nil,
-                        thumbnailPath: thumbnailPath,
+                        thumbnailPath: Self.fallbackThumbnail(
+                            from: originalStoredURL, itemID: itemID, storage: imageStorage
+                        ),
                         status: .failed,
                         errorMessage: BackgroundRemovalCopy.removalFailed
                     )
@@ -95,6 +98,19 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                 )
             }
         }.value
+    }
+
+    private static func fallbackThumbnail(
+        from originalURL: URL,
+        itemID: UUID,
+        storage: ImageStorageService
+    ) -> String? {
+        let existingURL = storage.thumbnailsURL.appendingPathComponent("\(itemID.uuidString).png")
+        // A rejected improvement must not replace the thumbnail of the last accepted cutout.
+        if FileManager.default.fileExists(atPath: existingURL.path) {
+            return storage.relativePath(for: existingURL)
+        }
+        return try? storage.makeThumbnail(from: originalURL, itemID: itemID)
     }
 
     private static func makeTransparentCutoutPNG(

@@ -91,6 +91,7 @@ struct ItemDetailView: View {
                 }
             }
             .buttonStyle(MinimalButtonStyle())
+            .disabled(viewModel.isRetryingBackgroundRemoval)
             .accessibilityLabel("Retry background removal")
 
             if let retryMessage = viewModel.retryMessage {
