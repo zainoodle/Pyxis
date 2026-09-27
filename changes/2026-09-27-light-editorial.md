@@ -15,6 +15,7 @@ summary: Translate the charcoal editorial design into the light palette so both 
 - Extend `PyxisPressableStyle` and selection animations to fit tiles, gallery chips, sort controls, carousel items, and appearance options.
 - Simplify the Fits page: remove the header manifesto, the duplicate filter menu inside search, the duplicated FAVORITES sort action, suggested-look summary/tags copy, and verbose empty-state text so the gallery reads as a lookbook, not a manual.
 - Audit pass: `foregroundStyle` prompts, `scrollIndicators(.hidden)`, 44pt minimum hit areas on chips and sort controls, reduce-motion fallback for the tab underline, press feedback on all remaining plain buttons, and a VoiceOver label on saved-fit cards.
+- Raise the deployment target to iOS 26 and adopt modern APIs: `Tab`-based tab structure and a zoom navigation transition from closet tiles to item detail.
 
 ## Verification
 

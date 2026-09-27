@@ -9,6 +9,7 @@ struct ClosetGridView: View {
     @State private var isShowingAddFlow = false
     @State private var savedItemPrompt: ClosetItem?
     @State private var seedMessage: String?
+    @Namespace private var tileTransition
     @Environment(\.modelContext) private var modelContext
     @FocusState private var isSearchFocused: Bool
     private let buildAction: (UUID?) -> Void
@@ -134,8 +135,10 @@ struct ClosetGridView: View {
                             ItemDetailView(item: item, showsCloseButton: false) { buildItem in
                                 buildAction(buildItem.id)
                             }
+                            .navigationTransition(.zoom(sourceID: item.id, in: tileTransition))
                         } label: {
                             ClosetGridItemView(item: item)
+                                .matchedTransitionSource(id: item.id, in: tileTransition)
                         }
                         .buttonStyle(PyxisPressableStyle())
                     }
