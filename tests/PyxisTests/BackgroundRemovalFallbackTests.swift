@@ -59,6 +59,34 @@ final class BackgroundRemovalFallbackTests: XCTestCase {
         XCTAssertEqual(preferred, 1)
     }
 
+    func testCandidateSelectorRejectsMaskCoveringMostImageEdges() {
+        let backgroundLikeMask = BackgroundMaskInstanceStats(
+            instance: 0,
+            areaFraction: 0.70,
+            centroidX: 0.50,
+            centroidY: 0.50,
+            minX: 0,
+            maxX: 1,
+            minY: 0,
+            maxY: 0.9
+        )
+        let garmentMask = BackgroundMaskInstanceStats(
+            instance: 1,
+            areaFraction: 0.20,
+            centroidX: 0.51,
+            centroidY: 0.49,
+            minX: 0.28,
+            maxX: 0.73,
+            minY: 0.16,
+            maxY: 0.85
+        )
+
+        XCTAssertEqual(
+            BackgroundMaskCandidateSelector.preferredCandidateIndex(from: [backgroundLikeMask, garmentMask]),
+            1
+        )
+    }
+
     func testMaskStatsReadGrayscaleInsteadOfOpaqueOutputAlpha() throws {
         let width = 4
         let height = 4
@@ -184,6 +212,32 @@ final class BackgroundRemovalFallbackTests: XCTestCase {
         XCTAssertNil(result.cutoutPath)
         XCTAssertEqual(result.errorMessage, "Background removal failed — retry")
         XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: result.originalPath).path))
+    }
+
+    func testRejectedImprovementDoesNotOverwriteAcceptedImagesOnDisk() async throws {
+        let root = try makeTemporaryRoot()
+        let storage = try ImageStorageService(rootURL: root)
+        let itemID = UUID()
+        let source = root.appendingPathComponent("empty.png")
+        let context = CIContext()
+        let blank = CIImage(color: .clear).cropped(to: CGRect(x: 0, y: 0, width: 200, height: 200))
+        let originalData = try XCTUnwrap(context.pngRepresentation(
+            of: blank, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB()
+        ))
+        try originalData.write(to: source)
+        let originalPath = try storage.saveOriginal(from: source, itemID: itemID)
+        let acceptedData = try XCTUnwrap(makeTestImage(color: .red).pngDataForTests())
+        let cutoutPath = try storage.saveCutoutPNG(acceptedData, itemID: itemID)
+        let thumbnailPath = try storage.saveThumbnailPNG(acceptedData, itemID: itemID)
+
+        let result = await LocalBackgroundRemovalService(imageStorage: storage).processImage(
+            at: storage.url(for: originalPath), itemID: itemID
+        )
+
+        XCTAssertEqual(result.status, .failed)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: originalPath)), originalData)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: cutoutPath)), acceptedData)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: thumbnailPath)), acceptedData)
     }
 
     func testImportFailureUsesGenericMessage() async throws {

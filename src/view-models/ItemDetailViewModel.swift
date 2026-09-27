@@ -28,10 +28,11 @@ final class ItemDetailViewModel: ObservableObject {
     }
 
     func retryBackgroundRemoval(for item: ClosetItem) async {
-        guard let imageStorage else {
+        guard let imageStorage, !isRetryingBackgroundRemoval else {
             return
         }
 
+        retryMessage = nil
         isRetryingBackgroundRemoval = true
         defer { isRetryingBackgroundRemoval = false }
 
@@ -46,8 +47,8 @@ final class ItemDetailViewModel: ObservableObject {
             imageRevision += 1
         }
         retryMessage = result.status == .succeeded
-            ? "Background removed"
-            : (result.errorMessage ?? "Background removal failed — retry")
+            ? "Cutout reviewed and framed"
+            : "Couldn’t improve this cutout. Kept your current image."
     }
 
     static func applySuccessfulBackgroundRemovalResult(

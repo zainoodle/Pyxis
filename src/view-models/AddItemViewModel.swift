@@ -25,6 +25,7 @@ final class AddItemViewModel: ObservableObject {
     @Published var notes = ""
     @Published var favorite = false
     @Published var setupError: String?
+    @Published var processingMessage: String?
     @Published var imageRevision = 0
     @Published var isAIEnhancing = false
     @Published var aiEnhancementError: String?
@@ -76,6 +77,7 @@ final class AddItemViewModel: ObservableObject {
 
     func selectImage(_ url: URL) {
         invalidateProcessing()
+        processingMessage = nil
         discardProcessedImages()
         discardTemporaryImport()
         draftItemID = UUID()
@@ -129,6 +131,7 @@ final class AddItemViewModel: ObservableObject {
             processingItemID = UUID()
         }
 
+        processingMessage = nil
         stage = .processing
         let processed = await backgroundRemovalService.processImage(
             at: selectedImageURL,
@@ -140,6 +143,16 @@ final class AddItemViewModel: ObservableObject {
               self.selectedImageURL == selectedImageURL else {
             deleteProcessedImages(processed, itemID: processingItemID)
             discardTemporaryImport(at: selectedImageURL)
+            return
+        }
+
+        if processed.status == .failed, let priorResult, !priorResult.originalPath.isEmpty {
+            deleteProcessedImages(processed, itemID: processingItemID)
+            result = priorResult
+            stage = priorResult.status == .succeeded
+                ? .processed
+                : .failed(priorResult.errorMessage ?? "Background removal failed — retry")
+            processingMessage = "Couldn’t improve this cutout. Kept your current image."
             return
         }
 
@@ -183,6 +196,11 @@ final class AddItemViewModel: ObservableObject {
         }
         draftItemID = processingItemID
         result = processed
+        if !processed.originalPath.isEmpty, let imageStorage {
+            discardTemporaryImport(at: selectedImageURL)
+            self.selectedImageURL = imageStorage.url(for: processed.originalPath)
+        }
+        imageRevision += 1
 
         switch processed.status {
         case .succeeded:
@@ -241,6 +259,7 @@ final class AddItemViewModel: ObservableObject {
 
     func discardDraft() {
         invalidateProcessing()
+        processingMessage = nil
         discardProcessedImages()
         discardTemporaryImport()
         result = nil
