@@ -91,7 +91,7 @@ Run the distribution preflight after App Store Connect provider access and an Ap
 
 ## Local-first closet and Outfit on you
 
-The closet, background removal, garment recognition, measurements, and saved fits work on device. Outfit on you adds an optional paid image preview: choose a full-body reference, add up to six pieces from the closet or Photos, correct suggested garment types if needed, and generate. There is no chat interface. You can compare the original and preview, save results locally, and remove your reference or saved previews.
+The closet, background removal, garment recognition, measurements, and saved fits work on device. Imported garments are automatically checked and framed after background removal; uncertain cutouts keep the original photo, and existing cutouts are framed for display without rewriting stored images. Outfit on you adds an optional paid image preview: choose a full-body reference, add up to six pieces from the closet or Photos, correct suggested garment types if needed, and generate. There is no chat interface. You can compare the original and preview, save results locally, and remove your reference or saved previews.
 
 Cloud generation requires explicit consent and xAI zero-retention processing. The provider, model, and credentials are backend concerns; users see photos, privacy choices, and a monthly allowance. Until configured, the app shows a coming-soon state and makes no photo uploads. On-device try-on generation is not bundled in this version; the client service protocol leaves room for a future implementation.
 

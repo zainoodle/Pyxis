@@ -59,6 +59,34 @@ final class BackgroundRemovalFallbackTests: XCTestCase {
         XCTAssertEqual(preferred, 1)
     }
 
+    func testCandidateSelectorRejectsMaskCoveringMostImageEdges() {
+        let backgroundLikeMask = BackgroundMaskInstanceStats(
+            instance: 0,
+            areaFraction: 0.70,
+            centroidX: 0.50,
+            centroidY: 0.50,
+            minX: 0,
+            maxX: 1,
+            minY: 0,
+            maxY: 0.9
+        )
+        let garmentMask = BackgroundMaskInstanceStats(
+            instance: 1,
+            areaFraction: 0.20,
+            centroidX: 0.51,
+            centroidY: 0.49,
+            minX: 0.28,
+            maxX: 0.73,
+            minY: 0.16,
+            maxY: 0.85
+        )
+
+        XCTAssertEqual(
+            BackgroundMaskCandidateSelector.preferredCandidateIndex(from: [backgroundLikeMask, garmentMask]),
+            1
+        )
+    }
+
     func testMaskStatsReadGrayscaleInsteadOfOpaqueOutputAlpha() throws {
         let width = 4
         let height = 4

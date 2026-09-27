@@ -13,7 +13,7 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 9. On a physical iPhone, tap `TAKE PHOTO`, approve camera access, capture a clothing item, and choose `Use Photo`; on Simulator, confirm the unavailable camera action cannot be opened. Repeat the add flow with `PHOTO LIBRARY` or `CHOOSE FILE` to confirm existing imports still work.
 10. Confirm the stable `ADD PHOTO → CLEAN IMAGE → REVIEW DETAILS` indicator advances and the original preview appears.
 11. Confirm background removal starts without blocking the UI and the labeled review form remains visible.
-12. Confirm a cutout appears, or the failure state says `BACKGROUND REMOVAL FAILED — RETRY`.
+12. Confirm the cutout automatically fills its frame with a small margin and needs no approval step. If the mask is empty, tiny, or covers nearly the whole image, confirm `ORIGINAL ONLY` appears and the original can still be saved.
 13. With a photo where hands or arms sit beside the garment, confirm small detached body fragments are excluded; with a pair of shoes, confirm both pieces remain.
 14. With `PYXIS_AI_BASE_URL` configured, tap `AI DE-WRINKLE`, confirm the disclosure appears before the action, and verify the generated result replaces the cutout preview while the original remains stored.
 15. Build a fit, tap `TRY THIS FIT ON YOU`, choose a full-body photo, generate, and confirm the person and selected garments are sent only after tapping the generate button. Confirm offline/backend failures remain retryable.
@@ -30,6 +30,7 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 26. Save the item.
 27. Confirm the item appears in the grid with the same product-style code shown during Studio Snap.
 28. Scroll rapidly through a seeded closet and swipe outfit rows; confirm images appear without blocking scrolling or repeatedly flashing `NO IMAGE`.
+    Confirm previously saved transparent cutouts also fill their frames without changing their stored originals.
 29. Quit Pyxis, relaunch it, and confirm the item persists.
 30. Open `FILTERS`; select a closet, category, subtype, and color, then confirm each filter affects the grid and is represented by a removable chip. Tap `CLEAR ALL` and confirm search, closet, category, subtype, color, favorites, and sort all return to defaults.
 31. Leave the active search and filters applied, open an item, and return to Closet; confirm the state remains intact. Terminate and relaunch Pyxis; confirm Closet starts with the default unfiltered, newest-first catalog because filters are intentionally session-scoped.

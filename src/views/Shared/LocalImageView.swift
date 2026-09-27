@@ -1,8 +1,11 @@
 import SwiftUI
 import UIKit
 import ImageIO
+import CoreImage
 
 struct LocalImageView: View {
+    private static let framingContext = CIContext(options: [.cacheIntermediates: false])
+
     let url: URL?
     var contentMode: ContentMode = .fit
     var revision = 0
@@ -91,7 +94,10 @@ struct LocalImageView: View {
             return nil
         }
 
-        return UIImage(cgImage: image)
+        let displayedImage = url.deletingLastPathComponent().lastPathComponent == "Cutouts"
+            ? GarmentImageFraming.framedDisplayImage(image, using: framingContext)
+            : image
+        return UIImage(cgImage: displayedImage)
     }
 }
 
