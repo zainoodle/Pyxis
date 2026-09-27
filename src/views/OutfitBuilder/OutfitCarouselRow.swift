@@ -39,14 +39,14 @@ struct OutfitCarouselRow: View {
                 Button("PREV") {
                     advance(-1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .font(PyxisTypography.label)
                 .accessibilityLabel("Previous \(row.slot.title.lowercased())")
 
                 Button("NEXT") {
                     advance(1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .font(PyxisTypography.label)
                 .accessibilityLabel("Next \(row.slot.title.lowercased())")
             }

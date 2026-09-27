@@ -142,7 +142,7 @@ struct OutfitBuilderView: View {
                                 .frame(width: layout.width, height: layout.height)
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PyxisPressableStyle())
                         .position(x: layout.x, y: layout.y)
                         .accessibilityLabel("Remove \(piece.item.displayName ?? piece.item.subtype.rawValue) from fit")
                     }
@@ -189,7 +189,7 @@ struct OutfitBuilderView: View {
                 }
                 .buttonStyle(MinimalButtonStyle())
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     LazyHStack(spacing: 10) {
                         ForEach(availableItems) { item in
                             Button { select(item) } label: {
@@ -207,7 +207,7 @@ struct OutfitBuilderView: View {
                                 .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
                                 .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PyxisPressableStyle())
                             .accessibilityLabel("Add \(item.displayName ?? item.subtype.rawValue) to fit")
                         }
                         Button { isShowingAddFlow = true } label: {
@@ -223,11 +223,12 @@ struct OutfitBuilderView: View {
                             .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
                             .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PyxisPressableStyle())
                         .accessibilityLabel("Add a new closet item")
                     }
                     .padding(.vertical, 2)
                 }
+                .scrollIndicators(.hidden)
                 .scrollClipDisabled()
             }
         }
@@ -279,7 +280,7 @@ struct OutfitBuilderView: View {
             .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 9))
             .overlay { RoundedRectangle(cornerRadius: 9).stroke(PyxisColors.hairline, lineWidth: 1) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .disabled(selectedPieces.isEmpty)
         .accessibilityLabel("Try on selected fit, premium")
     }
@@ -294,7 +295,7 @@ struct OutfitBuilderView: View {
                 .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
                 .editorialGlow(cornerRadius: 9, strength: 1.3)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .disabled(!service.canSave(draft))
         .opacity(service.canSave(draft) ? 1 : 0.45)
         .accessibilityLabel("Save fit")

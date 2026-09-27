@@ -55,7 +55,7 @@ struct SearchAndFilterView: View {
                 "Search closet",
                 text: $filterState.searchText,
                 prompt: Text("SEARCH YOUR CLOSET")
-                    .foregroundColor(PyxisColors.secondaryText)
+                    .foregroundStyle(PyxisColors.secondaryText)
             )
                 .textFieldStyle(.plain)
                 .font(PyxisTypography.editorialBody)
@@ -75,7 +75,7 @@ struct SearchAndFilterView: View {
     }
 
     private var categoryStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 9) {
                 categoryButton("ALL", category: nil)
                 ForEach(ClothingCategory.allCases) { category in
@@ -85,6 +85,7 @@ struct SearchAndFilterView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 2)
         }
+        .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .padding(.vertical, -8)
     }
@@ -176,7 +177,7 @@ struct SearchAndFilterView: View {
     }
 
     private var activeFilters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: PyxisSpacing.sm) {
                 if !filterState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     ActiveFilterChip(title: "SEARCH: \(filterState.searchText)") {
@@ -220,6 +221,7 @@ struct SearchAndFilterView: View {
                 .accessibilityLabel("Clear all search and filters")
             }
         }
+        .scrollIndicators(.hidden)
     }
 }
 

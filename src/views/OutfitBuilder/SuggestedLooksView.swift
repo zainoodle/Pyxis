@@ -58,7 +58,7 @@ struct SuggestedLooksView: View {
                     .frame(minHeight: 52)
                     .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .accessibilityLabel("Save suggested look \(featured.title)")
 
                 if suggestions.count > 1 {
@@ -78,7 +78,7 @@ struct SuggestedLooksView: View {
                                         .foregroundStyle(PyxisColors.text)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PyxisPressableStyle())
                             .accessibilityLabel("Show suggested look \(look.title)")
                         }
                     }

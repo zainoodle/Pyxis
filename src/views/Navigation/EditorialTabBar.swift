@@ -3,6 +3,7 @@ import SwiftUI
 struct EditorialTabBar: View {
     @Binding var selection: AppSection
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var underline
 
     var body: some View {
@@ -42,7 +43,7 @@ struct EditorialTabBar: View {
         }
         .padding(.horizontal, 8)
         .padding(.top, 9)
-        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: selection)
+        .animation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.34, dampingFraction: 0.86), value: selection)
         .background(PyxisColors.background.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) {
             Rectangle().fill(PyxisColors.hairline).frame(height: 1)

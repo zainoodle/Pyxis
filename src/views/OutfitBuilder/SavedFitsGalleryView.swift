@@ -99,7 +99,7 @@ struct SavedFitsGalleryView: View {
                 .font(.system(size: 18, weight: .ultraLight))
                 .accessibilityHidden(true)
             TextField("SEARCH FITS", text: $query.searchText,
-                      prompt: Text("SEARCH FITS").foregroundColor(PyxisColors.secondaryText))
+                      prompt: Text("SEARCH FITS").foregroundStyle(PyxisColors.secondaryText))
                 .font(PyxisTypography.editorialBody)
                 .tracking(1.8)
                 .textFieldStyle(.plain)
@@ -117,7 +117,7 @@ struct SavedFitsGalleryView: View {
     }
 
     private var filters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 9) {
                 filterChip("ALL", active: !query.favoritesOnly && query.color == nil && query.season == nil) {
                     query.favoritesOnly = false
@@ -144,6 +144,7 @@ struct SavedFitsGalleryView: View {
             }
             .padding(.vertical, 8)
         }
+        .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .padding(.vertical, -8)
     }

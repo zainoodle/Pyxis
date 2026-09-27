@@ -27,7 +27,7 @@ struct SavedFitsStrip: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, PyxisSpacing.md)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: PyxisSpacing.md) {
                         ForEach(outfits.prefix(12)) { outfit in
                             Button {
@@ -39,12 +39,14 @@ struct SavedFitsStrip: View {
                                     isRecent: outfit.id == recentOutfitID
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PyxisPressableStyle())
                             .transition(.move(edge: .trailing).combined(with: .opacity))
+                            .accessibilityLabel("Open \(outfit.name ?? "saved fit")")
                         }
                     }
                     .animation(.easeOut(duration: 0.24), value: outfits.map(\.id))
                 }
+                .scrollIndicators(.hidden)
             }
         }
     }

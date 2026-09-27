@@ -97,6 +97,5 @@ struct ProfileView: View {
         }
         .frame(minHeight: 60)
         .contentShape(Rectangle())
-        .buttonStyle(.plain)
     }
 }

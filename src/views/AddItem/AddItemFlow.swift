@@ -39,7 +39,7 @@ struct AddItemFlow: View {
                     Button("CLOSE") {
                         dismiss()
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PyxisPressableStyle())
                     .keyboardShortcut(.cancelAction)
                     .accessibilityLabel("Close add item")
                 }

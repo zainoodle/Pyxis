@@ -14,6 +14,7 @@ summary: Translate the charcoal editorial design into the light palette so both 
 - Render garment and outfit compositions on the adaptive `imageCanvas`/`galleryCanvas` plates so light garments stay visible on light surfaces.
 - Extend `PyxisPressableStyle` and selection animations to fit tiles, gallery chips, sort controls, carousel items, and appearance options.
 - Simplify the Fits page: remove the header manifesto, the duplicate filter menu inside search, the duplicated FAVORITES sort action, suggested-look summary/tags copy, and verbose empty-state text so the gallery reads as a lookbook, not a manual.
+- Audit pass: `foregroundStyle` prompts, `scrollIndicators(.hidden)`, 44pt minimum hit areas on chips and sort controls, reduce-motion fallback for the tab underline, press feedback on all remaining plain buttons, and a VoiceOver label on saved-fit cards.
 
 ## Verification
 
