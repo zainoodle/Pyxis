@@ -144,6 +144,13 @@ struct AddItemFlow: View {
 
             statusView
 
+            if let message = viewModel.processingMessage {
+                Text(message.uppercased())
+                    .font(PyxisTypography.label)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+
             if let aiError = viewModel.aiEnhancementError {
                 InlineErrorMessage(message: aiError)
             }

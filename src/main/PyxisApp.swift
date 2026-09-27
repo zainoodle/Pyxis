@@ -39,6 +39,9 @@ private struct StartupHostView: View {
             do {
                 modelContainer = try SwiftDataContainer.makeAppContainer()
                 didFail = false
+                #if DEBUG
+                await DebugCutoutDiagnosticService.runIfRequested()
+                #endif
             } catch {
                 didFail = true
             }

@@ -1,0 +1,16 @@
+{
+  "repository": "apple/coreml-sam2-tiny",
+  "revision": "6d04587b4937500c26afbdeeb9777a336efaeef6",
+  "license": "Apache-2.0",
+  "sha256": {
+    "SAM2TinyMaskDecoderFLOAT16.mlpackage/Manifest.json": "33ba96c9c6babca854fb1820917f73d0262432a096184ccae29f58dbb9c8ed62",
+    "SAM2TinyPromptEncoderFLOAT16.mlpackage/Manifest.json": "cb078094eda6773fbdb90ca27e44c7e6525d6c69273376a63fe7db596c7de676",
+    "SAM2TinyImageEncoderFLOAT16.mlpackage/Manifest.json": "9553062890eb4aed121c10e389ee07f2f8b278cd2f13807f88ccc6214a339cfa",
+    "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel": "24bd23b9267c8ccc172a5370bc3507d4e11f7a33ba14d529dfd904e7ebf50847",
+    "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "75d30eb00ad294872463b07efbfa17b536ae9ec4168f9b78f12a4fb57245ee94",
+    "SAM2TinyPromptEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel": "3ef4f5a82aacfeaa10d39be293116ed9a00bd4bacf48bd1f6fb8c1bf89714ec8",
+    "SAM2TinyPromptEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "9a44d58c9fdf3026b58034183eb414b64e83139768d6ee6e206a75a5599c57ce",
+    "SAM2TinyImageEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel": "95baf50c6e4b7ba659c962b7badb311d9da0ba1b51169cfd9559497182dd846d",
+    "SAM2TinyImageEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "a773aad6b0a28f906b5d28a8141dbf639ebcb57a48323ec60f3b1f640d91b1ed"
+  }
+}

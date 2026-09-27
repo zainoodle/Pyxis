@@ -57,10 +57,9 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
             do {
                 let originalPath = try imageStorage.saveOriginal(from: originalURL, itemID: itemID)
                 let originalStoredURL = imageStorage.url(for: originalPath)
-                let thumbnailPath = try? imageStorage.makeThumbnail(from: originalStoredURL, itemID: itemID)
 
                 do {
-                    let cutoutData = try Self.makeTransparentCutoutPNG(
+                    let cutoutData = try await Self.makeTransparentCutoutPNG(
                         from: originalStoredURL,
                         ciContext: ciContext
                     )
@@ -73,14 +72,18 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                     return BackgroundRemovalResult(
                         originalPath: originalPath,
                         cutoutPath: cutoutPath,
-                        thumbnailPath: thumbnailFromCutout ?? thumbnailPath,
+                        thumbnailPath: thumbnailFromCutout ?? Self.fallbackThumbnail(
+                            from: originalStoredURL, itemID: itemID, storage: imageStorage
+                        ),
                         status: .succeeded
                     )
                 } catch {
                     return BackgroundRemovalResult(
                         originalPath: originalPath,
                         cutoutPath: nil,
-                        thumbnailPath: thumbnailPath,
+                        thumbnailPath: Self.fallbackThumbnail(
+                            from: originalStoredURL, itemID: itemID, storage: imageStorage
+                        ),
                         status: .failed,
                         errorMessage: BackgroundRemovalCopy.removalFailed
                     )
@@ -97,12 +100,27 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         }.value
     }
 
-    private static func makeTransparentCutoutPNG(
+    private static func fallbackThumbnail(
+        from originalURL: URL,
+        itemID: UUID,
+        storage: ImageStorageService
+    ) -> String? {
+        let existingURL = storage.thumbnailsURL.appendingPathComponent("\(itemID.uuidString).png")
+        // A rejected improvement must not replace the thumbnail of the last accepted cutout.
+        if FileManager.default.fileExists(atPath: existingURL.path) {
+            return storage.relativePath(for: existingURL)
+        }
+        return try? storage.makeThumbnail(from: originalURL, itemID: itemID)
+    }
+
+    static func makeTransparentCutoutPNG(
         from imageURL: URL,
         ciContext: CIContext
-    ) throws -> Data {
+    ) async throws -> Data {
         let inputImage = try orientationCorrectedImage(from: imageURL)
-        let maskImage = try bestForegroundMask(for: inputImage, ciContext: ciContext)
+        // Vision supplies only approximate garment locations. SAM produces the final mask.
+        let hint = try? bestForegroundMask(for: inputImage, ciContext: ciContext)
+        let maskImage = try await SAMGarmentSegmenter.shared.mask(for: inputImage, foregroundHint: hint)
         let transparentBackground = CIImage(color: .clear).cropped(to: inputImage.extent)
 
         let filter = CIFilter.blendWithMask()
@@ -111,9 +129,11 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         filter.maskImage = maskImage
 
         guard let output = filter.outputImage,
+              let framing = GarmentImageFraming.analyze(output, using: ciContext),
+              GarmentImageFraming.acceptsAutomaticCutout(framing),
               let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
               let data = ciContext.pngRepresentation(
-                of: output,
+                of: output.cropped(to: framing.frameRect),
                 format: .RGBA8,
                 colorSpace: colorSpace
               ) else {
@@ -123,7 +143,7 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         return data
     }
 
-    private static func bestForegroundMask(
+    static func bestForegroundMask(
         for inputImage: CIImage,
         ciContext: CIContext
     ) throws -> CIImage {
@@ -132,42 +152,41 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
             (.down, .down)
         ]
 
-        let candidates = try orientations.map { orientation in
-            let visionImage = inputImage.oriented(orientation.image)
-            let request = VNGenerateForegroundInstanceMaskRequest()
-            let handler = VNImageRequestHandler(ciImage: visionImage)
-            try handler.perform([request])
+        let candidates = orientations.compactMap { orientation -> BackgroundMaskCandidate? in
+            do {
+                let visionImage = inputImage.oriented(orientation.image)
+                let request = VNGenerateForegroundInstanceMaskRequest()
+                let handler = VNImageRequestHandler(ciImage: visionImage)
+                try handler.perform([request])
 
-            guard let observation = request.results?.first else {
-                throw BackgroundRemovalError.noForegroundMask
-            }
-
-            let selectedInstances = try selectedForegroundInstances(
-                from: observation,
-                handler: handler,
-                ciContext: ciContext
-            )
-            let maskBuffer = try observation.generateScaledMaskForImage(
-                forInstances: selectedInstances,
-                from: handler
-            )
-            let restoredMask = CIImage(cvPixelBuffer: maskBuffer).oriented(orientation.inverse)
-            let normalizedMask = restoredMask
-                .transformed(
-                    by: CGAffineTransform(
-                        translationX: -restoredMask.extent.origin.x,
-                        y: -restoredMask.extent.origin.y
-                    )
+                guard let observation = request.results?.first else { return nil }
+                let selectedInstances = try selectedForegroundInstances(
+                    from: observation,
+                    handler: handler,
+                    ciContext: ciContext
                 )
-                .cropped(to: inputImage.extent)
-            guard let stats = BackgroundMaskInstanceStats(
-                instance: candidatesIndex(for: orientation.image),
-                maskImage: normalizedMask,
-                ciContext: ciContext
-            ) else {
-                throw BackgroundRemovalError.noForegroundMask
+                let maskBuffer = try observation.generateScaledMaskForImage(
+                    forInstances: selectedInstances,
+                    from: handler
+                )
+                let restoredMask = CIImage(cvPixelBuffer: maskBuffer).oriented(orientation.inverse)
+                let normalizedMask = restoredMask
+                    .transformed(
+                        by: CGAffineTransform(
+                            translationX: -restoredMask.extent.origin.x,
+                            y: -restoredMask.extent.origin.y
+                        )
+                    )
+                    .cropped(to: inputImage.extent)
+                guard let stats = BackgroundMaskInstanceStats(
+                    instance: candidatesIndex(for: orientation.image),
+                    maskImage: normalizedMask,
+                    ciContext: ciContext
+                ) else { return nil }
+                return BackgroundMaskCandidate(maskImage: normalizedMask, stats: stats)
+            } catch {
+                return nil
             }
-            return BackgroundMaskCandidate(maskImage: normalizedMask, stats: stats)
         }
 
         guard let bestIndex = BackgroundMaskCandidateSelector.preferredCandidateIndex(
@@ -361,17 +380,22 @@ enum BackgroundMaskCandidateSelector {
             return 0
         }
 
-        let centerDistance = abs(stats.centroidX - 0.5)
-        let centerWeight = max(0.45, 1 - centerDistance)
-        let usefulArea = min(stats.areaFraction, 0.65)
-        let usefulHeight = min(1, max(0.35, stats.height))
-        let touchesMultipleEdges = [
+        let boundsArea = max(stats.width * stats.height, 0.0001)
+        let touchingEdges = [
             stats.minX < 0.01,
             stats.maxX > 0.99,
             stats.minY < 0.01,
             stats.maxY > 0.99
-        ].filter { $0 }.count >= 2
-        let edgeWeight = touchesMultipleEdges ? 0.45 : 1
+        ].filter { $0 }.count
+        guard stats.areaFraction / boundsArea >= 0.08, touchingEdges < 3 else {
+            return 0
+        }
+
+        let centerDistance = abs(stats.centroidX - 0.5)
+        let centerWeight = max(0.45, 1 - centerDistance)
+        let usefulArea = min(stats.areaFraction, 0.65)
+        let usefulHeight = min(1, max(0.35, stats.height))
+        let edgeWeight = touchingEdges >= 2 ? 0.45 : 1
         return usefulArea * centerWeight * (0.7 + usefulHeight * 0.3) * edgeWeight
     }
 }
@@ -455,11 +479,14 @@ public final class FailingBackgroundRemovalService: BackgroundRemovalServiceProt
 
 public enum BackgroundRemovalError: LocalizedError {
     case couldNotLoadImage
+    case modelUnavailable
     case noForegroundMask
     case couldNotEncodeCutout
 
     public var errorDescription: String? {
         switch self {
+        case .modelUnavailable:
+            return "The garment cutout model could not be loaded."
         case .couldNotLoadImage:
             return "The image could not be loaded."
         case .noForegroundMask:
