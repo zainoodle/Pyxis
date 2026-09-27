@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PyxisRootView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedSection: AppSection = .closet
     @State private var builderFocusItemID: UUID?
     @State private var isShowingBuilder = false
@@ -42,11 +41,9 @@ struct PyxisRootView: View {
             .tag(AppSection.profile)
         }
         .tint(PyxisColors.text)
-        .toolbar(colorScheme == .dark ? .hidden : .visible, for: .tabBar)
+        .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if colorScheme == .dark {
-                EditorialTabBar(selection: $selectedSection)
-            }
+            EditorialTabBar(selection: $selectedSection)
         }
     }
 

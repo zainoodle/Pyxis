@@ -10,15 +10,21 @@ private struct EditorialGlow: ViewModifier {
 
     func body(content: Content) -> some View {
         content.background {
-            if colorScheme == .dark, contrast != .increased, !reduceTransparency {
+            if contrast != .increased, !reduceTransparency {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.24 * strength), lineWidth: 2)
+                    .stroke(glowColor, lineWidth: 2)
                     .blur(radius: 7)
                     .padding(-1)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
         }
+    }
+
+    private var glowColor: Color {
+        colorScheme == .dark
+            ? .white.opacity(0.24 * strength)
+            : PyxisColors.hairline.opacity(0.5 * strength)
     }
 }
 
@@ -30,9 +36,9 @@ private struct EditorialCanvas: ViewModifier {
         content.background {
             PyxisColors.background
                 .overlay(alignment: .topLeading) {
-                    if colorScheme == .dark, !reduceTransparency {
+                    if !reduceTransparency {
                         RadialGradient(
-                            colors: [.white.opacity(0.055), .clear],
+                            colors: [canvasWash, .clear],
                             center: .topLeading,
                             startRadius: 0,
                             endRadius: 260
@@ -41,6 +47,10 @@ private struct EditorialCanvas: ViewModifier {
                 }
                 .ignoresSafeArea()
         }
+    }
+
+    private var canvasWash: Color {
+        colorScheme == .dark ? .white.opacity(0.055) : PyxisColors.text.opacity(0.05)
     }
 }
 

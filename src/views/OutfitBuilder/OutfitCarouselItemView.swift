@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct OutfitCarouselItemView: View {
-    @Environment(\.colorScheme) private var colorScheme
     let item: ClosetItem
     let isSelected: Bool
     let action: () -> Void
@@ -19,7 +18,7 @@ struct OutfitCarouselItemView: View {
                 LocalImageView(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
                     .padding(.horizontal, PyxisSpacing.sm)
-                    .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
+                    .background(PyxisColors.imageCanvas,
                                 in: RoundedRectangle(cornerRadius: 8))
 
                 ItemCodeLabel(code: item.itemCode)
@@ -32,7 +31,7 @@ struct OutfitCarouselItemView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .accessibilityLabel("\(item.itemCode) \(item.displayName ?? item.subtype.rawValue)")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])

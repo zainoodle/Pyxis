@@ -5,7 +5,6 @@ import UIKit
 #endif
 
 struct OutfitBuilderView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
@@ -258,7 +257,7 @@ struct OutfitBuilderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, colorScheme == .dark ? 48 : 12)
+        .padding(.bottom, 48)
         .background(PyxisColors.background)
         .overlay(alignment: .top) { Rectangle().fill(PyxisColors.hairline).frame(height: 1) }
     }
