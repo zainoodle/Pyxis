@@ -27,14 +27,7 @@ struct SavedFitsGalleryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            PrimaryPageHeader(title: "FITS") {
-                Text("LOCAL FIRST\nYOUR STYLE\nALWAYS YOURS")
-                    .font(PyxisTypography.editorialMicro)
-                    .tracking(1.1)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .multilineTextAlignment(.leading)
-                    .lineSpacing(2)
-            }
+            PrimaryPageHeader(title: "FITS")
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -47,9 +40,9 @@ struct SavedFitsGalleryView: View {
                     }
 
                     if savedOutfits.isEmpty {
-                        emptyState("NO SAVED FITS", detail: "CREATE AN OUTFIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
+                        emptyState("NO SAVED FITS")
                     } else if visibleOutfits.isEmpty {
-                        emptyState("NO MATCHING FITS", detail: "TRY ANOTHER SEARCH OR CLEAR YOUR FILTERS")
+                        emptyState("NO MATCHING FITS")
                         Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
                             .buttonStyle(MinimalButtonStyle())
                     } else {
@@ -111,21 +104,10 @@ struct SavedFitsGalleryView: View {
                 .tracking(1.8)
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
-            Menu {
-                Button("FAVORITES ONLY") { query.favoritesOnly.toggle() }
-                Button("RECENT FIRST") { query.sort = .recent }
-                Button("MOST WORN FIRST") { query.sort = .mostWorn }
-                Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 19, weight: .ultraLight))
-                    .frame(width: 36, height: 42)
-            }
-            .accessibilityLabel("More fit filters")
         }
         .foregroundStyle(PyxisColors.text)
         .padding(.leading, 16)
-        .padding(.trailing, 8)
+        .padding(.trailing, 16)
         .frame(height: 54)
         .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 11))
         .overlay {
@@ -170,10 +152,6 @@ struct SavedFitsGalleryView: View {
         HStack(spacing: 22) {
             sortButton("RECENT", sort: .recent)
             sortButton("MOST WORN", sort: .mostWorn)
-            Button("FAVORITES") { query.favoritesOnly.toggle() }
-                .foregroundStyle(query.favoritesOnly ? PyxisColors.text : PyxisColors.inactiveText)
-                .font(PyxisTypography.editorialLabel)
-                .tracking(1.1)
             Spacer(minLength: 0)
             Text("\(visibleOutfits.count) FITS")
                 .font(PyxisTypography.editorialMicro)
@@ -254,12 +232,12 @@ struct SavedFitsGalleryView: View {
         }
     }
 
-    private func emptyState(_ title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            Text(title).font(PyxisTypography.title).foregroundStyle(PyxisColors.text)
-            Text(detail).font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
-        }
-        .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
+    private func emptyState(_ title: String) -> some View {
+        Text(title)
+            .font(PyxisTypography.editorialLabel)
+            .tracking(1.5)
+            .foregroundStyle(PyxisColors.secondaryText)
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
     }
 }
 

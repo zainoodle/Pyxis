@@ -26,18 +26,11 @@ struct SuggestedLooksView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("PICKED FOR YOU")
-                    .font(PyxisTypography.editorialTitle)
-                    .tracking(2)
-                    .foregroundStyle(PyxisColors.text)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Text("YOUR CLOSET / NEW COMBINATIONS")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .multilineTextAlignment(.trailing)
-            }
+            Text("PICKED FOR YOU")
+                .font(PyxisTypography.editorialLabel)
+                .tracking(1.5)
+                .foregroundStyle(PyxisColors.secondaryText)
+                .accessibilityAddTraits(.isHeader)
 
             if let featured {
                 OutfitFlatLayView(items: featured.items)
@@ -47,32 +40,10 @@ struct SuggestedLooksView: View {
                     }
                     .accessibilityLabel("Suggested look made from \(featured.items.map { $0.displayName ?? $0.itemCode }.joined(separator: ", "))")
 
-                HStack(alignment: .top, spacing: PyxisSpacing.md) {
-                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        Text(featured.title)
-                            .font(PyxisTypography.editorialTitle)
-                            .tracking(1.5)
-                            .foregroundStyle(PyxisColors.text)
-                        Text(featured.summary)
-                            .font(PyxisTypography.body)
-                            .foregroundStyle(PyxisColors.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: PyxisSpacing.sm) {
-                        ForEach(featured.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(PyxisTypography.label)
-                                .foregroundStyle(PyxisColors.secondaryText)
-                                .padding(.horizontal, PyxisSpacing.md)
-                                .padding(.vertical, PyxisSpacing.sm)
-                                .background(PyxisColors.field, in: Capsule())
-                        }
-                    }
-                }
+                Text(featured.title)
+                    .font(PyxisTypography.editorialTitle)
+                    .tracking(1.5)
+                    .foregroundStyle(PyxisColors.text)
 
                 Button { save(featured) } label: {
                     HStack {
@@ -113,12 +84,11 @@ struct SuggestedLooksView: View {
                     }
                 }
             } else {
-                Text(hasEnoughPieces
-                     ? "ALL CURRENT COMBINATIONS ARE SAVED. ADD A PIECE TO UNLOCK NEW LOOKS."
-                     : "ADD A TOP, BOTTOM, AND SHOES, OR A ONE-PIECE AND SHOES, TO GET LOOKS.")
-                    .font(PyxisTypography.label)
+                Text(hasEnoughPieces ? "NO NEW LOOKS" : "ADD MORE PIECES TO UNLOCK LOOKS")
+                    .font(PyxisTypography.editorialLabel)
+                    .tracking(1.5)
                     .foregroundStyle(PyxisColors.secondaryText)
-                    .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
             }
 
             if let message {
