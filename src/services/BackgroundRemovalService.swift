@@ -59,7 +59,7 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
                 let originalStoredURL = imageStorage.url(for: originalPath)
 
                 do {
-                    let cutoutData = try Self.makeTransparentCutoutPNG(
+                    let cutoutData = try await Self.makeTransparentCutoutPNG(
                         from: originalStoredURL,
                         ciContext: ciContext
                     )
@@ -113,12 +113,14 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         return try? storage.makeThumbnail(from: originalURL, itemID: itemID)
     }
 
-    private static func makeTransparentCutoutPNG(
+    static func makeTransparentCutoutPNG(
         from imageURL: URL,
         ciContext: CIContext
-    ) throws -> Data {
+    ) async throws -> Data {
         let inputImage = try orientationCorrectedImage(from: imageURL)
-        let maskImage = try bestForegroundMask(for: inputImage, ciContext: ciContext)
+        // Vision supplies only approximate garment locations. SAM produces the final mask.
+        let hint = try? bestForegroundMask(for: inputImage, ciContext: ciContext)
+        let maskImage = try await SAMGarmentSegmenter.shared.mask(for: inputImage, foregroundHint: hint)
         let transparentBackground = CIImage(color: .clear).cropped(to: inputImage.extent)
 
         let filter = CIFilter.blendWithMask()
@@ -141,7 +143,7 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         return data
     }
 
-    private static func bestForegroundMask(
+    static func bestForegroundMask(
         for inputImage: CIImage,
         ciContext: CIContext
     ) throws -> CIImage {
@@ -477,11 +479,14 @@ public final class FailingBackgroundRemovalService: BackgroundRemovalServiceProt
 
 public enum BackgroundRemovalError: LocalizedError {
     case couldNotLoadImage
+    case modelUnavailable
     case noForegroundMask
     case couldNotEncodeCutout
 
     public var errorDescription: String? {
         switch self {
+        case .modelUnavailable:
+            return "The garment cutout model could not be loaded."
         case .couldNotLoadImage:
             return "The image could not be loaded."
         case .noForegroundMask:
