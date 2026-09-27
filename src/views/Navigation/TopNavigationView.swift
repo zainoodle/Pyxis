@@ -34,7 +34,7 @@ struct TopNavigationView: View {
             Button(action: addAction) {
                 UppercaseNavLabel(title: "New", isActive: false)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PyxisPressableStyle())
             .keyboardShortcut("n", modifiers: .command)
             .accessibilityLabel("Add new item")
 
@@ -49,7 +49,7 @@ struct TopNavigationView: View {
                         isActive: filterState.hasActiveFilters
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .accessibilityLabel("Open closet filters")
                 .accessibilityValue(
                     filterState.activeFilterCount == 0
@@ -184,7 +184,7 @@ private struct ClosetFilterSheet: View {
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .accessibilityLabel("Close filters")
     }
 
@@ -223,8 +223,9 @@ private struct FilterOptionButton: View {
                     Rectangle()
                         .stroke(isSelected ? PyxisColors.text : PyxisColors.hairline, lineWidth: 1)
                 }
+                .animation(.easeOut(duration: 0.18), value: isSelected)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }

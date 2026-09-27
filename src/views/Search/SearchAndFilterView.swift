@@ -111,8 +111,9 @@ struct SearchAndFilterView: View {
                         .stroke(PyxisColors.hairline, lineWidth: 1)
                 }
                 .editorialGlow(cornerRadius: 9, strength: selected ? 1.25 : 0.55)
+                .animation(.easeOut(duration: 0.18), value: selected)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -158,6 +159,7 @@ struct SearchAndFilterView: View {
             HStack(spacing: PyxisSpacing.xs) {
                 Image(systemName: filterState.favoritesOnly ? "heart.fill" : "heart")
                     .font(.system(size: 11, weight: .semibold))
+                    .contentTransition(.symbolEffect(.replace))
 
                 Text("FAVORITES")
                     .font(PyxisTypography.label)
@@ -175,8 +177,9 @@ struct SearchAndFilterView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(filterState.favoritesOnly ? PyxisColors.text : PyxisColors.hairline, lineWidth: 1)
             }
+            .animation(.easeOut(duration: 0.18), value: filterState.favoritesOnly)
         }
-            .buttonStyle(.plain)
+            .buttonStyle(PyxisPressableStyle())
             .editorialGlow(cornerRadius: 8, strength: filterState.favoritesOnly ? 1.1 : 0.4)
             .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
             .accessibilityLabel("Show favorites only")
@@ -231,7 +234,7 @@ struct SearchAndFilterView: View {
                     filterState.clearAll()
                 }
                 .font(PyxisTypography.label)
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .frame(minHeight: 44)
                 .accessibilityLabel("Clear all search and filters")
             }
@@ -258,7 +261,7 @@ private struct ActiveFilterChip: View {
             .overlay { Capsule().stroke(PyxisColors.hairline, lineWidth: 1) }
             .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PyxisPressableStyle())
         .accessibilityLabel("Remove \(title) filter")
     }
 }

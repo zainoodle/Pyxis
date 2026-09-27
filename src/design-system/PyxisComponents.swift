@@ -49,8 +49,19 @@ struct MinimalButtonStyle: ButtonStyle {
                     .stroke(PyxisColors.hairline, lineWidth: 1)
             }
             .editorialGlow(cornerRadius: 8, strength: configuration.isPressed ? 0.4 : 0.7)
-            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .animation(.snappy(duration: 0.16), value: configuration.isPressed)
             .contentShape(Rectangle())
+    }
+}
+
+struct PyxisPressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .animation(.snappy(duration: 0.16), value: configuration.isPressed)
     }
 }
 

@@ -11,6 +11,7 @@ summary: Create outfits within Fits using a visual composition of garments from 
 - Replace the free builder's avatar stage with a garment composition and a horizontal tray of real closet images. The initial fit chooses a top, bottom, and shoes when available; layers and accessories are optional.
 - Keep one Save Fit action. Saving returns to the Fits gallery. The Try On Pro action opens the existing try-on flow with its purchase and photo-consent steps.
 - Preserve local outfit records and image storage. No migration or new photo upload path is introduced.
+- Add shared press feedback (PyxisPressableStyle: scale + snappy timing) to grid tiles, category chips, filter options, nav actions, and the tab bar; animate selection fills, the favorites heart morph, the sliding tab underline, and symmetric saved-prompt dismissal.
 
 ## Verification
 

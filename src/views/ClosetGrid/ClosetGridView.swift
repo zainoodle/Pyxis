@@ -35,10 +35,14 @@ struct ClosetGridView: View {
             if let savedItemPrompt {
                 SavedItemBuildPrompt(item: savedItemPrompt) {
                     let itemID = savedItemPrompt.id
-                    self.savedItemPrompt = nil
+                    withAnimation(.smooth(duration: 0.2)) {
+                        self.savedItemPrompt = nil
+                    }
                     buildAction(itemID)
                 } dismissAction: {
-                    self.savedItemPrompt = nil
+                    withAnimation(.smooth(duration: 0.2)) {
+                        self.savedItemPrompt = nil
+                    }
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -69,7 +73,7 @@ struct ClosetGridView: View {
         }
         .sheet(isPresented: $isShowingAddFlow) {
             AddItemFlow(initialClosetID: viewModel.filterState.closetID) { item in
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.smooth(duration: 0.25)) {
                     savedItemPrompt = item
                 }
             }
@@ -134,7 +138,7 @@ struct ClosetGridView: View {
                         } label: {
                             ClosetGridItemView(item: item)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PyxisPressableStyle())
                     }
                 }
                 .padding(.top, PyxisSpacing.md)
@@ -199,7 +203,7 @@ private struct SavedItemBuildPrompt: View {
             }
 
             Button("READY", action: dismissAction)
-                .buttonStyle(.plain)
+                .buttonStyle(PyxisPressableStyle())
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
         }
