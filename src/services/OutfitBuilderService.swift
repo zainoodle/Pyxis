@@ -68,7 +68,8 @@ public struct OutfitBuilderService {
 
     public func defaultSelections(for rows: [OutfitRow]) -> [OutfitSlot: Int] {
         var selections = Dictionary(uniqueKeysWithValues: rows.compactMap { row in
-            row.items.isEmpty ? nil : (row.slot, 0)
+            row.items.isEmpty || ![.top, .bottom, .footwear, .onePiece].contains(row.slot)
+                ? nil : (row.slot, 0)
         })
         let hasSeparates = selections[.top] != nil && selections[.bottom] != nil
         if hasSeparates {
