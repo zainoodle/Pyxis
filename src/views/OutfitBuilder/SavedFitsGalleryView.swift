@@ -40,7 +40,7 @@ struct SavedFitsGalleryView: View {
         VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
             PrimaryPageHeader {
                 if let buildAction {
-                    Button("BUILD FIT", action: buildAction)
+                    Button("CREATE OUTFIT", action: buildAction)
                         .buttonStyle(MinimalButtonStyle())
                 }
             }
@@ -72,7 +72,7 @@ struct SavedFitsGalleryView: View {
                     }
 
                     if savedOutfits.isEmpty {
-                        emptyState("NO SAVED FITS", detail: "BUILD A FIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
+                        emptyState("NO SAVED FITS", detail: "CREATE AN OUTFIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
                     } else if visibleOutfits.isEmpty {
                         emptyState("NO MATCHING FITS", detail: "TRY ANOTHER SEARCH OR CLEAR YOUR FILTERS")
                         Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
@@ -120,7 +120,7 @@ struct SavedFitsGalleryView: View {
                     }
 
                     if savedOutfits.isEmpty {
-                        emptyState("NO SAVED FITS", detail: "BUILD A FIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
+                        emptyState("NO SAVED FITS", detail: "CREATE AN OUTFIT FROM YOUR CLOSET TO START YOUR LOOKBOOK")
                     } else if visibleOutfits.isEmpty {
                         emptyState("NO MATCHING FITS", detail: "TRY ANOTHER SEARCH OR CLEAR YOUR FILTERS")
                         Button("CLEAR FILTERS") { query = OutfitGalleryQuery() }
@@ -150,7 +150,7 @@ struct SavedFitsGalleryView: View {
                 Button(action: buildAction) {
                     HStack {
                         Spacer()
-                        Text("BUILD FIT")
+                        Text("CREATE OUTFIT")
                             .font(PyxisTypography.editorialBody)
                             .tracking(2.5)
                         Spacer()

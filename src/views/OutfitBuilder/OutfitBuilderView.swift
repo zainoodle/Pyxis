@@ -1,26 +1,21 @@
 import SwiftData
 import SwiftUI
-import PhotosUI
 #if canImport(UIKit)
 import UIKit
 #endif
 
 struct OutfitBuilderView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
+
     @State private var selections: [OutfitSlot: Int] = [:]
-    @State private var notes = ""
-    @State private var isShowingAddFlow = false
-    @State private var selectedItem: ClosetItem?
-    @State private var pendingAddSlot: OutfitSlot?
     @State private var focusedItemID: UUID?
-    @State private var savedConfirmationID: UUID?
+    @State private var isShowingAddFlow = false
+    @State private var isShowingTryOn = false
     @State private var saveErrorMessage: String?
-    @State private var isShowingAITryOn = false
-    @State private var stagePhotoItem: PhotosPickerItem?
-    @State private var stagePhoto: UIImage?
 
     private let service = OutfitBuilderService()
     private let initialItemID: UUID?
@@ -30,236 +25,318 @@ struct OutfitBuilderView: View {
         self._focusedItemID = State(initialValue: initialItemID)
     }
 
+    private var activeItems: [ClosetItem] { items.filter { !$0.isDeleted } }
+
     private var rows: [OutfitRow] {
-        service.requiredRows(from: items) + service.optionalRows(from: items).filter { !$0.items.isEmpty }
+        service.requiredRows(from: activeItems) + service.optionalRows(from: activeItems).filter { !$0.items.isEmpty }
     }
 
-    private var draft: OutfitDraft {
-        service.draft(from: rows, selections: selections)
-    }
+    private var draft: OutfitDraft { service.draft(from: rows, selections: selections) }
 
     private var selectedPieces: [(slot: OutfitSlot, item: ClosetItem)] {
         rows.compactMap { row in
-            guard let selectedIndex = selections[row.slot], row.items.indices.contains(selectedIndex) else {
-                return nil
-            }
-            return (slot: row.slot, item: row.items[selectedIndex])
+            guard let index = selections[row.slot], row.items.indices.contains(index) else { return nil }
+            return (slot: row.slot, item: row.items[index])
+        }
+    }
+
+    private var availableItems: [ClosetItem] {
+        let selectedIDs = Set(selectedPieces.map { $0.item.id })
+        let order: [OutfitSlot] = [.accessory, .outerwear, .top, .bottom, .footwear, .onePiece]
+        return order.flatMap { slot in
+            rows.first { $0.slot == slot }?.items.filter { !selectedIDs.contains($0.id) } ?? []
         }
     }
 
     var body: some View {
-        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
-            PrimaryPageHeader(title: "BUILD")
+        VStack(spacing: 0) {
+            header
 
-            if items.isEmpty {
-                VStack(spacing: PyxisSpacing.md) {
-                    Text("YOUR CLOSET IS EMPTY")
-                        .font(PyxisTypography.body)
-                        .foregroundStyle(PyxisColors.secondaryText)
-
-                    Button("ADD YOUR FIRST ITEM") {
-                        isShowingAddFlow = true
-                    }
-                    .buttonStyle(MinimalButtonStyle())
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, PyxisSpacing.xl)
-            } else {
-                ScrollView {
-                    VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
-                        ClosetReadinessView(rows: rows, draft: draft)
-
-                        OutfitStageView(
-                            selectedPieces: selectedPieces,
-                            photo: stagePhoto,
-                            photoItem: $stagePhotoItem
-                        )
-
-                        Button("OUTFIT ON YOU") { isShowingAITryOn = true }
-                            .buttonStyle(MinimalButtonStyle())
-                            .accessibilityLabel("Try clothing on your photo")
-
-                        ForEach(rows) { row in
-                            if row.items.isEmpty {
-                                MissingOutfitRow(slot: row.slot) {
-                                    pendingAddSlot = row.slot
-                                    isShowingAddFlow = true
-                                }
-                            } else {
-                                OutfitCarouselRow(
-                                    row: row,
-                                    selectedIndex: selections[row.slot],
-                                    selectIndex: { select(row.slot, index: $0) },
-                                    advance: { offset in advance(row.slot, by: offset) },
-                                    openItem: { selectedItem = $0 }
-                                )
-                            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .lastTextBaseline) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("YOUR FIT")
+                                .font(PyxisTypography.editorialTitle)
+                                .tracking(3.2)
+                                .foregroundStyle(PyxisColors.text)
+                                .accessibilityAddTraits(.isHeader)
+                            Text("\(selectedPieces.count) PIECES")
+                                .font(PyxisTypography.editorialLabel)
+                                .tracking(1.6)
+                                .foregroundStyle(PyxisColors.secondaryText)
                         }
-
-                        if dynamicTypeSize.isAccessibilitySize {
-                            notesField
-                        }
+                        Spacer()
                     }
-                    .padding(.vertical, PyxisSpacing.md)
+                    .padding(.top, 20)
+
+                    composition
+                        .frame(height: dynamicTypeSize.isAccessibilitySize ? 310 : 360)
+                        .padding(.top, 4)
+
+                    Rectangle()
+                        .fill(PyxisColors.hairline)
+                        .frame(height: 1)
+                        .padding(.bottom, 18)
+
+                    closetTray
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
+            .scrollIndicators(.hidden)
         }
-        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
-        .padding(.bottom, PyxisSpacing.md)
         .editorialCanvas()
-        .safeAreaInset(edge: .bottom) {
-            if !items.isEmpty {
-                saveRail
-                    .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
-                    .padding(.top, PyxisSpacing.md)
-                    .padding(.bottom, colorScheme == .dark ? 32 : PyxisSpacing.md)
-                    .background(PyxisColors.background)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(PyxisColors.hairline).frame(height: 1)
-                    }
-            }
-        }
+        .navigationBarBackButtonHidden(true)
+        .safeAreaInset(edge: .bottom, spacing: 0) { actionRail }
         .onAppear(perform: reconcileSelections)
-        .onChange(of: initialItemID) { _, newValue in
-            focusedItemID = newValue
-            reconcileSelections()
-        }
-        .onChange(of: items.map(\.id)) { _, _ in
-            reconcileSelections()
-        }
-        .onChange(of: stagePhotoItem) { _, item in
-            Task {
-                guard let data = try? await item?.loadTransferable(type: Data.self),
-                      let image = UIImage(data: data) else { return }
-                stagePhoto = image
-            }
-        }
+        .onChange(of: items.map(\.id)) { _, _ in reconcileSelections() }
+        .onChange(of: focusedItemID) { _, _ in reconcileSelections() }
         .sheet(isPresented: $isShowingAddFlow) {
-            AddItemFlow(
-                initialCategory: pendingAddSlot?.category,
-                initialSubtype: pendingAddSlot.map(service.defaultSubtype(for:)),
-                onSave: { item in
-                    focusedItemID = item.id
-                }
-            )
+            AddItemFlow { item in focusedItemID = item.id }
         }
-        .sheet(item: $selectedItem) { item in
-            ItemDetailView(item: item)
-        }
-        .sheet(isPresented: $isShowingAITryOn) {
+        .sheet(isPresented: $isShowingTryOn) {
             AITryOnView(items: selectedPieces.map(\.item))
         }
     }
 
-    private var saveRail: some View {
-        VStack(spacing: PyxisSpacing.sm) {
-            if dynamicTypeSize.isAccessibilitySize {
-                saveButton
-                    .frame(maxWidth: .infinity)
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PyxisSpacing.md) {
-                        notesField
-                        saveButton
-                    }
+    private var header: some View {
+        HStack(spacing: 0) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .ultraLight))
+                    .frame(width: 44, height: 48, alignment: .leading)
+            }
+            .accessibilityLabel("Back to fits")
 
-                    VStack(spacing: PyxisSpacing.sm) {
-                        notesField
-                        saveButton
+            Spacer(minLength: 0)
+            Text("CREATE OUTFIT")
+                .font(PyxisTypography.editorialLabel)
+                .tracking(2.4)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            Color.clear.frame(width: 44, height: 48)
+        }
+        .foregroundStyle(PyxisColors.text)
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+    }
+
+    private var composition: some View {
+        GeometryReader { geometry in
+            if selectedPieces.isEmpty {
+                Text("TAP A CLOSET ITEM TO START")
+                    .font(PyxisTypography.editorialLabel)
+                    .tracking(1.2)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ZStack {
+                    ForEach(selectedPieces, id: \.slot) { piece in
+                        let layout = pieceLayout(for: piece.slot, in: geometry.size)
+                        Button {
+                            selections[piece.slot] = nil
+                        } label: {
+                            LocalImageView(url: imageURL(for: piece.item), revision: imageRevision(for: piece.item))
+                                .frame(width: layout.width, height: layout.height)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .position(x: layout.x, y: layout.y)
+                        .accessibilityLabel("Remove \(piece.item.displayName ?? piece.item.subtype.rawValue) from fit")
                     }
                 }
-            }
-
-            if savedConfirmationID != nil {
-                Text("SAVED")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-
-            if let saveErrorMessage {
-                InlineErrorMessage(message: saveErrorMessage)
-            }
-
-            if let saveRequirement {
-                Text(saveRequirement)
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .accessibilityLabel(saveRequirement.capitalized)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
 
-    private var saveRequirement: String? {
-        if draft.footwearItemID == nil {
-            return "ADD FOOTWEAR"
+    private func pieceLayout(for slot: OutfitSlot, in size: CGSize) -> (width: CGFloat, height: CGFloat, x: CGFloat, y: CGFloat) {
+        let values: (CGFloat, CGFloat, CGFloat, CGFloat)
+        switch slot {
+        case .top: values = (0.57, 0.59, 0.29, 0.34)
+        case .bottom: values = (0.53, 0.82, 0.74, 0.53)
+        case .footwear: values = (0.44, 0.28, 0.27, 0.84)
+        case .onePiece: values = (0.57, 0.84, 0.53, 0.48)
+        case .outerwear: values = (0.55, 0.62, 0.27, 0.33)
+        case .accessory: values = (0.32, 0.32, 0.67, 0.84)
         }
+        return (size.width * values.0, size.height * values.1,
+                size.width * values.2, size.height * values.3)
+    }
+
+    private var closetTray: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("ADD FROM CLOSET")
+                    .font(PyxisTypography.editorialLabel)
+                    .tracking(1.6)
+                    .foregroundStyle(PyxisColors.text)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                Text("TAP AN ITEM TO ADD")
+                    .font(PyxisTypography.editorialMicro)
+                    .tracking(0.6)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            if availableItems.isEmpty {
+                Button(activeItems.isEmpty ? "ADD YOUR FIRST ITEM" : "ADD ANOTHER ITEM") {
+                    isShowingAddFlow = true
+                }
+                .buttonStyle(MinimalButtonStyle())
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 10) {
+                        ForEach(availableItems) { item in
+                            Button { select(item) } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    LocalImageView(url: imageURL(for: item), revision: imageRevision(for: item))
+                                        .frame(width: 120, height: 112)
+                                    Text(item.displayName?.uppercased() ?? item.subtype.rawValue.uppercased())
+                                        .font(PyxisTypography.editorialMicro)
+                                        .tracking(0.8)
+                                        .foregroundStyle(PyxisColors.secondaryText)
+                                        .lineLimit(1)
+                                }
+                                .frame(width: 120, height: 145)
+                                .padding(8)
+                                .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
+                                .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add \(item.displayName ?? item.subtype.rawValue) to fit")
+                        }
+                        Button { isShowingAddFlow = true } label: {
+                            VStack(spacing: 8) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 26, weight: .ultraLight))
+                                Text("ADD ITEM")
+                                    .font(PyxisTypography.editorialMicro)
+                            }
+                            .foregroundStyle(PyxisColors.secondaryText)
+                            .frame(width: 120, height: 145)
+                            .padding(8)
+                            .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Add a new closet item")
+                    }
+                    .padding(.vertical, 2)
+                }
+                .scrollClipDisabled()
+            }
+        }
+    }
+
+    private var actionRail: some View {
+        VStack(spacing: 8) {
+            if let saveErrorMessage { InlineErrorMessage(message: saveErrorMessage) }
+            if let saveRequirement {
+                Text(saveRequirement)
+                    .font(PyxisTypography.editorialMicro)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 10) {
+                    tryOnButton
+                    saveFitButton
+                }
+            } else {
+                HStack(spacing: 10) {
+                    tryOnButton
+                    saveFitButton
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, colorScheme == .dark ? 48 : 12)
+        .background(PyxisColors.background)
+        .overlay(alignment: .top) { Rectangle().fill(PyxisColors.hairline).frame(height: 1) }
+    }
+
+    private var tryOnButton: some View {
+        Button { isShowingTryOn = true } label: {
+            HStack(spacing: 7) {
+                Text("TRY ON")
+                Text("PRO")
+                    .font(PyxisTypography.editorialMicro)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .overlay { RoundedRectangle(cornerRadius: 5).stroke(PyxisColors.hairline, lineWidth: 1) }
+            }
+            .font(PyxisTypography.editorialLabel)
+            .tracking(1.2)
+            .foregroundStyle(PyxisColors.text)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 9))
+            .overlay { RoundedRectangle(cornerRadius: 9).stroke(PyxisColors.hairline, lineWidth: 1) }
+        }
+        .buttonStyle(.plain)
+        .disabled(selectedPieces.isEmpty)
+        .accessibilityLabel("Try on selected fit, premium")
+    }
+
+    private var saveFitButton: some View {
+        Button(action: saveFit) {
+            Text("SAVE FIT")
+                .font(PyxisTypography.editorialLabel)
+                .tracking(1.5)
+                .foregroundStyle(PyxisColors.background)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
+                .editorialGlow(cornerRadius: 9, strength: 1.3)
+        }
+        .buttonStyle(.plain)
+        .disabled(!service.canSave(draft))
+        .opacity(service.canSave(draft) ? 1 : 0.45)
+        .accessibilityLabel("Save fit")
+    }
+
+    private var saveRequirement: String? {
+        if draft.footwearItemID == nil { return "ADD SHOES TO SAVE THIS FIT" }
         if draft.onePieceItemID == nil && (draft.topItemID == nil || draft.bottomItemID == nil) {
-            return "SELECT A TOP AND BOTTOM, OR SELECT A ONE-PIECE"
+            return "ADD A TOP AND BOTTOM, OR ONE PIECE"
         }
         return nil
     }
 
-    private var notesField: some View {
-        TextField("FIT NOTES", text: $notes,
-                  prompt: Text("FIT NOTES").foregroundColor(PyxisColors.secondaryText), axis: .vertical)
-            .font(PyxisTypography.body)
-            .textFieldStyle(.plain)
-            .padding(PyxisSpacing.md)
-            .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
-            .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
-            .editorialGlow(cornerRadius: 8, strength: 0.6)
+    private func imageURL(for item: ClosetItem) -> URL? {
+        ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
     }
 
-    private var saveButton: some View {
-        Button("SAVE FIT") {
-            saveFit()
-        }
-        .buttonStyle(MinimalButtonStyle())
-        .disabled(!service.canSave(draft))
-        .opacity(service.canSave(draft) ? 1 : 0.35)
-        .accessibilityLabel("Save fit")
+    private func imageRevision(for item: ClosetItem) -> Int {
+        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
     }
 
     private func reconcileSelections() {
         let defaults = service.defaultSelections(for: rows)
         for row in rows {
-            guard !row.items.isEmpty else {
-                selections[row.slot] = nil
-                continue
-            }
-
-            if let index = selections[row.slot], row.items.indices.contains(index) {
-                continue
-            }
-
+            if let index = selections[row.slot], row.items.indices.contains(index) { continue }
             selections[row.slot] = defaults[row.slot]
         }
-
         if selections[.onePiece] != nil {
             selections[.top] = nil
             selections[.bottom] = nil
         }
-
         if let focusedItemID,
            let target = service.selectionTarget(for: focusedItemID, in: rows) {
-            withAnimation(.easeInOut(duration: 0.24)) {
-                select(target.slot, index: target.index)
-            }
+            select(target.slot, index: target.index)
             self.focusedItemID = nil
         }
     }
 
-    private func advance(_ slot: OutfitSlot, by offset: Int) {
-        guard let row = rows.first(where: { $0.slot == slot }) else {
-            return
-        }
-        guard let index = service.advancedIndex(
-            from: selections[slot],
-            offset: offset,
-            itemCount: row.items.count
-        ) else { return }
-        select(slot, index: index)
+    private func select(_ item: ClosetItem) {
+        guard let target = service.selectionTarget(for: item.id, in: rows) else { return }
+        select(target.slot, index: target.index)
     }
 
     private func select(_ slot: OutfitSlot, index: Int) {
@@ -270,219 +347,30 @@ struct OutfitBuilderView: View {
         } else if slot == .top || slot == .bottom {
             selections[.onePiece] = nil
         }
-
         #if canImport(UIKit)
         if let row = rows.first(where: { $0.slot == slot }), row.items.indices.contains(index) {
-            UIAccessibility.post(
-                notification: .announcement,
-                argument: "Selected \(row.items[index].itemCode) for \(slot.title.lowercased())"
-            )
+            UIAccessibility.post(notification: .announcement,
+                                 argument: "Selected \(row.items[index].itemCode) for \(slot.title.lowercased())")
         }
         #endif
     }
 
     private func saveFit() {
-        guard service.canSave(draft) else {
-            return
-        }
-
-        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        let outfit = service.outfit(
-            from: draft,
-            name: nil,
-            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
-        )
+        guard service.canSave(draft) else { return }
+        let outfit = service.outfit(from: draft)
         modelContext.insert(outfit)
         do {
-            try upsertMemory(for: outfit)
+            let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: activeItems)
+            try OnDeviceMemoryStore(context: modelContext).upsertMemory(
+                kind: .outfit, subjectID: outfit.id, summary: payload.summary,
+                embedding: payload.embedding, metadataTags: payload.metadataTags,
+                updatedAt: outfit.dateUpdated, saveImmediately: false
+            )
             try modelContext.save()
-            saveErrorMessage = nil
+            dismiss()
         } catch {
             modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
-            return
         }
-        notes = ""
-        withAnimation(.easeOut(duration: 0.24)) {
-            savedConfirmationID = outfit.id
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            await MainActor.run {
-                guard savedConfirmationID == outfit.id else {
-                    return
-                }
-                withAnimation(.easeOut(duration: 0.2)) {
-                    savedConfirmationID = nil
-                }
-            }
-        }
-    }
-
-    private func upsertMemory(for outfit: Outfit) throws {
-        let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: items)
-        try OnDeviceMemoryStore(context: modelContext).upsertMemory(
-            kind: .outfit,
-            subjectID: outfit.id,
-            summary: payload.summary,
-            embedding: payload.embedding,
-            metadataTags: payload.metadataTags,
-            updatedAt: outfit.dateUpdated,
-            saveImmediately: false
-        )
-    }
-}
-
-private struct OutfitStageView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    let selectedPieces: [(slot: OutfitSlot, item: ClosetItem)]
-    let photo: UIImage?
-    @Binding var photoItem: PhotosPickerItem?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            HStack {
-                Text("THE STAGE")
-                    .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
-                    .tracking(colorScheme == .dark ? 1.6 : 0)
-                    .foregroundStyle(PyxisColors.text)
-
-                Spacer()
-
-                Text("\(selectedPieces.count) PIECES")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.inactiveText)
-            }
-
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(colorScheme == .dark ? PyxisColors.surface : PyxisColors.field)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(PyxisColors.hairline.opacity(colorScheme == .dark ? 0.8 : 0), lineWidth: 1)
-                    }
-
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-
-                    if let photo {
-                        Image(uiImage: photo)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 132, height: 180)
-                            .clipShape(RoundedRectangle(cornerRadius: 72))
-                    } else {
-                        Image(systemName: "person")
-                            .font(.system(size: 90, weight: .ultraLight))
-                            .foregroundStyle(PyxisColors.secondaryText)
-                            .frame(width: 132, height: 180)
-                            .accessibilityLabel("Add your photo to the stage")
-                    }
-
-                    Ellipse()
-                        .fill(PyxisColors.text.opacity(colorScheme == .dark ? 0.12 : 0.08))
-                        .frame(width: 150, height: 16)
-                        .padding(.top, 2)
-                    Spacer().frame(height: 10)
-                }
-            }
-            .frame(height: 230)
-
-            HStack(spacing: PyxisSpacing.sm) {
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    Label(photo == nil ? "ADD YOUR PHOTO" : "CHANGE PHOTO", systemImage: "person.crop.square")
-                        .font(PyxisTypography.label)
-                }
-                .buttonStyle(MinimalButtonStyle())
-            }
-            Text("PHOTO STAYS ON THIS DEVICE. USE OUTFIT ON YOU FOR A TRY-ON PREVIEW.")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
-        }
-    }
-}
-
-private struct ClosetReadinessView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    let rows: [OutfitRow]
-    let draft: OutfitDraft
-
-    private var missingSlots: [OutfitSlot] {
-        var missing: [OutfitSlot] = []
-        if draft.onePieceItemID == nil && (draft.topItemID == nil || draft.bottomItemID == nil) {
-            missing.append(draft.topItemID == nil ? .top : .bottom)
-        }
-        if draft.footwearItemID == nil { missing.append(.footwear) }
-        return missing
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
-            Text(missingSlots.isEmpty ? "CLOSET READY" : "MISSING \(missingSlots.map(\.title).joined(separator: " / "))")
-                .font(PyxisTypography.label)
-                .foregroundStyle(missingSlots.isEmpty ? PyxisColors.text : PyxisColors.secondaryText)
-
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: PyxisSpacing.sm) {
-                    ForEach(rows) { row in
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(row.slot.title)
-                            Spacer(minLength: PyxisSpacing.sm)
-                            Text("\(row.items.count)")
-                        }
-                        .font(PyxisTypography.label)
-                        .foregroundStyle(row.items.isEmpty ? PyxisColors.inactiveText : PyxisColors.secondaryText)
-                    }
-                }
-            } else {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 110, maximum: 180), alignment: .leading)],
-                    alignment: .leading,
-                    spacing: PyxisSpacing.xs
-                ) {
-                    ForEach(rows) { row in
-                        Text("\(row.slot.title) \(row.items.count)")
-                            .font(PyxisTypography.label)
-                            .foregroundStyle(row.items.isEmpty ? PyxisColors.inactiveText : PyxisColors.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-        }
-        .padding(.vertical, PyxisSpacing.sm)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PyxisColors.hairline)
-                .frame(height: 1)
-        }
-    }
-}
-
-private struct MissingOutfitRow: View {
-    let slot: OutfitSlot
-    let addAction: () -> Void
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
-                Text(slot.title)
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                Text("NO \(slot.title)")
-                    .font(PyxisTypography.body)
-                    .foregroundStyle(PyxisColors.inactiveText)
-            }
-
-            Spacer()
-
-            Button("ADD \(slot.title)") {
-                addAction()
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .accessibilityLabel("Add \(slot.title.lowercased())")
-        }
-        .frame(height: 132)
-        .padding(.horizontal, PyxisSpacing.md)
-        .background(PyxisColors.field)
     }
 }

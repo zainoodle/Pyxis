@@ -4,13 +4,15 @@ struct PyxisRootView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedSection: AppSection = .closet
     @State private var builderFocusItemID: UUID?
+    @State private var isShowingBuilder = false
 
     var body: some View {
         TabView(selection: $selectedSection) {
             NavigationStack {
                 ClosetGridView { itemID in
                     builderFocusItemID = itemID
-                    selectedSection = .build
+                    selectedSection = .fits
+                    isShowingBuilder = true
                 }
                 .navigationBarHidden(true)
             }
@@ -18,17 +20,17 @@ struct PyxisRootView: View {
             .tag(AppSection.closet)
 
             NavigationStack {
-                OutfitBuilderView(initialItemID: builderFocusItemID)
-                    .navigationBarHidden(true)
-            }
-            .tabItem { tabLabel(.build) }
-            .tag(AppSection.build)
-
-            NavigationStack {
                 SavedFitsGalleryView(
-                    buildAction: { selectedSection = .build }
+                    buildAction: {
+                        builderFocusItemID = nil
+                        isShowingBuilder = true
+                    }
                 )
                 .navigationBarHidden(true)
+                .navigationDestination(isPresented: $isShowingBuilder) {
+                    OutfitBuilderView(initialItemID: builderFocusItemID)
+                        .navigationBarHidden(true)
+                }
             }
             .tabItem { tabLabel(.fits) }
             .tag(AppSection.fits)

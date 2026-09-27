@@ -42,7 +42,6 @@ struct EditorialTabBar: View {
     private func symbol(for section: AppSection) -> String {
         switch section {
         case .closet: "hanger"
-        case .build: "plus"
         case .fits: "tshirt"
         case .profile: "person"
         }

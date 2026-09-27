@@ -39,6 +39,23 @@ final class OutfitBuilderServiceTests: XCTestCase {
         XCTAssertEqual(selections[.footwear], 0)
     }
 
+    func testDefaultSelectionsLeaveOptionalLayersInClosetTray() {
+        let top = makeItem(code: "TS-001", category: .tops, subtype: .tShirt)
+        let bottom = makeItem(code: "PA-001", category: .bottoms, subtype: .pants)
+        let shoes = makeItem(code: "SN-001", category: .footwear, subtype: .sneakers)
+        let jacket = makeItem(code: "JA-001", category: .outerwear, subtype: .jacket)
+        let bag = makeItem(code: "BG-001", category: .accessories, subtype: .bag)
+        let service = OutfitBuilderService()
+        let rows = service.requiredRows(from: [top, bottom, shoes, jacket, bag])
+            + service.optionalRows(from: [top, bottom, shoes, jacket, bag])
+
+        let selections = service.defaultSelections(for: rows)
+
+        XCTAssertNil(selections[.outerwear])
+        XCTAssertNil(selections[.accessory])
+        XCTAssertEqual(service.draft(from: rows, selections: selections).accessoryItemIDs, [])
+    }
+
     func testAdvancingSelectionWrapsWithinRowBounds() {
         let service = OutfitBuilderService()
 
