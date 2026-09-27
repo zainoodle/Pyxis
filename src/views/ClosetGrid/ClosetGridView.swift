@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct ClosetGridView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
@@ -24,7 +23,7 @@ struct ClosetGridView: View {
     }
 
     var body: some View {
-        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
+        VStack(spacing: PyxisSpacing.md) {
             TopNavigationView(
                 filterState: $viewModel.filterState,
                 closets: closets,
@@ -57,8 +56,8 @@ struct ClosetGridView: View {
 
             content
         }
-        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
-        .padding(.bottom, colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl)
+        .padding(.horizontal, 20)
+        .padding(.bottom, PyxisSpacing.md)
         .editorialCanvas()
         .toolbar {
             Button("ADD") {
@@ -129,7 +128,7 @@ struct ClosetGridView: View {
             Spacer()
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl) {
+                LazyVGrid(columns: columns, spacing: PyxisSpacing.md) {
                     ForEach(filteredItems) { item in
                         NavigationLink {
                             ItemDetailView(item: item, showsCloseButton: false) { buildItem in

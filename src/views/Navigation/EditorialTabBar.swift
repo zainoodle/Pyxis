@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EditorialTabBar: View {
     @Binding var selection: AppSection
+    @Environment(\.colorScheme) private var colorScheme
     @Namespace private var underline
 
     var body: some View {
@@ -30,7 +31,7 @@ struct EditorialTabBar: View {
                         }
                     }
                     .foregroundStyle(selection == section ? PyxisColors.text : PyxisColors.inactiveText)
-                    .shadow(color: selection == section ? .white.opacity(0.2) : .clear, radius: 9)
+                    .shadow(color: selection == section ? selectedGlow : .clear, radius: 9)
                     .frame(maxWidth: .infinity, minHeight: 66)
                     .contentShape(Rectangle())
                 }
@@ -46,6 +47,10 @@ struct EditorialTabBar: View {
         .overlay(alignment: .top) {
             Rectangle().fill(PyxisColors.hairline).frame(height: 1)
         }
+    }
+
+    private var selectedGlow: Color {
+        colorScheme == .dark ? .white.opacity(0.2) : PyxisColors.hairline.opacity(0.45)
     }
 
     private func symbol(for section: AppSection) -> String {

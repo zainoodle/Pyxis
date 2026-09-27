@@ -1,19 +1,15 @@
 import SwiftUI
 
 struct SearchAndFilterView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var filterState: ClosetFilterState
     let closets: [Closet]
     let isSearchFocused: FocusState<Bool>.Binding
 
     var body: some View {
-        VStack(alignment: .leading, spacing: colorScheme == .dark ? 14 : PyxisSpacing.sm) {
+        VStack(alignment: .leading, spacing: 14) {
             searchField
-
-            if colorScheme == .dark {
-                categoryStrip
-            }
+            categoryStrip
 
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
@@ -43,32 +39,32 @@ struct SearchAndFilterView: View {
     }
 
     private var showsActiveFilters: Bool {
-        // The selected category is already visible in the dark category strip.
-        let visibleCategoryCount = colorScheme == .dark && filterState.category != nil ? 1 : 0
+        // The selected category is already visible in the category strip.
+        let visibleCategoryCount = filterState.category != nil ? 1 : 0
         return filterState.activeFilterCount > visibleCategoryCount
     }
 
     private var searchField: some View {
         HStack(spacing: 14) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: colorScheme == .dark ? 19 : 12, weight: .light))
+                .font(.system(size: 19, weight: .light))
                 .foregroundStyle(PyxisColors.text)
                 .accessibilityHidden(true)
 
             TextField(
                 "Search closet",
                 text: $filterState.searchText,
-                prompt: Text(colorScheme == .dark ? "SEARCH YOUR CLOSET" : "SEARCH")
+                prompt: Text("SEARCH YOUR CLOSET")
                     .foregroundColor(PyxisColors.secondaryText)
             )
                 .textFieldStyle(.plain)
-                .font(colorScheme == .dark ? PyxisTypography.editorialBody : PyxisTypography.body)
-                .tracking(colorScheme == .dark ? 1.2 : 0)
+                .font(PyxisTypography.editorialBody)
+                .tracking(1.2)
                 .autocorrectionDisabled()
                 .focused(isSearchFocused)
         }
-        .padding(.horizontal, colorScheme == .dark ? 16 : PyxisSpacing.sm)
-        .frame(maxWidth: .infinity, minHeight: colorScheme == .dark ? 54 : 44)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, minHeight: 54)
         .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 10))
         .overlay {
             RoundedRectangle(cornerRadius: 10)
@@ -117,31 +113,22 @@ struct SearchAndFilterView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    @ViewBuilder
     private var sortPicker: some View {
-        if colorScheme == .dark {
-            Menu {
-                sortOptions
-            } label: {
-                HStack(spacing: 8) {
-                    Text(filterState.sort == .mostWorn ? "MOST WORN" : filterState.sort.rawValue.uppercased())
-                        .font(PyxisTypography.editorialLabel)
-                        .tracking(1.1)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .light))
-                }
-                .foregroundStyle(PyxisColors.text)
-                .frame(minWidth: 128, minHeight: 44, alignment: .leading)
-            }
-            .accessibilityLabel("Sort closet")
-            .accessibilityValue(filterState.sort.rawValue)
-        } else {
+        Menu {
             sortOptions
-                .labelsHidden()
-                .tint(PyxisColors.text)
-                .frame(minWidth: dynamicTypeSize.isAccessibilitySize ? nil : 128, alignment: .leading)
-                .frame(minHeight: 44)
+        } label: {
+            HStack(spacing: 8) {
+                Text(filterState.sort == .mostWorn ? "MOST WORN" : filterState.sort.rawValue.uppercased())
+                    .font(PyxisTypography.editorialLabel)
+                    .tracking(1.1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .light))
+            }
+            .foregroundStyle(PyxisColors.text)
+            .frame(minWidth: 128, minHeight: 44, alignment: .leading)
         }
+        .accessibilityLabel("Sort closet")
+        .accessibilityValue(filterState.sort.rawValue)
     }
 
     private var sortOptions: some View {
@@ -201,12 +188,6 @@ struct SearchAndFilterView: View {
                         title: closets.first(where: { $0.id == closetID })?.displayName ?? "CLOSET"
                     ) {
                         filterState.closetID = nil
-                    }
-                }
-                if colorScheme != .dark, let category = filterState.category {
-                    ActiveFilterChip(title: category.rawValue) {
-                        filterState.selectCategory(nil)
-                        filterState.subtype = nil
                     }
                 }
                 if let subtype = filterState.subtype {

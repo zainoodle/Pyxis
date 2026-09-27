@@ -35,20 +35,20 @@ struct PrimaryPageHeader<Actions: View>: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: colorScheme == .dark ? 68 : 44, alignment: .leading)
-        .padding(.top, colorScheme == .dark ? PyxisSpacing.sm : PyxisSpacing.lg)
+        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+        .padding(.top, PyxisSpacing.sm)
     }
 
     private var brand: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("PYXIS")
-                .font(colorScheme == .dark ? PyxisTypography.editorialBrand : PyxisTypography.title)
-                .tracking(colorScheme == .dark ? 4.5 : 0)
-                .shadow(color: colorScheme == .dark ? .white.opacity(0.24) : .clear, radius: 12)
+                .font(PyxisTypography.editorialBrand)
+                .tracking(4.5)
+                .shadow(color: colorScheme == .dark ? .white.opacity(0.24) : PyxisColors.hairline.opacity(0.4), radius: 12)
                 .foregroundStyle(PyxisColors.text)
                 .lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
-            if colorScheme == .dark, let title {
+            if let title {
                 Text(title)
                     .font(PyxisTypography.editorialLabel)
                     .tracking(3)
