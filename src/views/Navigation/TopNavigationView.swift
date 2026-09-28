@@ -61,7 +61,7 @@ struct TopNavigationView: View {
     }
 }
 
-private struct ClosetFilterSheet: View {
+struct ClosetFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var filterState: ClosetFilterState
@@ -152,6 +152,9 @@ private struct ClosetFilterSheet: View {
                     }
                 }
 
+                Toggle("FAVORITES ONLY", isOn: $filterState.favoritesOnly)
+                    .font(PyxisTypography.label)
+
                 if filterState.hasActiveFilters {
                     Button("CLEAR ALL") {
                         filterState.clearAll()
@@ -169,9 +172,6 @@ private struct ClosetFilterSheet: View {
         VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
             Text("FILTERS")
                 .font(PyxisTypography.title)
-            Text("REFINE YOUR COLLECTION")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
         }
     }
 

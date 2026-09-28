@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ClosetGridView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
@@ -14,48 +13,57 @@ struct ClosetGridView: View {
     @FocusState private var isSearchFocused: Bool
     private let buildAction: (UUID?) -> Void
 
-    private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: PyxisSpacing.md),
-              count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
-    }
-
     init(buildAction: @escaping (UUID?) -> Void = { _ in }) {
         self.buildAction = buildAction
     }
 
     var body: some View {
-        VStack(spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.lg) {
-            TopNavigationView(
-                filterState: $viewModel.filterState,
-                closets: closets,
-                showsFilters: !items.isEmpty,
-                addAction: { isShowingAddFlow = true }
-            )
-
-            if let savedItemPrompt {
-                SavedItemBuildPrompt(item: savedItemPrompt) {
-                    let itemID = savedItemPrompt.id
-                    self.savedItemPrompt = nil
-                    buildAction(itemID)
-                } dismissAction: {
-                    self.savedItemPrompt = nil
+        GeometryReader { geometry in
+            ScrollView {
+            VStack(spacing: 20) {
+                PrimaryPageHeader(title: "CLOSET") {
+                    Button { isShowingAddFlow = true } label: {
+                        Label("ADD", systemImage: "plus")
+                            .font(PyxisTypography.editorialBody)
+                            .tracking(1.5)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 44)
+                            .foregroundStyle(PyxisColors.background)
+                            .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add new item")
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+    
+                if let savedItemPrompt {
+                    SavedItemBuildPrompt(item: savedItemPrompt) {
+                        let itemID = savedItemPrompt.id
+                        self.savedItemPrompt = nil
+                        buildAction(itemID)
+                    } dismissAction: {
+                        self.savedItemPrompt = nil
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+    
+                if !items.isEmpty {
+                    EditorialClosetControls(
+                        filterState: $viewModel.filterState,
+                        closets: closets,
+                        isSearchFocused: $isSearchFocused
+                    )
+                }
+    
+                content(cardHeight: max(290, min(460, geometry.size.height * 0.44)))
             }
-
-            if !items.isEmpty {
-                SearchAndFilterView(
-                    filterState: $viewModel.filterState,
-                    closets: closets,
-                    isSearchFocused: $isSearchFocused
-                )
+            .frame(minHeight: geometry.size.height, alignment: .top)
+            .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
+            .padding(.bottom, colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl)
             }
-
-            content
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
         }
-        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
-        .padding(.bottom, colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl)
-        .editorialCanvas()
+        .background { ClosetWashedBackground().ignoresSafeArea() }
         .toolbar {
             Button("ADD") {
                 isShowingAddFlow = true
@@ -79,10 +87,17 @@ struct ClosetGridView: View {
                 viewModel.filterState.closetID = nil
             }
         }
+        .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-pyxisSeedCloset") {
+                seedDebugCloset()
+            }
+            #endif
+        }
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func content(cardHeight: CGFloat) -> some View {
         let filteredItems = viewModel.filteredItems(from: items, closets: closets)
 
         if items.isEmpty {
@@ -124,21 +139,9 @@ struct ClosetGridView: View {
             }
             Spacer()
         } else {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl) {
-                    ForEach(filteredItems) { item in
-                        NavigationLink {
-                            ItemDetailView(item: item, showsCloseButton: false) { buildItem in
-                                buildAction(buildItem.id)
-                            }
-                        } label: {
-                            ClosetGridItemView(item: item)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, PyxisSpacing.md)
-            }
+            EditorialClosetGallery(items: filteredItems, galleryHeight: cardHeight, buildAction: buildAction)
+                .padding(.horizontal, colorScheme == .dark ? -20 : -PyxisSpacing.md)
+
         }
     }
 
