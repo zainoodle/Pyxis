@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EditorialTabBar: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selection: AppSection
 
     var body: some View {
@@ -22,7 +23,7 @@ struct EditorialTabBar: View {
                             .frame(width: 28, height: 1)
                     }
                     .foregroundStyle(selection == section ? PyxisColors.text : PyxisColors.inactiveText)
-                    .shadow(color: selection == section ? .white.opacity(0.2) : .clear, radius: 9)
+                    .shadow(color: selection == section && colorScheme == .dark ? .white.opacity(0.2) : .clear, radius: 9)
                     .frame(maxWidth: .infinity, minHeight: 66)
                     .contentShape(Rectangle())
                 }

@@ -1,14 +1,13 @@
 import SwiftUI
 
 struct UppercaseNavLabel: View {
-    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let isActive: Bool
 
     var body: some View {
         Text(title.uppercased())
-            .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.nav)
-            .tracking(colorScheme == .dark ? 1.5 : 0)
+            .font(PyxisTypography.editorialLabel)
+            .tracking(1.5)
             .foregroundStyle(isActive ? PyxisColors.text : PyxisColors.secondaryText)
             .lineLimit(1)
             .frame(minWidth: 44, minHeight: 44)
@@ -17,13 +16,12 @@ struct UppercaseNavLabel: View {
 }
 
 struct ItemCodeLabel: View {
-    @Environment(\.colorScheme) private var colorScheme
     let code: String
 
     var body: some View {
         Text(code.uppercased())
-            .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.code)
-            .tracking(colorScheme == .dark ? 1 : 0)
+            .font(PyxisTypography.editorialLabel)
+            .tracking(1)
             .foregroundStyle(PyxisColors.text)
             .lineLimit(1)
             .accessibilityLabel("Item code \(code)")
@@ -70,11 +68,8 @@ struct PremiumCardBackground: ViewModifier {
 }
 
 private struct CatalogTileBackground: ViewModifier {
-    @Environment(\.colorScheme) private var colorScheme
-
     func body(content: Content) -> some View {
         content
-            .background(colorScheme == .dark ? Color.clear : PyxisColors.surface)
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(PyxisColors.hairline)
