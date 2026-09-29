@@ -30,7 +30,7 @@ struct EditorialClosetGallery: View {
     }
 
     private func geometry(for width: CGFloat) -> GalleryGeometry {
-        let cardWidth = min(width * 0.21, 96)
+        let cardWidth = min(width * 0.30, 140)
         return GalleryGeometry(
             cardWidth: cardWidth,
             cardHeight: cardWidth / 0.62
