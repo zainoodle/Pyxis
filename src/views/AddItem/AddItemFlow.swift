@@ -32,16 +32,9 @@ struct AddItemFlow: View {
     var body: some View {
         ScrollView {
             VStack(spacing: PyxisSpacing.lg) {
-                HStack {
-                    Text("ADD ITEM")
-                        .font(PyxisTypography.title)
-                    Spacer()
-                    Button("CLOSE") {
-                        dismiss()
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityLabel("Close add item")
+                PrimaryPageHeader(title: "Add piece") {
+                    HeaderIconButton(symbol: "xmark", label: "Close add item") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
                 }
 
                 AddItemStepIndicator(stage: viewModel.stage)
@@ -68,9 +61,10 @@ struct AddItemFlow: View {
                     editorContent
                 }
             }
-            .padding(PyxisSpacing.md)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
         }
-        .background(PyxisColors.background)
+        .editorialCanvas()
         .safeAreaInset(edge: .bottom) {
             if viewModel.selectedImageURL != nil, !viewModel.stage.isProcessing {
                 Button(viewModel.stage.isFailed ? "SAVE ORIGINAL" : "SAVE ITEM") {
@@ -358,11 +352,11 @@ private struct AddItemStepIndicator: View {
 
     var body: some View {
         HStack(spacing: PyxisSpacing.sm) {
-            step(0, title: "ADD PHOTO")
+            step(0, title: "Photo")
             connector(after: 0)
-            step(1, title: "CLEAN IMAGE")
+            step(1, title: "Clean up")
             connector(after: 1)
-            step(2, title: "REVIEW DETAILS")
+            step(2, title: "Details")
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Step \(currentStep + 1) of 3, \(stepTitle)")

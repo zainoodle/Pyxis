@@ -27,17 +27,14 @@ struct SuggestedLooksView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("PICKED FOR YOU")
-                    .font(colorScheme == .dark ? PyxisTypography.editorialTitle : PyxisTypography.title)
-                    .tracking(colorScheme == .dark ? 2 : 0)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("For you")
+                    .font(PyxisTypography.editorialTitle)
                     .foregroundStyle(PyxisColors.text)
                     .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Text("YOUR CLOSET / NEW COMBINATIONS")
+                Text("New combinations from your closet")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
-                    .multilineTextAlignment(.trailing)
             }
 
             if let featured {
@@ -53,7 +50,7 @@ struct SuggestedLooksView: View {
                 HStack(alignment: .top, spacing: PyxisSpacing.md) {
                     VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                         Text(featured.title)
-                            .font(colorScheme == .dark ? PyxisTypography.editorialTitle : .system(.title2, design: .monospaced, weight: .medium))
+                            .font(PyxisTypography.editorialTitle)
                             .tracking(colorScheme == .dark ? 1.5 : 0)
                             .foregroundStyle(PyxisColors.text)
                         Text(featured.summary)

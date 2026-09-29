@@ -27,7 +27,7 @@ struct TryOnPrivacyView: View {
                             .font(PyxisTypography.label)
                     }
                 }.padding(PyxisSpacing.lg)
-            }.navigationTitle("PRIVACY").navigationBarTitleDisplayMode(.inline)
+            }.editorialNavigationTitle("Privacy")
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
         }
     }
@@ -53,7 +53,7 @@ struct TryOnClosetPicker: View {
                         }
                     }.disabled(selectedIDs.contains(item.id))
                 }
-            }.navigationTitle("YOUR CLOSET").navigationBarTitleDisplayMode(.inline)
+            }.editorialNavigationTitle("Your closet")
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
         }
     }
@@ -87,7 +87,7 @@ struct TryOnSavedPreviewsView: View {
                     }
                     if let error = model.errorMessage { InlineErrorMessage(message: error) }
                 }.padding(PyxisSpacing.md)
-            }.navigationTitle("SAVED PREVIEWS").navigationBarTitleDisplayMode(.inline)
+            }.editorialNavigationTitle("Saved previews")
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
                 .confirmationDialog("Delete this preview from this device?", isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }), titleVisibility: .visible) {
                     Button("DELETE PREVIEW", role: .destructive) { if let preview = pendingDeletion { model.deletePreview(preview) }; pendingDeletion = nil }

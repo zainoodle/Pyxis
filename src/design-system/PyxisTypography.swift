@@ -8,6 +8,8 @@ enum PyxisTypography {
     static let title = Font.custom("IBMPlexMono-Medium", size: 20, relativeTo: .title3)
 
     static let editorialBrand = Font.custom("IBMPlexMono-Light", size: 28, relativeTo: .title)
+    static let pageTitle = Font.custom("IBMPlexMono-Light", size: 32, relativeTo: .largeTitle)
+    static let closetBrowse = Font.custom("IBMPlexMono-Light", size: 14, relativeTo: .body)
     static let editorialTitle = Font.custom("IBMPlexMono-Light", size: 21, relativeTo: .title3)
     static let editorialBody = Font.custom("IBMPlexMono-Regular", size: 13, relativeTo: .body)
     static let editorialLabel = Font.custom("IBMPlexMono-Regular", size: 12, relativeTo: .caption)

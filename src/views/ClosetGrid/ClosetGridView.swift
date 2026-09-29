@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct ClosetGridView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
@@ -9,8 +10,9 @@ struct ClosetGridView: View {
     @State private var isShowingAddFlow = false
     @State private var savedItemPrompt: ClosetItem?
     @State private var seedMessage: String?
+    @State private var selectedItemID: UUID?
+    @State private var isShowingSearch = false
     @Environment(\.modelContext) private var modelContext
-    @FocusState private var isSearchFocused: Bool
     private let buildAction: (UUID?) -> Void
 
     private var columns: [GridItem] {
@@ -23,8 +25,11 @@ struct ClosetGridView: View {
     }
 
     var body: some View {
-        VStack(spacing: PyxisSpacing.md) {
-            TopNavigationView(addAction: { isShowingAddFlow = true })
+        VStack(spacing: 8) {
+            EditorialClosetHeader(
+                addAction: { isShowingAddFlow = true },
+                searchAction: { isShowingSearch = true }
+            )
 
             if let savedItemPrompt {
                 SavedItemBuildPrompt(item: savedItemPrompt) {
@@ -34,21 +39,22 @@ struct ClosetGridView: View {
                 } dismissAction: {
                     self.savedItemPrompt = nil
                 }
+                .padding(.horizontal, 24)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             if !items.isEmpty {
                 SearchAndFilterView(
                     filterState: $viewModel.filterState,
-                    closets: closets,
-                    isSearchFocused: $isSearchFocused
+                    closets: closets
                 )
+                .padding(.horizontal, 24)
             }
 
             content
+                .padding(.horizontal, colorScheme == .dark ? 0 : 24)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, PyxisSpacing.md)
+        .padding(.bottom, colorScheme == .dark ? 0 : PyxisSpacing.md)
         .editorialCanvas()
         .toolbar {
             Button("ADD") {
@@ -57,16 +63,24 @@ struct ClosetGridView: View {
             .keyboardShortcut("n", modifiers: .command)
 
             Button("FIND") {
-                isSearchFocused = true
+                isShowingSearch = true
             }
             .keyboardShortcut("f", modifiers: .command)
         }
         .sheet(isPresented: $isShowingAddFlow) {
             AddItemFlow(initialClosetID: viewModel.filterState.closetID) { item in
                 withAnimation(.easeOut(duration: 0.2)) {
+                    selectedItemID = item.id
                     savedItemPrompt = item
                 }
             }
+        }
+        .sheet(isPresented: $isShowingSearch) {
+            EditorialClosetSearchSheet(
+                filterState: $viewModel.filterState,
+                items: items,
+                closets: closets
+            ) { selectedItemID = $0 }
         }
         .onChange(of: closets.map(\.id)) { _, closetIDs in
             if let closetID = viewModel.filterState.closetID, !closetIDs.contains(closetID) {
@@ -117,6 +131,8 @@ struct ClosetGridView: View {
                 }
             }
             Spacer()
+        } else if colorScheme == .dark {
+            EditorialClosetGallery(items: filteredItems, selection: $selectedItemID, buildAction: buildAction)
         } else {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: PyxisSpacing.md) {

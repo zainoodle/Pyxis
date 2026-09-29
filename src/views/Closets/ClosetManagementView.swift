@@ -46,11 +46,10 @@ struct ClosetManagementView: View {
                     }
                 }
             }
-            .padding(PyxisSpacing.md)
+            .padding(24)
         }
-        .background(PyxisColors.background)
-        .navigationTitle("MANAGE CLOSETS")
-        .navigationBarTitleDisplayMode(.inline)
+        .editorialCanvas()
+        .editorialNavigationTitle("Closets")
     }
 
     private var createRow: some View {

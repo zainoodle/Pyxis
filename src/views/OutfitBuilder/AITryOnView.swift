@@ -39,8 +39,7 @@ struct AITryOnView: View {
                 .padding(PyxisSpacing.md)
             }
             .background(PyxisColors.background)
-            .navigationTitle("OUTFIT ON YOU")
-            .navigationBarTitleDisplayMode(.inline)
+            .editorialNavigationTitle("Try on")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { sheet = .privacy } label: { Image(systemName: "hand.raised") }

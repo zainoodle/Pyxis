@@ -1,65 +1,61 @@
 import SwiftUI
 
-/// A stable anchor for each top-level tab. The tab bar identifies the current
-/// destination, while this header keeps the brand and page actions in one place.
+/// One destination title, with related actions aligned on the trailing edge.
 struct PrimaryPageHeader<Actions: View>: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.colorScheme) private var colorScheme
-    private let title: String?
+    private let title: String
     private let actions: Actions
 
-    init(title: String? = nil, @ViewBuilder actions: () -> Actions) {
+    init(title: String, @ViewBuilder actions: () -> Actions) {
         self.title = title
         self.actions = actions()
     }
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    brand
-                    actions
-                }
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PyxisSpacing.md) {
-                        brand
-                        Spacer(minLength: PyxisSpacing.sm)
-                        actions
-                    }
-
-                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        brand
-                        actions
-                    }
-                }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                heading.fixedSize()
+                Spacer(minLength: 0)
+                actions
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                heading
+                HStack { Spacer(); actions }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-        .padding(.top, PyxisSpacing.sm)
+        .foregroundStyle(PyxisColors.text)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.top, 8)
     }
 
-    private var brand: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("PYXIS")
-                .font(PyxisTypography.editorialBrand)
-                .tracking(4.5)
-                .shadow(color: colorScheme == .dark ? .white.opacity(0.24) : .clear, radius: 12)
-                .foregroundStyle(PyxisColors.text)
-                .lineLimit(1)
-                .accessibilityAddTraits(.isHeader)
-            if let title {
-                Text(title)
-                    .font(PyxisTypography.editorialLabel)
-                    .tracking(3)
-                    .foregroundStyle(PyxisColors.secondaryText)
-            }
-        }
+    private var heading: some View {
+        Text(title)
+            .font(PyxisTypography.pageTitle)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
 extension PrimaryPageHeader where Actions == EmptyView {
-    init(title: String? = nil) {
+    init(title: String) {
         self.init(title: title) { EmptyView() }
+    }
+}
+
+struct HeaderIconButton: View {
+    let symbol: String
+    let label: String
+    var identifier = ""
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .light))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(identifier)
     }
 }

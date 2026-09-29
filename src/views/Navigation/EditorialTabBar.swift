@@ -23,7 +23,6 @@ struct EditorialTabBar: View {
                             .frame(width: 28, height: 1)
                     }
                     .foregroundStyle(selection == section ? PyxisColors.text : PyxisColors.inactiveText)
-                    .shadow(color: selection == section && colorScheme == .dark ? .white.opacity(0.2) : .clear, radius: 9)
                     .frame(maxWidth: .infinity, minHeight: 66)
                     .contentShape(Rectangle())
                 }
@@ -32,6 +31,7 @@ struct EditorialTabBar: View {
                 .accessibilityAddTraits(selection == section ? .isSelected : [])
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.horizontal, 8)
         .padding(.top, 9)
         .background(PyxisColors.background.ignoresSafeArea(edges: .bottom))

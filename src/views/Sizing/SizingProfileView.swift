@@ -22,14 +22,13 @@ struct SizingProfileView: View {
                 sizeChecker
                 privacy
             }
-            .padding(PyxisSpacing.md)
+            .padding(24)
         }
-        .background(PyxisColors.background)
-        .navigationTitle("FIT PASSPORT")
-        .navigationBarTitleDisplayMode(.inline)
+        .editorialCanvas()
+        .editorialNavigationTitle("Fit passport")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("SAVE") { saveProfile() }
+                Button("Save") { saveProfile() }
             }
         }
         .onAppear(perform: loadProfile)
@@ -39,7 +38,7 @@ struct SizingProfileView: View {
     }
 
     private var intro: some View {
-        Text("SAVE ONLY WHAT YOU KNOW. PYXIS COMPARES YOUR MEASUREMENTS WITH A RETAILER'S OWN SIZE CHART—IT DOES NOT ASSIGN ONE UNIVERSAL SIZE.")
+        Text("Save what you know. Compare your measurements with a retailer’s size chart; sizing varies by brand.")
             .font(PyxisTypography.label)
             .foregroundStyle(PyxisColors.secondaryText)
     }
@@ -58,14 +57,14 @@ struct SizingProfileView: View {
                 }
             }
 
-            Text("MEASUREMENTS USED FOR SIZE MATCHING")
+            Text("Measurements")
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
             ForEach([MeasurementKey.chest, .waist, .hip, .inseam, .foot]) { key in
                 MeasurementInput(key: key, system: system, value: binding(for: key))
             }
 
-            DisclosureGroup("OPTIONAL PROFILE CONTEXT") {
+            DisclosureGroup("Optional details") {
                 VStack(spacing: PyxisSpacing.md) {
                     ForEach([MeasurementKey.height, .weight, .shoulder]) { key in
                         MeasurementInput(key: key, system: system, value: binding(for: key))
@@ -90,9 +89,9 @@ struct SizingProfileView: View {
 
     private var sizeChecker: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            Text("RETAILER SIZE CHECK")
-                .font(PyxisTypography.title)
-            Text("COPY THE MEASUREMENT RANGES FROM THE PRODUCT'S SIZE CHART. LEAVE COLUMNS BLANK WHEN THE RETAILER DOES NOT PROVIDE THEM.")
+            Text("Size check")
+                .font(PyxisTypography.editorialTitle)
+            Text("Enter ranges from the product’s size chart. Leave any unavailable measurements blank.")
                 .font(PyxisTypography.label)
                 .foregroundStyle(PyxisColors.secondaryText)
 

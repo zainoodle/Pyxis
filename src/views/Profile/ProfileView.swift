@@ -7,12 +7,12 @@ struct ProfileView: View {
     @State private var selectedClosetID: UUID?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-            PrimaryPageHeader(title: "PROFILE")
+        VStack(alignment: .leading, spacing: 8) {
+            PrimaryPageHeader(title: "Profile")
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("ORGANIZE")
+                    Text("WARDROBE")
                         .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
                         .tracking(colorScheme == .dark ? 1.5 : 0)
                         .foregroundStyle(PyxisColors.secondaryText)
@@ -22,7 +22,7 @@ struct ProfileView: View {
                     NavigationLink {
                         ClosetManagementView(selectedClosetID: $selectedClosetID)
                     } label: {
-                        settingsRow("MANAGE CLOSETS", systemImage: "folder")
+                        settingsRow("Closets", systemImage: "folder")
                     }
 
                     Rectangle()
@@ -32,7 +32,7 @@ struct ProfileView: View {
                     NavigationLink {
                         SizingProfileView()
                     } label: {
-                        settingsRow("FIT PASSPORT", systemImage: "ruler")
+                        settingsRow("Fit passport", systemImage: "ruler")
                     }
 
                     Text("APPEARANCE")
@@ -59,11 +59,12 @@ struct ProfileView: View {
                                         }
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(option.title.capitalized)
                                 .editorialGlow(cornerRadius: 8, strength: appearance == option.rawValue ? 1.1 : 0.5)
                                 .accessibilityAddTraits(appearance == option.rawValue ? .isSelected : [])
                             }
                         }
-                        .accessibilityLabel("App appearance")
+                        .accessibilityElement(children: .contain)
                     } else {
                         Picker("APPEARANCE", selection: $appearance) {
                             ForEach(PyxisAppearance.allCases) { option in
@@ -71,13 +72,19 @@ struct ProfileView: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        .accessibilityLabel("App appearance")
+                        .accessibilityElement(children: .contain)
                     }
+                    Text("PYXIS")
+                        .font(PyxisTypography.editorialMicro)
+                        .tracking(3)
+                        .foregroundStyle(PyxisColors.inactiveText)
+                        .padding(.top, 40)
+                        .accessibilityHidden(true)
                 }
-                .padding(.top, PyxisSpacing.md)
+                .padding(.top, 24)
             }
         }
-        .padding(.horizontal, colorScheme == .dark ? 20 : PyxisSpacing.md)
+        .padding(.horizontal, 24)
         .padding(.bottom, PyxisSpacing.md)
         .editorialCanvas()
         .navigationBarHidden(true)
@@ -92,16 +99,19 @@ struct ProfileView: View {
     private func settingsRow(_ title: String, systemImage: String) -> some View {
         HStack(spacing: PyxisSpacing.md) {
             Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .light))
+                .accessibilityHidden(true)
                 .frame(width: 24)
                 .foregroundStyle(PyxisColors.secondaryText)
             Text(title)
-                .font(colorScheme == .dark ? PyxisTypography.editorialBody : PyxisTypography.body)
-                .tracking(colorScheme == .dark ? 1.2 : 0)
+                .font(PyxisTypography.body)
+                .tracking(0)
+                .multilineTextAlignment(.leading)
 
             Spacer(minLength: PyxisSpacing.sm)
 
             Image(systemName: "chevron.right")
-                .font(PyxisTypography.label)
+                .font(.system(size: 12, weight: .light))
                 .foregroundStyle(PyxisColors.inactiveText)
                 .accessibilityHidden(true)
         }

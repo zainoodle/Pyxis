@@ -115,8 +115,7 @@ struct OutfitDetailView: View {
         }
         .padding(PyxisSpacing.md)
         .editorialCanvas()
-        .navigationTitle(outfit.name?.uppercased() ?? "FIT DETAIL")
-        .navigationBarTitleDisplayMode(.inline)
+        .editorialNavigationTitle(outfit.name ?? "Fit details")
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

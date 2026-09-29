@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct SearchAndFilterView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var filterState: ClosetFilterState
     let closets: [Closet]
-    let isSearchFocused: FocusState<Bool>.Binding
     @State private var isShowingMoreFilters = false
 
     var body: some View {
-        VStack(spacing: 14) {
-            searchField
+        HStack {
             browseMenu
+            Spacer(minLength: 0)
         }
         .foregroundStyle(PyxisColors.text)
         .sheet(isPresented: $isShowingMoreFilters) {
@@ -21,58 +21,15 @@ struct SearchAndFilterView: View {
         }
     }
 
-    private var searchField: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 19, weight: .light))
-                .foregroundStyle(PyxisColors.text)
-                .accessibilityHidden(true)
-
-            TextField(
-                "Search closet",
-                text: $filterState.searchText,
-                prompt: Text("SEARCH YOUR CLOSET")
-                    .foregroundColor(PyxisColors.secondaryText)
-            )
-            .textFieldStyle(.plain)
-            .font(PyxisTypography.editorialBody)
-            .tracking(1.2)
-            .autocorrectionDisabled()
-            .focused(isSearchFocused)
-
-            if !filterState.searchText.isEmpty {
-                Button {
-                    filterState.searchText = ""
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, minHeight: 54)
-        .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 10))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(PyxisColors.hairline, lineWidth: 1)
-        }
-        .editorialGlow()
-        .accessibilityLabel("Search closet")
-    }
-
     private var browseMenu: some View {
         HStack {
-            Spacer(minLength: 0)
             Menu {
                 Toggle(isOn: $filterState.favoritesOnly) {
                     Label("Favorites only", systemImage: "heart")
                 }
 
                 Section("Category") {
-                    categoryOption("All items", category: nil)
+                    categoryOption("All pieces", category: nil)
                     ForEach(ClothingCategory.allCases) { category in
                         categoryOption(categoryTitle(category), category: category)
                     }
@@ -93,13 +50,14 @@ struct SearchAndFilterView: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(browseTitle)
-                            .font(PyxisTypography.editorialLabel)
+                            .font(PyxisTypography.closetBrowse)
+                            .multilineTextAlignment(.leading)
 
                         if let browseDetail {
                             Text(browseDetail)
                                 .font(PyxisTypography.editorialMicro)
                                 .foregroundStyle(PyxisColors.secondaryText)
-                                .lineLimit(1)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 
@@ -108,14 +66,13 @@ struct SearchAndFilterView: View {
                         .accessibilityHidden(true)
                 }
                 .tracking(1.1)
-                .foregroundStyle(PyxisColors.text)
-                .padding(.horizontal, PyxisSpacing.md)
+                .foregroundStyle(colorScheme == .dark ? PyxisColors.secondaryText : PyxisColors.text)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .accessibilityLabel("Browse closet")
+            .accessibilityIdentifier("closet.browse")
             .accessibilityValue(browseDetail.map { "\(browseTitle), \($0)" } ?? browseTitle)
-            Spacer(minLength: 0)
         }
     }
 
@@ -143,13 +100,16 @@ struct SearchAndFilterView: View {
 
     private var browseTitle: String {
         if let category = filterState.category {
-            return categoryTitle(category).uppercased()
+            return categoryTitle(category)
         }
-        return filterState.favoritesOnly ? "FAVORITES" : "ALL ITEMS"
+        return filterState.favoritesOnly ? "Favorites" : "All pieces"
     }
 
     private var browseDetail: String? {
         var parts: [String] = []
+        if !filterState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            parts.append("“\(filterState.searchText)”")
+        }
         if filterState.category != nil && filterState.favoritesOnly {
             parts.append("FAVORITES")
         }

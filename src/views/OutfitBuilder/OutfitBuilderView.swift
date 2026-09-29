@@ -54,21 +54,10 @@ struct OutfitBuilderView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .lastTextBaseline) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("YOUR FIT")
-                                .font(PyxisTypography.editorialTitle)
-                                .tracking(3.2)
-                                .foregroundStyle(PyxisColors.text)
-                                .accessibilityAddTraits(.isHeader)
-                            Text("\(selectedPieces.count) PIECES")
-                                .font(PyxisTypography.editorialLabel)
-                                .tracking(1.6)
-                                .foregroundStyle(PyxisColors.secondaryText)
-                        }
-                        Spacer()
-                    }
-                    .padding(.top, 20)
+                    Text("\(selectedPieces.count) pieces")
+                        .font(PyxisTypography.label)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .padding(.top, 8)
 
                     composition
                         .frame(height: dynamicTypeSize.isAccessibilitySize ? 310 : 360)
@@ -81,7 +70,7 @@ struct OutfitBuilderView: View {
 
                     closetTray
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 20)
             }
             .scrollIndicators(.hidden)
@@ -110,9 +99,8 @@ struct OutfitBuilderView: View {
             .accessibilityLabel("Back to fits")
 
             Spacer(minLength: 0)
-            Text("CREATE OUTFIT")
-                .font(PyxisTypography.editorialLabel)
-                .tracking(2.4)
+            Text("Create fit")
+                .font(PyxisTypography.body)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .accessibilityAddTraits(.isHeader)
@@ -120,7 +108,7 @@ struct OutfitBuilderView: View {
             Color.clear.frame(width: 44, height: 48)
         }
         .foregroundStyle(PyxisColors.text)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.top, 4)
     }
 
@@ -170,13 +158,13 @@ struct OutfitBuilderView: View {
     private var closetTray: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("ADD FROM CLOSET")
+                Text("From your closet")
                     .font(PyxisTypography.editorialLabel)
                     .tracking(1.6)
                     .foregroundStyle(PyxisColors.text)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
-                Text("TAP AN ITEM TO ADD")
+                Text("Tap to add")
                     .font(PyxisTypography.editorialMicro)
                     .tracking(0.6)
                     .foregroundStyle(PyxisColors.secondaryText)
@@ -256,9 +244,9 @@ struct OutfitBuilderView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.top, 12)
-        .padding(.bottom, colorScheme == .dark ? 48 : 12)
+        .padding(.bottom, 12)
         .background(PyxisColors.background)
         .overlay(alignment: .top) { Rectangle().fill(PyxisColors.hairline).frame(height: 1) }
     }

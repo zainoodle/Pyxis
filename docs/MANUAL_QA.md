@@ -3,7 +3,7 @@
 Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` scheme and `./scripts/build_and_run.sh --verify` launches the app on a booted simulator.
 
 1. Launch Pyxis.
-2. Confirm the first screen is the closet grid.
+2. Confirm the first screen is Closet: a garment gallery in Dark appearance and a grid in Light appearance.
 3. Confirm the empty state says `ADD FIRST ITEM`.
 4. On a Release build, confirm `SEED CLOSET` is not visible.
 5. Press `Command+N`.
@@ -29,11 +29,11 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 24. Confirm category, subtype, and color suggestions are populated.
 25. Edit display name, brand, size, tags, notes, category, subtype, color, and favorite.
 26. Save the item.
-27. Confirm the item appears in the grid with the same product-style code shown during Studio Snap.
+27. Confirm the saved item appears in Closet. In Dark appearance, it becomes the selected garment; open its detail to verify the same product-style code shown during Studio Snap.
 28. Scroll rapidly through a seeded closet and swipe outfit rows; confirm images appear without blocking scrolling or repeatedly flashing `NO IMAGE`.
     Confirm previously saved transparent cutouts also fill their frames without changing their stored originals.
 29. Quit Pyxis, relaunch it, and confirm the item persists.
-30. Beneath Closet search, open the centered category menu. Select Tops, Bottoms, and Outerwear in turn, then toggle Favorites Only. Open Sort & filter, change Sort from Newest, and select a closet, type, and color. Confirm the grid updates and the menu label summarizes active choices without showing the default sort. Choose All items and confirm category and type clear. Tap Clear all and confirm search, closet, category, subtype, color, favorites, and sort return to defaults. Switch between Light and Dark appearance and confirm the Closet header, search, menu, garment grid, and bottom navigation retain the same layout and controls.
+30. In Dark appearance, open All pieces beneath the Closet heading. Select Tops, Bottoms, and Outerwear in turn, then toggle Favorites only. Open Sort & filter, change Sort from Newest, and select a closet, type, and color. Confirm the gallery updates and the menu label summarizes active choices. Choose All pieces and confirm category and type clear. Tap Clear all and confirm search, closet, category, subtype, color, favorites, and sort return to defaults. In Light appearance, confirm the shared compact header opens search from its magnifying glass and the garment grid remains available.
 31. Leave the active search and filters applied, open an item, and return to Closet; confirm the state remains intact. Terminate and relaunch Pyxis; confirm Closet starts with the default unfiltered, newest-first catalog because filters are intentionally session-scoped.
 32. Press `Command+F` and search by item code, display name, brand, tag, notes, category, subtype, and color.
 33. Open item detail, toggle original/cutout, retry background removal, edit metadata, press `Escape`, reopen detail, and confirm the edits persisted.
@@ -48,3 +48,28 @@ Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` sch
 42. Tap `DELETE ITEM`, cancel the confirmation, and confirm the item remains. Repeat, confirm deletion, and confirm the item and related image files disappear.
 43. Run `./scripts/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
 44. Disconnect network and repeat launch/import/save/search to confirm core local behavior remains available.
+
+## Editorial dark Closet regression checks
+
+- Swipe through at least three pieces: image, name, category, and count must agree. Tap a garment, return, switch to Fits and back; selection must be preserved.
+- Search from the magnifying glass, select a result, open its detail, and return. Clear search and confirm the selected garment still agrees with the caption. Try a query with no results and use Clear all.
+- Filter while a later garment is selected. If the selected garment remains in the results, keep it centered; otherwise select a valid remaining garment. Check favorites with zero results.
+- Import a new garment while a later garment is selected. After save, the image and caption must both refer to the new garment when it matches the active filters.
+- At default text size, the entire garment caption and count must sit above the bottom navigation. Confirm only one set of tabs is exposed, and the custom bar reserves its own layout space.
+- Change Dynamic Type while the second garment is selected. Its image and caption must remain paired. At the largest accessibility size, scroll the gallery vertically to reach the full caption/count; tab labels must remain readable.
+- Use a transparent original without a processed cutout. The large gallery must show the original at display resolution, not an enlarged thumbnail. Keep thumbnail resolution for compact search results.
+- Turn on Increase Contrast or Reduce Transparency and confirm the decorative backdrop lighting disappears. With Reduce Motion, VoiceOver Next/Previous garment actions should change selection without an animated transition.
+
+Local verification evidence and exact checks: [editorial design QA](../design-qa.md).
+
+## Cohesive screen hierarchy
+
+- Closet, Fits, and Profile use the same 32-point IBM Plex Mono title, 24-point side margins, and compact top spacing. Closet and Fits group search/add together in 44-point targets.
+- On Fits, open search, search by garment name, select a result, return, toggle Favorites, and clear all filters. With no saved fits, hide browse controls and offer Create a fit.
+- Create and save a fit. Confirm the builder has one title, a piece count, a readable clothing tray, and reachable Save fit / Try on actions above navigation.
+- Open Add piece and cancel. Confirm Photo / Clean up / Details remain legible, with the current step announced.
+- Open Closets and Fit passport from Profile, then return. Check inline titles, spacing, and the native back action.
+- At maximum accessibility text, Fits uses one column and stacks its browse count; Profile keeps icons compact, wraps labels left aligned, and stacks appearance choices.
+- Repeat the primary header/search checks in Light appearance. Its existing garment grid and light palette remain available.
+
+Current captures, findings, and verification: [cohesive UI review](COHESIVE_UI_REVIEW.md).

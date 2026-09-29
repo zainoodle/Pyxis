@@ -4,7 +4,7 @@ struct TopNavigationView: View {
     let addAction: () -> Void
 
     var body: some View {
-        PrimaryPageHeader(title: "CLOSET") {
+        PrimaryPageHeader(title: "Closet") {
             Button(action: addAction) {
                 UppercaseNavLabel(title: "New", isActive: false)
             }

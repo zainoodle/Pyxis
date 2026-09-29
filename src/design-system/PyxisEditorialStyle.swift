@@ -12,8 +12,8 @@ private struct EditorialGlow: ViewModifier {
         content.background {
             if colorScheme == .dark, contrast != .increased, !reduceTransparency {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.24 * strength), lineWidth: 2)
-                    .blur(radius: 7)
+                    .stroke(Color.white.opacity(0.045 * strength), lineWidth: 1)
+                    .blur(radius: 4)
                     .padding(-1)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -24,18 +24,19 @@ private struct EditorialGlow: ViewModifier {
 
 private struct EditorialCanvas: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
         content.background {
             PyxisColors.background
-                .overlay(alignment: .topLeading) {
-                    if colorScheme == .dark, !reduceTransparency {
+                .overlay {
+                    if colorScheme == .dark, contrast != .increased, !reduceTransparency {
                         RadialGradient(
-                            colors: [.white.opacity(0.055), .clear],
-                            center: .topLeading,
+                            colors: [.white.opacity(0.045), .clear],
+                            center: UnitPoint(x: 0.42, y: 0.43),
                             startRadius: 0,
-                            endRadius: 260
+                            endRadius: 370
                         )
                     }
                 }

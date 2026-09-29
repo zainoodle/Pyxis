@@ -46,8 +46,7 @@ struct ClosetRefineSheet: View {
             .scrollContentBackground(.hidden)
             .background(PyxisColors.background)
             .foregroundStyle(PyxisColors.text)
-            .navigationTitle("SORT & FILTER")
-            .navigationBarTitleDisplayMode(.inline)
+            .editorialNavigationTitle("Sort & filter")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

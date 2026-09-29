@@ -50,8 +50,7 @@ struct ItemDetailView: View {
             .padding(PyxisSpacing.md)
         }
         .editorialCanvas()
-        .navigationTitle(item.itemCode)
-        .navigationBarTitleDisplayMode(.inline)
+        .editorialNavigationTitle(item.itemCode)
         .confirmationDialog(
             "DELETE \(item.itemCode)?",
             isPresented: $isConfirmingDeletion,
