@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ClosetGridItemView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let item: ClosetItem
 
     private var imageURL: URL? {
@@ -13,25 +14,20 @@ struct ClosetGridItemView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
             LocalImageView(url: imageURL, revision: imageRevision)
-                .frame(height: 166)
-                .padding(.horizontal, PyxisSpacing.sm)
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? 190 : 150)
 
-            if let displayName = item.displayName, !displayName.isEmpty {
-                Text(displayName.uppercased())
-                    .font(PyxisTypography.editorialBody)
-                    .foregroundStyle(PyxisColors.text)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .tracking(0.8)
-            }
+            Text(item.displayName ?? item.subtype.rawValue.capitalized)
+                .font(PyxisTypography.editorialBody)
+                .foregroundStyle(PyxisColors.text)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
 
             ItemCodeLabel(code: item.itemCode)
-                .opacity(0.65)
         }
-        .frame(minWidth: 150, minHeight: 213)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, PyxisSpacing.sm)
-        .catalogTileBackground()
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(item.itemCode) \(item.displayName ?? item.subtype.rawValue)")
     }
 

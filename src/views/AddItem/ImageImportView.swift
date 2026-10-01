@@ -13,7 +13,14 @@ struct ImageImportView: View {
 
     var body: some View {
         VStack(spacing: PyxisSpacing.md) {
-            Button("TAKE PHOTO") {
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Text("Choose photo")
+            }
+            .buttonStyle(EditorialPrimaryButtonStyle())
+            .accessibilityLabel("Choose clothing image from photo library")
+            .accessibilityIdentifier("piece.choosePhoto")
+
+            Button("Take photo") {
                 guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
                     importMessage = "Camera unavailable"
                     return
@@ -29,40 +36,34 @@ struct ImageImportView: View {
                     : "Unavailable on this device"
             )
 
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Text("PHOTO LIBRARY")
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .accessibilityLabel("Choose clothing image from photo library")
-
-            Button("CHOOSE FILE") {
-                isShowingImporter = true
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .accessibilityLabel("Choose clothing image file")
-
-            #if DEBUG
-            Button("DEMO IMAGE") {
-                if let url = makeDemoImageURL() {
-                    onSelect(url)
+            Menu {
+                Button("Choose file", systemImage: "doc") { isShowingImporter = true }
+                #if DEBUG
+                Button("Demo image", systemImage: "tshirt") {
+                    if let url = makeDemoImageURL() { onSelect(url) }
                 }
+                .accessibilityLabel("Import demo clothing image")
+                #endif
+            } label: {
+                Label("More", systemImage: "ellipsis")
+                    .font(PyxisTypography.control).frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(MinimalButtonStyle())
-            .accessibilityLabel("Import demo clothing image")
-            #endif
+            .accessibilityLabel("More import options")
 
-            Text("DROP IMAGE")
-                .font(PyxisTypography.label)
-                .foregroundStyle(isDropTargeted ? PyxisColors.text : PyxisColors.inactiveText)
+            if isDropTargeted {
+                Text("Drop image here")
+                    .font(PyxisTypography.proseCaption)
+                    .foregroundStyle(PyxisColors.text)
+            }
 
             if let importMessage {
-                Text(importMessage.uppercased())
-                    .font(PyxisTypography.label)
+                Text(importMessage)
+                    .font(PyxisTypography.proseCaption)
                     .foregroundStyle(PyxisColors.error)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(PyxisColors.background)
         .onDrop(of: [UTType.fileURL.identifier, UTType.image.identifier], isTargeted: $isDropTargeted) { providers in
             loadFirstURL(from: providers)
         }

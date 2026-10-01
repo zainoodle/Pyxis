@@ -93,20 +93,16 @@ public struct LocalOutfitSuggestionService {
             selected.append(candidate)
         }
 
-        let titles = ["SOFT STRUCTURE", "CITY LAYERS", "WEEKEND MODE"]
-        return selected.enumerated().map { index, candidate in
+        return selected.map { candidate in
             let colors = Array(NSOrderedSet(array: candidate.pieces.map { $0.primaryColor.rawValue }))
                 .compactMap { $0 as? String }
                 .filter { $0 != ClosetColor.unknown.rawValue }
-            let palette = colors.prefix(2).joined(separator: " AND ").uppercased()
-            let summary = palette.isEmpty
-                ? "A FRESH COMBINATION FROM PIECES YOU ALREADY OWN."
-                : "A \(palette) PALETTE FROM PIECES YOU ALREADY OWN."
+            let palette = colors.prefix(2).map { $0.capitalized }.joined(separator: " + ")
             return SuggestedLook(
                 id: candidate.key,
-                title: titles[index % titles.count],
-                summary: summary,
-                tags: ["FROM YOUR CLOSET", "\(candidate.pieces.count) PIECES"],
+                title: palette.isEmpty ? "Suggested fit" : palette,
+                summary: "",
+                tags: ["\(candidate.pieces.count) pieces"],
                 draft: candidate.draft,
                 items: candidate.pieces
             )

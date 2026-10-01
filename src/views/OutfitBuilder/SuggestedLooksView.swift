@@ -28,13 +28,10 @@ struct SuggestedLooksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("For you")
+                Text("Suggestions")
                     .font(PyxisTypography.editorialTitle)
                     .foregroundStyle(PyxisColors.text)
                     .accessibilityAddTraits(.isHeader)
-                Text("New combinations from your closet")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
             }
 
             if let featured {
@@ -53,42 +50,16 @@ struct SuggestedLooksView: View {
                             .font(PyxisTypography.editorialTitle)
                             .tracking(colorScheme == .dark ? 1.5 : 0)
                             .foregroundStyle(PyxisColors.text)
-                        Text(featured.summary)
-                            .font(PyxisTypography.body)
+                        Text("\(featured.items.count) pieces")
+                            .font(PyxisTypography.editorialLabel)
                             .foregroundStyle(PyxisColors.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                 }
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: PyxisSpacing.sm) {
-                        ForEach(featured.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(PyxisTypography.label)
-                                .foregroundStyle(PyxisColors.secondaryText)
-                                .padding(.horizontal, PyxisSpacing.md)
-                                .padding(.vertical, PyxisSpacing.sm)
-                                .background(PyxisColors.field, in: Capsule())
-                        }
-                    }
-                }
-
-                Button { save(featured) } label: {
-                    HStack {
-                        Spacer()
-                        Text("SAVE THIS LOOK")
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                    }
-                    .font(PyxisTypography.body)
-                    .foregroundStyle(PyxisColors.background)
-                    .padding(PyxisSpacing.md)
-                    .frame(minHeight: 52)
-                    .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Save suggested look \(featured.title)")
+                Button("Save fit") { save(featured) }
+                    .buttonStyle(EditorialPrimaryButtonStyle())
+                    .accessibilityLabel("Save suggested fit \(featured.title)")
 
                 if suggestions.count > 1 {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: PyxisSpacing.md),
@@ -116,8 +87,8 @@ struct SuggestedLooksView: View {
                 }
             } else {
                 Text(hasEnoughPieces
-                     ? "ALL CURRENT COMBINATIONS ARE SAVED. ADD A PIECE TO UNLOCK NEW LOOKS."
-                     : "ADD A TOP, BOTTOM, AND SHOES, OR A ONE-PIECE AND SHOES, TO GET LOOKS.")
+                     ? "No new combinations yet."
+                     : "Add a complete outfit to see suggestions.")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.secondaryText)
                     .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
@@ -136,7 +107,7 @@ struct SuggestedLooksView: View {
     }
 
     private func save(_ look: SuggestedLook) {
-        let outfit = OutfitBuilderService().outfit(from: look.draft, name: look.title, notes: look.summary)
+        let outfit = OutfitBuilderService().outfit(from: look.draft, name: look.title)
         modelContext.insert(outfit)
         do {
             let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: items)
@@ -151,7 +122,7 @@ struct SuggestedLooksView: View {
             )
             try modelContext.save()
             selectedID = nil
-            message = "SAVED TO FITS"
+            message = "Fit saved"
         } catch {
             modelContext.rollback()
             message = PersistenceErrorMessage.saveFailed(error)

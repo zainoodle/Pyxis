@@ -10,6 +10,7 @@ struct SavedFitsGalleryView: View {
     @State private var favoriteError: String?
     @State private var isShowingSearch = false
     @State private var selectedSearchResult: Outfit?
+    @AppStorage("pyxis.outfitComposition.v1") private var draftData = Data()
     let buildAction: (() -> Void)?
 
     init(buildAction: (() -> Void)? = nil) { self.buildAction = buildAction }
@@ -43,12 +44,30 @@ struct SavedFitsGalleryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let favoriteError { InlineErrorMessage(message: favoriteError) }
+                    if !draftData.isEmpty, let buildAction {
+                        Button(action: buildAction) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Continue fit").font(PyxisTypography.editorialTitle)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.right")
+                            }
+                            .foregroundStyle(PyxisColors.text)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("fits.resumeDraft")
+                    }
 
                     if savedOutfits.isEmpty {
                         emptyState("Your first fit", detail: "Bring pieces from your closet together.")
                         if let buildAction {
-                            Button("Create a fit", action: buildAction)
-                                .buttonStyle(MinimalButtonStyle())
+                            if draftData.isEmpty {
+                                Button("Create a fit", action: buildAction)
+                                    .buttonStyle(EditorialPrimaryButtonStyle())
+                            }
                         }
                     } else if visibleOutfits.isEmpty {
                         emptyState("No matching fits", detail: "Try another search or clear your filters.")
@@ -220,7 +239,7 @@ private struct OutfitGalleryTile: View {
                         .tracking(colorScheme == .dark ? 1.1 : 0)
                         .foregroundStyle(PyxisColors.text)
                         .lineLimit(2)
-                    Text("\(pieces.count) PIECES · WORN \(outfit.wearCount)×")
+                    Text("\(pieces.count) PIECES" + (outfit.wearCount > 0 ? " · WORN \(outfit.wearCount)×" : ""))
                         .font(colorScheme == .dark ? PyxisTypography.editorialMicro : PyxisTypography.code)
                         .tracking(colorScheme == .dark ? 0.7 : 0)
                         .foregroundStyle(PyxisColors.secondaryText)
@@ -236,40 +255,57 @@ private struct OutfitGalleryTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Open \(outfit.name ?? "saved fit"), \(pieces.count) pieces, worn \(outfit.wearCount) times")
+        .accessibilityLabel("Open \(outfit.name ?? "saved fit"), \(pieces.count) pieces" + (outfit.wearCount > 0 ? ", worn \(outfit.wearCount) times" : ""))
     }
 }
 
 struct OutfitFlatLayView: View {
-    @Environment(\.colorScheme) private var colorScheme
     let items: [ClosetItem]
 
     var body: some View {
         GeometryReader { geometry in
             if items.isEmpty {
-                Text("NO CLOSET IMAGES")
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.inactiveText)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ForEach(Array(items.prefix(5).enumerated()), id: \.element.id) { index, item in
-                    LocalImageView(url: imageURL(for: item), revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000))
-                        .frame(width: geometry.size.width * width(for: index),
-                               height: geometry.size.height * height(for: index))
-                        .position(x: geometry.size.width * x(for: index),
-                                  y: geometry.size.height * y(for: index))
+                VStack(spacing: 12) {
+                    Image(systemName: "hanger").font(.system(size: 36, weight: .ultraLight))
+                    Text("Add a piece to start your fit")
+                        .font(PyxisTypography.control)
+                        .multilineTextAlignment(.center)
                 }
+                .foregroundStyle(PyxisColors.secondaryText)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ZStack {
+                    ForEach(Array(items.prefix(6))) { item in
+                        let placement = placement(for: item)
+                        LocalImageView(
+                            url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item)),
+                            revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
+                        )
+                        .frame(width: geometry.size.width * placement.width,
+                               height: geometry.size.height * placement.height)
+                        .rotationEffect(.degrees(placement.rotation))
+                        .shadow(color: .black.opacity(0.18), radius: 8, y: 6)
+                        .position(x: geometry.size.width * placement.x, y: geometry.size.height * placement.y)
+                        .accessibilityLabel(item.displayName ?? item.itemCode)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .clipped()
     }
 
-    private func imageURL(for item: ClosetItem) -> URL? {
-        ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
+    private func placement(for item: ClosetItem) -> (width: CGFloat, height: CGFloat, x: CGFloat, y: CGFloat, rotation: Double) {
+        let hasLayer = items.contains { $0.category == .outerwear }
+        let hasOnePiece = items.contains { $0.category == .onePiece }
+        switch item.category {
+        case .outerwear: return (0.60, 0.57, 0.29, 0.29, 0)
+        case .tops: return hasLayer ? (0.49, 0.43, 0.75, 0.27, 0) : (0.60, 0.56, 0.30, 0.29, 0)
+        case .bottoms: return hasLayer ? (0.54, 0.62, 0.44, 0.68, 5) : (0.52, 0.75, 0.72, 0.51, 3)
+        case .onePiece: return (0.62, 0.92, 0.35, 0.49, 0)
+        case .footwear:
+            return hasLayer || hasOnePiece ? (0.35, 0.28, 0.81, 0.79, -10) : (0.43, 0.28, 0.30, 0.84, -8)
+        case .accessories: return (0.27, 0.25, 0.82, 0.52, 0)
+        case .other: return (0.3, 0.3, 0.5, 0.5, 0)
+        }
     }
-
-    private func width(for index: Int) -> CGFloat { [0.59, 0.53, 0.51, 0.38, 0.34][index] }
-    private func height(for index: Int) -> CGFloat { [0.59, 0.66, 0.36, 0.45, 0.30][index] }
-    private func x(for index: Int) -> CGFloat { [0.35, 0.68, 0.33, 0.77, 0.57][index] }
-    private func y(for index: Int) -> CGFloat { [0.34, 0.56, 0.83, 0.28, 0.83][index] }
 }

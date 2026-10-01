@@ -63,11 +63,12 @@ public struct SizeRecommendationService {
         }
         guard let best = scored.max(by: { $0.1 < $1.1 }) else { return nil }
         let confidence = min(0.95, 0.45 + Double(best.2) * 0.15 + max(0, best.1) * 0.2)
-        let names = relevantMeasurements(profile: profile, category: category).keys.sorted().joined(separator: ", ")
+        let ranges = relevantRanges(option: best.0, category: category)
+        let names = measurements.keys.filter { ranges[$0] != nil }.sorted().formatted(.list(type: .and))
         return SizeRecommendation(
             sizeLabel: best.0.label,
             confidence: confidence,
-            explanation: "Based on your \(names) measurements and \(profile.fitPreference.rawValue) fit preference. Check product reviews and fabric stretch before ordering."
+            explanation: "Matches your \(names) in this chart."
         )
     }
 

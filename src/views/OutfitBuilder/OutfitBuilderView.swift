@@ -1,351 +1,242 @@
 import SwiftData
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct OutfitBuilderView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
-
-    @State private var selections: [OutfitSlot: Int] = [:]
-    @State private var focusedItemID: UUID?
-    @State private var isShowingAddFlow = false
-    @State private var isShowingTryOn = false
+    @State private var composition = OutfitComposition()
+    @State private var didInitialize = false
+    @State private var didSave = false
+    @State private var isDraftSaved = false
+    @State private var sheet: BuilderSheet?
     @State private var saveErrorMessage: String?
-
-    private let service = OutfitBuilderService()
+    @State private var isShowingDiscardConfirmation = false
+    @StateObject private var tryOnEntry = TryOnEntryViewModel()
     private let initialItemID: UUID?
+    private let service = OutfitBuilderService()
+    private let draftStore = OutfitDraftStore()
 
-    init(initialItemID: UUID? = nil) {
-        self.initialItemID = initialItemID
-        self._focusedItemID = State(initialValue: initialItemID)
-    }
+    init(initialItemID: UUID? = nil) { self.initialItemID = initialItemID }
 
     private var activeItems: [ClosetItem] { items.filter { !$0.isDeleted } }
-
-    private var rows: [OutfitRow] {
-        service.requiredRows(from: activeItems) + service.optionalRows(from: activeItems).filter { !$0.items.isEmpty }
-    }
-
-    private var draft: OutfitDraft { service.draft(from: rows, selections: selections) }
-
-    private var selectedPieces: [(slot: OutfitSlot, item: ClosetItem)] {
-        rows.compactMap { row in
-            guard let index = selections[row.slot], row.items.indices.contains(index) else { return nil }
-            return (slot: row.slot, item: row.items[index])
-        }
-    }
-
-    private var availableItems: [ClosetItem] {
-        let selectedIDs = Set(selectedPieces.map { $0.item.id })
-        let order: [OutfitSlot] = [.accessory, .outerwear, .top, .bottom, .footwear, .onePiece]
-        return order.flatMap { slot in
-            rows.first { $0.slot == slot }?.items.filter { !selectedIDs.contains($0.id) } ?? []
+    private var selectedPieces: [ClosetItem] {
+        let order: [OutfitSlot] = [.outerwear, .bottom, .top, .onePiece, .footwear, .accessory]
+        return order.compactMap { slot in
+            composition.selections[slot].flatMap { id in activeItems.first { $0.id == id } }
         }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             header
-
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("\(selectedPieces.count) pieces")
-                        .font(PyxisTypography.label)
-                        .foregroundStyle(PyxisColors.secondaryText)
-                        .padding(.top, 8)
-
-                    composition
-                        .frame(height: dynamicTypeSize.isAccessibilitySize ? 310 : 360)
-                        .padding(.top, 4)
-
-                    Rectangle()
-                        .fill(PyxisColors.hairline)
-                        .frame(height: 1)
-                        .padding(.bottom, 18)
-
-                    closetTray
+                    OutfitFlatLayView(items: selectedPieces)
+                        .frame(height: dynamicTypeSize.isAccessibilitySize ? 220 : 320)
+                        .padding(.vertical, 10)
+                        .accessibilityLabel("Your fit, \(selectedPieces.count) pieces")
+                    ForEach(selectedPieces) { item in pieceRow(item) }
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 20)
+                .padding(.bottom, 12)
             }
             .scrollIndicators(.hidden)
         }
         .editorialCanvas()
         .navigationBarBackButtonHidden(true)
         .safeAreaInset(edge: .bottom, spacing: 0) { actionRail }
-        .onAppear(perform: reconcileSelections)
-        .onChange(of: items.map(\.id)) { _, _ in reconcileSelections() }
-        .onChange(of: focusedItemID) { _, _ in reconcileSelections() }
-        .sheet(isPresented: $isShowingAddFlow) {
-            AddItemFlow { item in focusedItemID = item.id }
+        .onAppear(perform: initializeDraft)
+        .task { await tryOnEntry.load() }
+        .onChange(of: items.map { "\($0.id)|\($0.categoryRawValue)|\($0.isDeleted)" }) { _, _ in
+            composition.reconcile(with: activeItems)
         }
-        .sheet(isPresented: $isShowingTryOn) {
-            AITryOnView(items: selectedPieces.map(\.item))
+        .onChange(of: composition) { _, _ in persistDraft() }
+        .sheet(item: $sheet) { destination in
+            switch destination {
+            case .pieces(let slot):
+                OutfitPiecePicker(items: activeItems, composition: composition, slot: slot, select: select)
+            case .tryOn:
+                AITryOnView(items: selectedPieces)
+            case .savedPreviews:
+                SavedTryOnEntryView()
+            }
         }
+        .confirmationDialog("Discard this draft?", isPresented: $isShowingDiscardConfirmation, titleVisibility: .visible) {
+            Button("Discard draft", role: .destructive) {
+                didSave = true
+                draftStore.clear()
+                dismiss()
+            }
+        } message: { Text("Your saved fits and closet pieces will stay in your wardrobe.") }
     }
 
     private var header: some View {
-        HStack(spacing: 0) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .ultraLight))
-                    .frame(width: 44, height: 48, alignment: .leading)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Button { dismiss() } label: {
+                    Label("Fits", systemImage: "chevron.left")
+                        .font(PyxisTypography.editorialLabel)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back to fits, keeping draft")
+                Spacer()
+                Menu {
+                    if let destination = tryOnEntry.destination {
+                        Button(destination.title, systemImage: "person.crop.rectangle") {
+                            sheet = destination == .generate ? .tryOn : .savedPreviews
+                        }
+                        .disabled(destination == .generate && selectedPieces.isEmpty)
+                    }
+                    Button("Discard draft", systemImage: "trash", role: .destructive) {
+                        isShowingDiscardConfirmation = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Fit options")
             }
-            .accessibilityLabel("Back to fits")
-
-            Spacer(minLength: 0)
-            Text("Create fit")
-                .font(PyxisTypography.body)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            Text("Your fit")
+                .font(PyxisTypography.pageTitle)
                 .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            Color.clear.frame(width: 44, height: 48)
+            Text("\(selectedPieces.count) pieces · \(isDraftSaved ? "Draft saved" : "Working draft")")
+                .font(PyxisTypography.editorialLabel)
+                .foregroundStyle(PyxisColors.secondaryText)
+                .accessibilityIdentifier("fit.draftStatus")
         }
         .foregroundStyle(PyxisColors.text)
         .padding(.horizontal, 24)
-        .padding(.top, 4)
+        .padding(.bottom, 6)
     }
 
-    private var composition: some View {
-        GeometryReader { geometry in
-            if selectedPieces.isEmpty {
-                Text("TAP A CLOSET ITEM TO START")
-                    .font(PyxisTypography.editorialLabel)
-                    .tracking(1.2)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ZStack {
-                    ForEach(selectedPieces, id: \.slot) { piece in
-                        let layout = pieceLayout(for: piece.slot, in: geometry.size)
-                        Button {
-                            selections[piece.slot] = nil
-                        } label: {
-                            LocalImageView(url: imageURL(for: piece.item), revision: imageRevision(for: piece.item))
-                                .frame(width: layout.width, height: layout.height)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .position(x: layout.x, y: layout.y)
-                        .accessibilityLabel("Remove \(piece.item.displayName ?? piece.item.subtype.rawValue) from fit")
+    private func pieceRow(_ item: ClosetItem) -> some View {
+        let slot = service.slot(for: item.category) ?? .accessory
+        let isKept = composition.keptSlots.contains(slot)
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 14))
+        return VStack(spacing: 0) {
+            Rectangle().fill(PyxisColors.hairline.opacity(0.65)).frame(height: 0.5)
+            layout {
+                HStack(spacing: 14) {
+                    LocalImageView(
+                        url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item)),
+                        revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
+                    )
+                    .frame(width: 46, height: 44)
+                    .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(item.displayName ?? item.subtype.rawValue.capitalized)
+                            .font(PyxisTypography.editorialBody)
+                            .fixedSize(horizontal: false, vertical: true)
+                        ItemCodeLabel(code: item.itemCode)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-    }
-
-    private func pieceLayout(for slot: OutfitSlot, in size: CGSize) -> (width: CGFloat, height: CGFloat, x: CGFloat, y: CGFloat) {
-        let values: (CGFloat, CGFloat, CGFloat, CGFloat)
-        switch slot {
-        case .top: values = (0.57, 0.59, 0.29, 0.34)
-        case .bottom: values = (0.53, 0.82, 0.74, 0.53)
-        case .footwear: values = (0.44, 0.28, 0.27, 0.84)
-        case .onePiece: values = (0.57, 0.84, 0.53, 0.48)
-        case .outerwear: values = (0.55, 0.62, 0.27, 0.33)
-        case .accessory: values = (0.32, 0.32, 0.67, 0.84)
-        }
-        return (size.width * values.0, size.height * values.1,
-                size.width * values.2, size.height * values.3)
-    }
-
-    private var closetTray: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("From your closet")
-                    .font(PyxisTypography.editorialLabel)
-                    .tracking(1.6)
-                    .foregroundStyle(PyxisColors.text)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-                Text("Tap to add")
-                    .font(PyxisTypography.editorialMicro)
-                    .tracking(0.6)
-                    .foregroundStyle(PyxisColors.secondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-
-            if availableItems.isEmpty {
-                Button(activeItems.isEmpty ? "ADD YOUR FIRST ITEM" : "ADD ANOTHER ITEM") {
-                    isShowingAddFlow = true
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    if isKept { composition.toggleKeep(slot) }
+                    else { sheet = .pieces(slot) }
+                } label: {
+                    Label(isKept ? "Keep" : "Swap", systemImage: isKept ? "lock" : "arrow.left.arrow.right")
+                        .font(PyxisTypography.editorialLabel)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(MinimalButtonStyle())
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 10) {
-                        ForEach(availableItems) { item in
-                            Button { select(item) } label: {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    LocalImageView(url: imageURL(for: item), revision: imageRevision(for: item))
-                                        .frame(width: 120, height: 112)
-                                    Text(item.displayName?.uppercased() ?? item.subtype.rawValue.uppercased())
-                                        .font(PyxisTypography.editorialMicro)
-                                        .tracking(0.8)
-                                        .foregroundStyle(PyxisColors.secondaryText)
-                                        .lineLimit(1)
-                                }
-                                .frame(width: 120, height: 145)
-                                .padding(8)
-                                .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
-                                .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Add \(item.displayName ?? item.subtype.rawValue) to fit")
-                        }
-                        Button { isShowingAddFlow = true } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 26, weight: .ultraLight))
-                                Text("ADD ITEM")
-                                    .font(PyxisTypography.editorialMicro)
-                            }
-                            .foregroundStyle(PyxisColors.secondaryText)
-                            .frame(width: 120, height: 145)
-                            .padding(8)
-                            .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
-                            .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline, lineWidth: 1) }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Add a new closet item")
-                    }
-                    .padding(.vertical, 2)
-                }
-                .scrollClipDisabled()
+                .buttonStyle(.plain)
+                .accessibilityLabel(isKept ? "Unlock \(item.itemCode)" : "Swap \(item.itemCode)")
+                .accessibilityIdentifier("fit.\(isKept ? "unlock" : "swap").\(item.itemCode)")
             }
+            .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 10 : 5)
+            .foregroundStyle(PyxisColors.text)
         }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button(isKept ? "Unlock piece" : "Keep piece", systemImage: isKept ? "lock.open" : "lock") {
+                composition.toggleKeep(slot)
+            }
+            Button("Remove from fit", systemImage: "minus", role: .destructive) { composition.remove(slot) }
+                .disabled(isKept)
+        }
+        .accessibilityAction(named: isKept ? "Unlock piece" : "Keep piece") { composition.toggleKeep(slot) }
+        .accessibilityAction(named: "Remove from fit") { composition.remove(slot) }
     }
 
     private var actionRail: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             if let saveErrorMessage { InlineErrorMessage(message: saveErrorMessage) }
-            if let saveRequirement {
-                Text(saveRequirement)
-                    .font(PyxisTypography.editorialMicro)
+            if let requirement {
+                Text(requirement)
+                    .font(PyxisTypography.editorialLabel)
                     .foregroundStyle(PyxisColors.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: 10) {
-                    tryOnButton
-                    saveFitButton
-                }
-            } else {
-                HStack(spacing: 10) {
-                    tryOnButton
-                    saveFitButton
-                }
+            Button { sheet = .pieces(nil) } label: {
+                Label("Add a piece", systemImage: "plus")
+                    .font(PyxisTypography.control)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("fit.addPiece")
+            Button("Save fit", action: saveFit)
+                .buttonStyle(EditorialPrimaryButtonStyle())
+                .disabled(!service.canSave(composition.draft))
+                .accessibilityIdentifier("fit.save")
         }
         .padding(.horizontal, 24)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
+        .padding(.vertical, 12)
         .background(PyxisColors.background)
-        .overlay(alignment: .top) { Rectangle().fill(PyxisColors.hairline).frame(height: 1) }
     }
 
-    private var tryOnButton: some View {
-        Button { isShowingTryOn = true } label: {
-            HStack(spacing: 7) {
-                Text("TRY ON")
-                Text("PRO")
-                    .font(PyxisTypography.editorialMicro)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .overlay { RoundedRectangle(cornerRadius: 5).stroke(PyxisColors.hairline, lineWidth: 1) }
-            }
-            .font(PyxisTypography.editorialLabel)
-            .tracking(1.2)
-            .foregroundStyle(PyxisColors.text)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 9))
-            .overlay { RoundedRectangle(cornerRadius: 9).stroke(PyxisColors.hairline, lineWidth: 1) }
-        }
-        .buttonStyle(.plain)
-        .disabled(selectedPieces.isEmpty)
-        .accessibilityLabel("Try on selected fit, premium")
-    }
-
-    private var saveFitButton: some View {
-        Button(action: saveFit) {
-            Text("SAVE FIT")
-                .font(PyxisTypography.editorialLabel)
-                .tracking(1.5)
-                .foregroundStyle(PyxisColors.background)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(PyxisColors.text, in: RoundedRectangle(cornerRadius: 9))
-                .editorialGlow(cornerRadius: 9, strength: 1.3)
-        }
-        .buttonStyle(.plain)
-        .disabled(!service.canSave(draft))
-        .opacity(service.canSave(draft) ? 1 : 0.45)
-        .accessibilityLabel("Save fit")
-    }
-
-    private var saveRequirement: String? {
-        if draft.footwearItemID == nil { return "ADD SHOES TO SAVE THIS FIT" }
+    private var requirement: String? {
+        let draft = composition.draft
+        if draft.footwearItemID == nil { return "Add shoes to complete this fit." }
         if draft.onePieceItemID == nil && (draft.topItemID == nil || draft.bottomItemID == nil) {
-            return "ADD A TOP AND BOTTOM, OR ONE PIECE"
-        }
+            return "Add a top and bottom, or one piece." }
         return nil
     }
 
-    private func imageURL(for item: ClosetItem) -> URL? {
-        ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
+    private func initializeDraft() {
+        guard !didInitialize else { return }
+        do {
+            if let saved = try draftStore.load() { composition = saved }
+            else {
+                let rows = service.requiredRows(from: activeItems) + service.optionalRows(from: activeItems)
+                let draft = service.draft(from: rows, selections: service.defaultSelections(for: rows))
+                composition = OutfitComposition(selections: Dictionary(uniqueKeysWithValues: [
+                    (OutfitSlot.top, draft.topItemID), (.bottom, draft.bottomItemID),
+                    (.onePiece, draft.onePieceItemID), (.footwear, draft.footwearItemID)
+                ].compactMap { slot, id in id.map { (slot, $0) } }))
+            }
+        } catch { saveErrorMessage = "The previous draft could not be opened. You can build a new fit." }
+        composition.reconcile(with: activeItems)
+        if let initialItemID, let item = activeItems.first(where: { $0.id == initialItemID }),
+           let slot = service.slot(for: item.category) {
+            composition.begin(with: item.id, for: slot)
+        }
+        didInitialize = true
+        persistDraft()
     }
 
-    private func imageRevision(for item: ClosetItem) -> Int {
-        Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
+    private func select(_ item: ClosetItem) -> Bool {
+        guard let slot = service.slot(for: item.category), composition.select(item.id, for: slot) else { return false }
+        return true
     }
 
-    private func reconcileSelections() {
-        let defaults = service.defaultSelections(for: rows)
-        for row in rows {
-            if let index = selections[row.slot], row.items.indices.contains(index) { continue }
-            selections[row.slot] = defaults[row.slot]
-        }
-        if selections[.onePiece] != nil {
-            selections[.top] = nil
-            selections[.bottom] = nil
-        }
-        if let focusedItemID,
-           let target = service.selectionTarget(for: focusedItemID, in: rows) {
-            select(target.slot, index: target.index)
-            self.focusedItemID = nil
-        }
-    }
-
-    private func select(_ item: ClosetItem) {
-        guard let target = service.selectionTarget(for: item.id, in: rows) else { return }
-        select(target.slot, index: target.index)
-    }
-
-    private func select(_ slot: OutfitSlot, index: Int) {
-        selections[slot] = index
-        if slot == .onePiece {
-            selections[.top] = nil
-            selections[.bottom] = nil
-        } else if slot == .top || slot == .bottom {
-            selections[.onePiece] = nil
-        }
-        #if canImport(UIKit)
-        if let row = rows.first(where: { $0.slot == slot }), row.items.indices.contains(index) {
-            UIAccessibility.post(notification: .announcement,
-                                 argument: "Selected \(row.items[index].itemCode) for \(slot.title.lowercased())")
-        }
-        #endif
+    private func persistDraft() {
+        guard didInitialize, !didSave else { return }
+        do { try draftStore.save(composition); isDraftSaved = true }
+        catch { isDraftSaved = false; saveErrorMessage = "This draft could not be saved. Keep this screen open and try again." }
     }
 
     private func saveFit() {
-        guard service.canSave(draft) else { return }
-        let outfit = service.outfit(from: draft)
+        guard service.canSave(composition.draft) else { return }
+        let outfit = service.outfit(from: composition.draft)
         modelContext.insert(outfit)
         do {
             let payload = OnDeviceMemoryPayloadBuilder.outfitPayload(for: outfit, items: activeItems)
@@ -355,10 +246,23 @@ struct OutfitBuilderView: View {
                 updatedAt: outfit.dateUpdated, saveImmediately: false
             )
             try modelContext.save()
+            didSave = true
+            draftStore.clear()
             dismiss()
         } catch {
             modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
+        }
+    }
+}
+
+private enum BuilderSheet: Identifiable {
+    case pieces(OutfitSlot?), tryOn, savedPreviews
+    var id: String {
+        switch self {
+        case .pieces(let slot): "pieces.\(slot?.rawValue ?? "all")"
+        case .tryOn: "tryOn"
+        case .savedPreviews: "savedPreviews"
         }
     }
 }

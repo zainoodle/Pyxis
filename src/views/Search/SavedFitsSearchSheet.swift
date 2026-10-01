@@ -42,13 +42,17 @@ struct SavedFitsSearchSheet: View {
                             dismiss()
                             selectFit(outfit)
                         } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(outfit.name ?? "Untitled fit").font(PyxisTypography.body)
-                                Text("\(outfit.itemIDs.count) pieces")
-                                    .font(PyxisTypography.label)
-                                    .foregroundStyle(PyxisColors.secondaryText)
+                            HStack(spacing: 16) {
+                                OutfitFlatLayView(items: outfit.itemIDs.compactMap { id in items.first { $0.id == id } })
+                                    .frame(width: 72, height: 80).accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(outfit.name ?? outfit.dateCreated.formatted(date: .abbreviated, time: .omitted)).font(PyxisTypography.control)
+                                    Text("\(outfit.itemIDs.count) pieces")
+                                        .font(PyxisTypography.label)
+                                        .foregroundStyle(PyxisColors.secondaryText)
+                                }
                             }
-                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

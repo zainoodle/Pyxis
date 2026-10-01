@@ -11,6 +11,7 @@ struct AITryOnView: View {
     @State private var garmentSelection: PhotosPickerItem?
     @State private var sheet: TryOnSheet?
     @State private var confirmsAnother = false
+    @State private var didCheckAvailability = false
 
     init(items: [ClosetItem] = []) {
         let garments = items.compactMap { item -> TryOnGarment? in
@@ -25,16 +26,23 @@ struct AITryOnView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-                    Text("YOUR CLOTHES. YOUR PERSPECTIVE.")
-                        .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
-                    referenceSection
-                    clothingSection
+                    if !didCheckAvailability {
+                        ProgressView("Checking availability…").font(PyxisTypography.prose)
+                            .frame(maxWidth: .infinity, minHeight: 180)
+                    } else if model.available {
+                        accessSection
+                        referenceSection
+                        clothingSection
+                        Text(TryOnPrivacy.fitDisclaimer)
+                            .font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.secondaryText)
+                    } else {
+                        ContentUnavailableView("Try-on unavailable", systemImage: "person.crop.rectangle")
+                    }
                     if let error = model.errorMessage { InlineErrorMessage(message: error) }
-                    accessSection
-                    Text(TryOnPrivacy.fitDisclaimer)
-                        .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
-                    Button("SAVED PREVIEWS · \(model.previews.count)") { sheet = .saved }
-                        .buttonStyle(MinimalButtonStyle()).disabled(model.isGenerating)
+                    if !model.previews.isEmpty {
+                        Button("Saved previews · \(model.previews.count)") { sheet = .saved }
+                            .buttonStyle(MinimalButtonStyle()).disabled(model.isGenerating)
+                    }
                 }
                 .padding(PyxisSpacing.md)
             }
@@ -42,17 +50,19 @@ struct AITryOnView: View {
             .editorialNavigationTitle("Try on")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { sheet = .privacy } label: { Image(systemName: "hand.raised") }
+                    Button { sheet = .privacy } label: { Image(systemName: "hand.raised").frame(width: 44, height: 44).contentShape(Rectangle()) }
                         .accessibilityLabel("Try-on privacy").disabled(model.isGenerating)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("CLOSE") { dismiss() }.disabled(model.isGenerating || model.isImporting)
+                    Button("Close") { dismiss() }.disabled(model.isGenerating || model.isImporting)
                 }
             }
-            .safeAreaInset(edge: .bottom) { generationRail }
+            .safeAreaInset(edge: .bottom) { if model.available { generationRail } }
             .interactiveDismissDisabled(model.isGenerating || model.isImporting)
             .task {
                 await model.load()
+                didCheckAvailability = true
+                guard model.available else { return }
                 do { try await purchase.refresh(productID: model.configuration?.productID) }
                 catch { model.errorMessage = "Purchase options could not load. Try again shortly." }
                 await model.refreshAllowance(authorization: purchase.authorization)
@@ -82,17 +92,19 @@ struct AITryOnView: View {
                 }
             }
             .confirmationDialog("Generate another preview?", isPresented: $confirmsAnother, titleVisibility: .visible) {
-                Button(model.isPrivatePC ? "GENERATE ON PC" : "GENERATE · 1 TRY-ON") { startGeneration() }
-                Button("CANCEL", role: .cancel) {}
+                Button(model.isPrivatePC ? "Generate preview" : "Generate · 1 try-on") { startGeneration() }
+                Button("Cancel", role: .cancel) {}
             } message: { Text(model.isPrivatePC ? "Save this preview first if you want to keep it." : "This uses one more try-on. Save this preview first if you want to keep it.") }
         }
         .tint(PyxisColors.text)
+        .disclosureGroupStyle(EditorialDisclosureGroupStyle())
     }
 
     private var hasReference: Bool { model.personURL != nil }
 
     private var referenceSection: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
+            Text("Your photo").font(PyxisTypography.editorialTitle)
             if let url = model.showsOriginal ? model.personURL : (model.generatedURL ?? model.personURL) {
                 LocalImageView(url: url)
                     .frame(maxWidth: .infinity).frame(height: model.generatedURL == nil ? 340 : 420)
@@ -100,34 +112,40 @@ struct AITryOnView: View {
                     .accessibilityLabel(model.generatedURL == nil || model.showsOriginal ? "Your reference photo" : "Generated outfit preview")
                 if model.generatedURL != nil {
                     Picker("Compare", selection: $model.showsOriginal) {
-                        Text("TRY-ON").tag(false)
-                        Text("ORIGINAL").tag(true)
+                        Text("Preview").tag(false)
+                        Text("Original").tag(true)
                     }.pickerStyle(.segmented)
-                    Button(model.resultSaved ? "SAVED ON THIS DEVICE" : "SAVE PREVIEW") { model.saveResult() }
+                    Button(model.resultSaved ? "Saved" : "Save preview") { model.saveResult() }
                         .buttonStyle(MinimalButtonStyle()).disabled(model.resultSaved || model.isGenerating)
                 }
             } else {
-                VStack(spacing: PyxisSpacing.md) {
-                    Image(systemName: "figure.stand").font(.system(size: 76, weight: .ultraLight))
-                    Text("START WITH YOU").font(PyxisTypography.title)
-                    Text("Choose a full-body photo. Face forward, use even lighting, and keep your arms slightly away from your body.")
-                        .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText).multilineTextAlignment(.center)
-                }.padding(PyxisSpacing.lg).frame(maxWidth: .infinity).frame(minHeight: 290).background(PyxisColors.field)
+                Image(systemName: "figure.stand")
+                    .font(.system(size: 48, weight: .ultraLight))
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+                    .background(PyxisColors.field)
+                    .accessibilityHidden(true)
             }
             HStack {
                 PhotosPicker(selection: $personSelection, matching: .images) {
-                    Text(hasReference ? "CHANGE PHOTO" : "CHOOSE YOUR PHOTO")
+                    Text(hasReference ? "Change photo" : "Choose photo")
                 }.buttonStyle(MinimalButtonStyle())
                 Spacer()
                 if hasReference {
                     Button(role: .destructive) { model.removeReference(); personSelection = nil } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "trash").frame(width: 44, height: 44).contentShape(Rectangle())
                     }.accessibilityLabel("Remove reference photo")
                 }
             }.disabled(model.isGenerating || model.isImporting)
+            DisclosureGroup("Photo tips") {
+                Text("Use a full-body photo. Face forward in even lighting, with your arms slightly away from your body.")
+                    .font(PyxisTypography.prose).foregroundStyle(PyxisColors.secondaryText)
+                    .padding(.top, PyxisSpacing.sm)
+            }
+            .font(PyxisTypography.control).frame(minHeight: 44)
             if model.personURL != nil {
                 Toggle("Remember my photo on this device", isOn: Binding(get: { model.rememberPhoto }, set: model.setRememberPhoto))
-                    .font(PyxisTypography.label).disabled(model.isGenerating || model.isImporting)
+                    .font(PyxisTypography.control).disabled(model.isGenerating || model.isImporting)
             }
         }
     }
@@ -135,7 +153,7 @@ struct AITryOnView: View {
     private var clothingSection: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             HStack {
-                Text("WHAT WOULD YOU LIKE TO TRY?").font(PyxisTypography.label)
+                Text("Pieces").font(PyxisTypography.editorialTitle)
                 Spacer()
                 Text("\(model.garments.count)/6").font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
             }
@@ -143,7 +161,7 @@ struct AITryOnView: View {
                 HStack(spacing: PyxisSpacing.md) {
                     LocalImageView(url: garment.imageURL).frame(width: 64, height: 78).background(PyxisColors.field)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(garment.name).font(PyxisTypography.label).lineLimit(2)
+                        Text(garment.name).font(PyxisTypography.control).lineLimit(2)
                         Picker("Garment type", selection: $garment.category) {
                             ForEach(ClothingCategory.allCases) { category in
                                 Text(category.tryOnTitle).tag(category)
@@ -151,8 +169,7 @@ struct AITryOnView: View {
                         }.pickerStyle(.menu).labelsHidden().accessibilityLabel("Garment type for \(garment.name)")
                     }
                     Spacer()
-                    Button { model.garments.removeAll { $0.id == garment.id } } label: { Image(systemName: "xmark") }
-                        .frame(minWidth: 44, minHeight: 44).accessibilityLabel("Remove \(garment.name)")
+                    Button { model.garments.removeAll { $0.id == garment.id } } label: { Image(systemName: "xmark").frame(width: 44, height: 44).contentShape(Rectangle()) }.accessibilityLabel("Remove \(garment.name)")
                 }
             }
             ViewThatFits(in: .horizontal) {
@@ -164,69 +181,70 @@ struct AITryOnView: View {
     }
 
     @ViewBuilder private var addClothingButtons: some View {
-        Button("FROM CLOSET") { sheet = .closet }.buttonStyle(MinimalButtonStyle())
+        Button("From closet") { sheet = .closet }.buttonStyle(MinimalButtonStyle())
             .disabled(model.garments.count >= 6)
-        PhotosPicker(selection: $garmentSelection, matching: .images) { Text("ADD A PHOTO") }
+        PhotosPicker(selection: $garmentSelection, matching: .images) { Text("Add photo") }
             .buttonStyle(MinimalButtonStyle()).disabled(model.garments.count >= 6)
     }
 
     @ViewBuilder private var accessSection: some View {
         if model.isLoading {
             ProgressView("Checking availability…").font(PyxisTypography.label)
-        } else if !model.available {
-            Text("Try-on is coming soon. You can prepare your photos and view any saved previews.")
-                .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
         } else if model.isPrivatePC {
             VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                Text("PRIVATE PC").font(PyxisTypography.label)
-                Text("Your PC must be on and connected to Tailscale. No subscription is used.")
-                    .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
+                Text("Your PC").font(PyxisTypography.editorialTitle)
+                Text("Keep your PC online during generation. No subscription required.")
+                    .font(PyxisTypography.prose).foregroundStyle(PyxisColors.secondaryText)
                 if let counts = model.configuration?.supportedGarmentCounts, !counts.contains(model.garments.count) {
-                    Text("This PC currently supports outfits with \(counts.map(String.init).joined(separator: ", ")) clothing pieces.")
-                        .font(PyxisTypography.label)
+                    Text("Choose \(counts.map(String.init).joined(separator: " or ")) piece\(counts == [1] ? "" : "s") for this preview.")
+                        .font(PyxisTypography.proseCaption)
                 }
                 if purchase.authorization == nil {
-                    Text("Private PC access is not configured in this build.").font(PyxisTypography.label)
+                    Text("Connect your PC to enable try-on.").font(PyxisTypography.proseCaption)
                 }
             }
         } else if let allowance = model.allowance {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(allowance.remaining) OF \(allowance.limit) TRY-ONS REMAINING").font(PyxisTypography.label)
+                Text("\(allowance.remaining) of \(allowance.limit) try-ons left").font(PyxisTypography.control)
                 Text("Renews \(allowance.renewalDate.formatted(date: .abbreviated, time: .omitted))")
-                    .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
-                Link("MANAGE SUBSCRIPTION", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
-                    .font(PyxisTypography.label).padding(.top, PyxisSpacing.sm)
+                    .font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.secondaryText)
+                Link("Manage subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+                    .font(PyxisTypography.control).padding(.vertical, PyxisSpacing.sm)
             }
         } else if purchase.authorization == nil {
             VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                Text("MAKE IT YOURS").font(PyxisTypography.title)
-                Text("\(model.configuration?.limit ?? 20) try-ons each month. One finished preview uses one try-on. Failed generations do not count.")
-                    .font(PyxisTypography.body)
+                Text("Try-on subscription").font(PyxisTypography.editorialTitle)
+                Text("\(model.configuration?.limit ?? 20) previews per month. Failed generations don’t count.")
+                    .font(PyxisTypography.prose)
                 if let product = purchase.product {
-                    Button("SUBSCRIBE · \(product.displayPrice)/MONTH") {
+                    Button("Subscribe · \(product.displayPrice)/month") {
                         Task {
                             do { try await purchase.purchase() }
                             catch { model.errorMessage = error.localizedDescription }
                         }
                     }.buttonStyle(MinimalButtonStyle())
                     Text("Renews automatically until canceled. Monthly try-ons do not roll over. Manage or cancel in App Store subscriptions.")
-                        .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
+                        .font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.secondaryText)
                 } else {
-                    Text("Subscriptions are not available yet.").font(PyxisTypography.label)
+                    Text("Subscriptions are unavailable right now.").font(PyxisTypography.proseCaption)
                 }
-                Button("RESTORE PURCHASE") {
+                Button {
                     Task {
                         do { try await purchase.restore() }
                         catch { model.errorMessage = error.localizedDescription }
                     }
-                }.font(PyxisTypography.label)
+                } label: {
+                    Text("Restore purchases").font(PyxisTypography.control).frame(minHeight: 44)
+                }
                 HStack {
-                    Button("Privacy") { sheet = .privacy }
-                    Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                }.font(PyxisTypography.label)
+                    Button { sheet = .privacy } label: { Text("Privacy").frame(minHeight: 44) }
+                    Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
+                        Text("Terms").frame(minHeight: 44)
+                    }
+                }.font(PyxisTypography.control)
             }.padding(PyxisSpacing.md).background(PyxisColors.field).disabled(purchase.isPurchasing)
         } else {
-            Button("REFRESH ALLOWANCE") { Task { await model.refreshAllowance(authorization: purchase.authorization) } }
+            Button("Refresh allowance") { Task { await model.refreshAllowance(authorization: purchase.authorization) } }
                 .buttonStyle(MinimalButtonStyle())
         }
     }
@@ -234,14 +252,17 @@ struct AITryOnView: View {
     private var generationRail: some View {
         VStack(spacing: PyxisSpacing.sm) {
             if model.isGenerating {
-                ProgressView("Creating your preview…").font(PyxisTypography.body)
+                ProgressView("Creating your preview…").font(PyxisTypography.prose)
                 Text("Keep Pyxis open. Outfits with several pieces take longer.")
-                    .font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
+                    .font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.secondaryText)
             } else {
-                Button(model.isPrivatePC ? (model.generatedURL == nil ? "TRY ON WITH PC" : "GENERATE ANOTHER ON PC") : (model.generatedURL == nil ? "TRY ON · 1 TRY-ON" : "GENERATE ANOTHER · 1 TRY-ON")) {
+                Button(model.generatedURL == nil ? "Generate preview" : "Generate another") {
                     if model.generatedURL != nil { confirmsAnother = true } else { startGeneration() }
-                }.buttonStyle(MinimalButtonStyle()).disabled(!model.canGenerate || purchase.authorization == nil)
+                }.buttonStyle(EditorialPrimaryButtonStyle()).disabled(!model.canGenerate || purchase.authorization == nil)
                     .accessibilityIdentifier("try-on-generate")
+                if !model.isPrivatePC {
+                    Text("Uses 1 try-on").font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.secondaryText)
+                }
             }
         }.frame(maxWidth: .infinity).padding(PyxisSpacing.md).background(PyxisColors.background)
             .overlay(alignment: .top) { Rectangle().fill(PyxisColors.hairline).frame(height: 1) }
@@ -269,12 +290,12 @@ extension ClothingCategory {
     var tryOnTitle: String {
         switch self {
         case .tops: return "Top"
-        case .bottoms: return "Pants / skirt"
+        case .bottoms: return "Bottoms"
         case .footwear: return "Shoes"
-        case .outerwear: return "Jacket / coat"
-        case .onePiece: return "Dress / one-piece"
+        case .outerwear: return "Outerwear"
+        case .onePiece: return "One piece"
         case .accessories: return "Accessory"
-        case .other: return "Identify automatically"
+        case .other: return "Other"
         }
     }
 }

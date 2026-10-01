@@ -2,6 +2,17 @@ import XCTest
 @testable import PyxisCore
 
 final class SizeRecommendationServiceTests: XCTestCase {
+    func testExplanationIncludesOnlyMeasurementsPresentInWinningChartRow() {
+        let profile = BodyProfile(chestCentimeters: 99, waistCentimeters: 84)
+        let options = [RetailerSizeOption(label: "M", chestCentimeters: 96...102)]
+
+        let result = SizeRecommendationService().recommend(profile: profile, category: .top, options: options)
+
+        XCTAssertEqual(result?.sizeLabel, "M")
+        XCTAssertTrue(result?.explanation.contains("chest") == true)
+        XCTAssertFalse(result?.explanation.contains("waist") == true)
+    }
+
     func testRecommendsSizeWhoseRelevantRangesContainProfile() {
         let profile = BodyProfile(
             fitPreference: .regular,

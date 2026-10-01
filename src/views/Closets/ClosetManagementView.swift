@@ -67,7 +67,8 @@ struct ClosetManagementView: View {
     }
 
     private var nameField: some View {
-        TextField("NEW CLOSET NAME", text: $newClosetName)
+        TextField("Closet name", text: $newClosetName)
+            .accessibilityLabel("Closet name")
             .textFieldStyle(.plain)
             .font(PyxisTypography.body)
             .padding(.horizontal, PyxisSpacing.sm)

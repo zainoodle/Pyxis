@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct ClosetGridView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
@@ -12,6 +11,7 @@ struct ClosetGridView: View {
     @State private var seedMessage: String?
     @State private var selectedItemID: UUID?
     @State private var isShowingSearch = false
+    @AppStorage("pyxis.closetPresentation") private var presentation = ClosetPresentation.gallery.rawValue
     @Environment(\.modelContext) private var modelContext
     private let buildAction: (UUID?) -> Void
 
@@ -44,17 +44,12 @@ struct ClosetGridView: View {
             }
 
             if !items.isEmpty {
-                SearchAndFilterView(
-                    filterState: $viewModel.filterState,
-                    closets: closets
-                )
+                browseControls
                 .padding(.horizontal, 24)
             }
 
             content
-                .padding(.horizontal, colorScheme == .dark ? 0 : 24)
         }
-        .padding(.bottom, colorScheme == .dark ? 0 : PyxisSpacing.md)
         .editorialCanvas()
         .toolbar {
             Button("ADD") {
@@ -86,6 +81,16 @@ struct ClosetGridView: View {
             if let closetID = viewModel.filterState.closetID, !closetIDs.contains(closetID) {
                 viewModel.filterState.closetID = nil
             }
+        }
+    }
+
+    private var browseControls: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+        return layout {
+            SearchAndFilterView(filterState: $viewModel.filterState, closets: closets)
+            ClosetPresentationPicker(selection: $presentation)
         }
     }
 
@@ -131,10 +136,14 @@ struct ClosetGridView: View {
                 }
             }
             Spacer()
-        } else if colorScheme == .dark {
+        } else if presentation == ClosetPresentation.gallery.rawValue {
             EditorialClosetGallery(items: filteredItems, selection: $selectedItemID, buildAction: buildAction)
         } else {
             ScrollView {
+                Text("\(filteredItems.count) pieces")
+                    .font(PyxisTypography.editorialLabel)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 LazyVGrid(columns: columns, spacing: PyxisSpacing.md) {
                     ForEach(filteredItems) { item in
                         NavigationLink {
@@ -149,6 +158,8 @@ struct ClosetGridView: View {
                 }
                 .padding(.top, PyxisSpacing.md)
             }
+            .padding(.horizontal, 24)
+            .scrollIndicators(.hidden)
         }
     }
 

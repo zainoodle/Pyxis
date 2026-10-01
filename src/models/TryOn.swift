@@ -61,7 +61,7 @@ public enum TryOnError: LocalizedError, Equatable {
     case server(String)
     public var errorDescription: String? {
         switch self {
-        case .unavailable: return "Try-on is not available yet. You can still choose clothing and view saved previews."
+        case .unavailable: return "Try-on is unavailable right now."
         case .invalidResponse: return "The preview could not be opened. Check your allowance before generating another."
         case .consentRequired: return "Please review how your photos are processed before generating."
         case .purchaseRequired: return "A try-on subscription is required."

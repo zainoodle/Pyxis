@@ -9,7 +9,8 @@ struct OutfitDetailView: View {
     @Bindable var outfit: Outfit
     @State private var refreshID = UUID()
     @State private var saveErrorMessage: String?
-    @State private var isShowingTryOn = false
+    @State private var tryOnSheet: TryOnEntry?
+    @StateObject private var tryOnEntry = TryOnEntryViewModel()
     @State private var isConfirmingDeletion = false
     @State private var duplicateConfirmation: String?
 
@@ -20,129 +21,117 @@ struct OutfitDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-            if let saveErrorMessage {
-                InlineErrorMessage(message: saveErrorMessage)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
+                if let saveErrorMessage { InlineErrorMessage(message: saveErrorMessage) }
+                if let duplicateConfirmation {
+                    Text(duplicateConfirmation).font(PyxisTypography.proseCaption)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                }
+                OutfitFlatLayView(items: selectedItems)
+                    .frame(height: 265)
+                    .background {
+                        if colorScheme == .light { RoundedRectangle(cornerRadius: 10).fill(PyxisColors.galleryCanvas) }
+                    }
+                    .accessibilityHidden(true)
 
-            if let duplicateConfirmation {
-                Text(duplicateConfirmation)
-                    .font(PyxisTypography.label)
+                Button("Wear today", action: markWornToday)
+                    .buttonStyle(EditorialPrimaryButtonStyle())
+                    .accessibilityLabel("Mark fit worn today")
+
+                Text("\(selectedItems.count) pieces" + (outfit.wearCount > 0 ? " · Worn \(outfit.wearCount)×" : ""))
+                    .font(PyxisTypography.editorialLabel)
                     .foregroundStyle(PyxisColors.secondaryText)
-            }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-                    if colorScheme == .dark {
-                        OutfitFlatLayView(items: selectedItems)
-                            .frame(height: 285)
-                            .accessibilityLabel("Pieces in \(outfit.name ?? "saved fit")")
-                        Text("\(selectedItems.count) PIECES · WORN \(outfit.wearCount)×")
-                            .font(PyxisTypography.editorialLabel)
-                            .tracking(1.4)
-                            .foregroundStyle(PyxisColors.secondaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, PyxisSpacing.sm)
-                            .overlay(alignment: .bottom) {
-                                Rectangle().fill(PyxisColors.hairline).frame(height: 1)
-                            }
-                    }
-
-                    VStack(spacing: PyxisSpacing.sm) {
-                        ForEach(selectedItems) { item in
+                VStack(spacing: PyxisSpacing.sm) {
+                    ForEach(selectedItems) { item in
+                        NavigationLink {
+                            ItemDetailView(item: item, showsCloseButton: false)
+                        } label: {
                             HStack(spacing: PyxisSpacing.md) {
-                                SavedFitItemImage(item: item)
-                                    .frame(width: 58, height: 84)
-
+                                SavedFitItemImage(item: item).frame(width: 58, height: 84).accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+                                    Text(item.displayName ?? item.subtype.rawValue.capitalized)
+                                        .font(PyxisTypography.control)
+                                        .fixedSize(horizontal: false, vertical: true)
                                     ItemCodeLabel(code: item.itemCode)
-                                    Text(item.displayName?.uppercased() ?? item.subtype.rawValue.uppercased())
-                                        .font(PyxisTypography.body)
-                                        .foregroundStyle(PyxisColors.secondaryText)
-                                        .lineLimit(1)
-                                    Text("WORN \(item.wearCount)")
-                                        .font(PyxisTypography.label)
-                                        .foregroundStyle(PyxisColors.inactiveText)
                                 }
-
                                 Spacer()
+                                Image(systemName: "chevron.right").font(.caption).accessibilityHidden(true)
                             }
+                            .contentShape(Rectangle())
                         }
-                    }
-
-                    if selectedItems.count < outfit.itemIDs.count {
-                        Text("SOME ITEMS IN THIS FIT ARE NO LONGER IN YOUR CLOSET")
-                            .font(PyxisTypography.label)
-                            .foregroundStyle(PyxisColors.error)
-                            .accessibilityLabel("Some items in this fit are no longer in your closet")
-                    }
-
-                    Button("TRY ON ME") { isShowingTryOn = true }
-                        .buttonStyle(MinimalButtonStyle())
-
-                    TextField("FIT NAME", text: optionalString($outfit.name))
-                        .textFieldStyle(.plain)
-                        .font(PyxisTypography.body)
-                        .padding(PyxisSpacing.md)
-                        .background(PyxisColors.field)
-
-                    TextField("NOTES", text: optionalString($outfit.notes), axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .font(PyxisTypography.body)
-                        .padding(PyxisSpacing.md)
-                        .background(PyxisColors.field)
-
-                    Toggle("FAVORITE", isOn: $outfit.favorite)
-                        .font(PyxisTypography.body)
-
-                    HStack(spacing: PyxisSpacing.md) {
-                        Button("MARK WORN TODAY") {
-                            markWornToday()
-                        }
-                        .buttonStyle(MinimalButtonStyle())
-
-                        Text("FIT WORN \(outfit.wearCount)")
-                            .font(PyxisTypography.label)
-                            .foregroundStyle(PyxisColors.secondaryText)
-                    }
-
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: PyxisSpacing.md) { lifecycleActions }
-                        VStack(alignment: .leading, spacing: PyxisSpacing.sm) { lifecycleActions }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Open \(item.displayName ?? item.subtype.rawValue), \(item.itemCode)")
                     }
                 }
+
+                if selectedItems.count < outfit.itemIDs.count {
+                    Text("Some pieces are no longer in your closet.")
+                        .font(PyxisTypography.proseCaption).foregroundStyle(PyxisColors.error)
+                }
+                if let destination = tryOnEntry.destination {
+                    Button(destination.title) { tryOnSheet = destination }.buttonStyle(MinimalButtonStyle())
+                }
+                DisclosureGroup("Edit fit") {
+                    VStack(alignment: .leading, spacing: PyxisSpacing.md) {
+                        fitField("Name", text: optionalString($outfit.name))
+                        fitField("Notes", text: optionalString($outfit.notes), axis: .vertical)
+                        Toggle("Favorite", isOn: $outfit.favorite)
+                    }
+                    .padding(.top, PyxisSpacing.md)
+                }
+                .font(PyxisTypography.control)
+                .frame(minHeight: 44)
             }
+            .padding(24)
         }
-        .padding(PyxisSpacing.md)
         .editorialCanvas()
-        .editorialNavigationTitle(outfit.name ?? "Fit details")
+        .disclosureGroupStyle(EditorialDisclosureGroupStyle())
+        .editorialNavigationTitle(outfit.name ?? outfit.dateCreated.formatted(date: .abbreviated, time: .omitted))
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("BACK", action: saveAndDismiss)
-                    .accessibilityLabel("Save fit and go back")
+                Button("Back", action: saveAndDismiss).accessibilityLabel("Save fit and go back")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: shareText) {
+                    Image(systemName: "square.and.arrow.up").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Share fit")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Duplicate fit", systemImage: "plus.square.on.square", action: duplicateFit)
+                    Button("Delete fit", systemImage: "trash", role: .destructive) { isConfirmingDeletion = true }
+                } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
+                .accessibilityLabel("Saved fit options")
             }
         }
         .id(refreshID)
-        .sheet(isPresented: $isShowingTryOn) { AITryOnView(items: selectedItems) }
+        .task { await tryOnEntry.load() }
+        .sheet(item: $tryOnSheet) { destination in
+            switch destination {
+            case .generate: AITryOnView(items: selectedItems)
+            case .savedPreviews: SavedTryOnEntryView()
+            }
+        }
         .confirmationDialog("Delete this saved fit?", isPresented: $isConfirmingDeletion, titleVisibility: .visible) {
-            Button("DELETE FIT", role: .destructive, action: deleteFit)
-            Button("CANCEL", role: .cancel) {}
+            Button("Delete fit", role: .destructive, action: deleteFit)
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently removes the fit from this device. Closet items are not deleted.")
         }
     }
 
-    @ViewBuilder
-    private var lifecycleActions: some View {
-        Button("DUPLICATE FIT", action: duplicateFit)
-            .buttonStyle(MinimalButtonStyle())
-        ShareLink(item: shareText) {
-            Text("SHARE FIT")
+    private func fitField(_ title: String, text: Binding<String>, axis: Axis = .horizontal) -> some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+            Text(title).font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
+            EditorialTextField(title, text: text, axis: axis).font(PyxisTypography.control)
+                .frame(minHeight: 44).padding(.horizontal, PyxisSpacing.sm)
+                .background(PyxisColors.field).accessibilityLabel(title)
         }
-        .buttonStyle(MinimalButtonStyle())
-        Button("DELETE FIT", role: .destructive) { isConfirmingDeletion = true }
-            .buttonStyle(MinimalButtonStyle())
     }
 
     private var shareText: String {
@@ -200,7 +189,7 @@ struct OutfitDetailView: View {
                 saveImmediately: false
             )
             try modelContext.save()
-            duplicateConfirmation = "FIT DUPLICATED"
+            duplicateConfirmation = "Fit duplicated"
             saveErrorMessage = nil
         } catch {
             modelContext.rollback()

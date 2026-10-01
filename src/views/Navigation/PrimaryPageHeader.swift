@@ -30,7 +30,6 @@ struct PrimaryPageHeader<Actions: View>: View {
     private var heading: some View {
         Text(title)
             .font(PyxisTypography.pageTitle)
-            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .accessibilityAddTraits(.isHeader)
     }
 }

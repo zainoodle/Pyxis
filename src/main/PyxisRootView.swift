@@ -3,6 +3,7 @@ import SwiftUI
 struct PyxisRootView: View {
     @State private var selectedSection: AppSection = .closet
     @State private var builderFocusItemID: UUID?
+    @State private var builderRequestID = UUID()
     @State private var isShowingBuilder = false
 
     var body: some View {
@@ -11,6 +12,7 @@ struct PyxisRootView: View {
                 NavigationStack {
                     ClosetGridView { itemID in
                         builderFocusItemID = itemID
+                        builderRequestID = UUID()
                         selectedSection = .fits
                         isShowingBuilder = true
                     }
@@ -24,12 +26,14 @@ struct PyxisRootView: View {
                     SavedFitsGalleryView(
                         buildAction: {
                             builderFocusItemID = nil
+                            builderRequestID = UUID()
                             isShowingBuilder = true
                         }
                     )
                     .navigationBarHidden(true)
                     .navigationDestination(isPresented: $isShowingBuilder) {
                         OutfitBuilderView(initialItemID: builderFocusItemID)
+                            .id(builderRequestID)
                             .navigationBarHidden(true)
                     }
                 }

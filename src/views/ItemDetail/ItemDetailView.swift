@@ -50,7 +50,23 @@ struct ItemDetailView: View {
             .padding(PyxisSpacing.md)
         }
         .editorialCanvas()
-        .editorialNavigationTitle(item.itemCode)
+        .disclosureGroupStyle(EditorialDisclosureGroupStyle())
+        .editorialNavigationTitle(item.displayName ?? item.subtype.rawValue.capitalized)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Delete piece", systemImage: "trash", role: .destructive) { isConfirmingDeletion = true }
+                } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
+                .accessibilityLabel("Piece options")
+            }
+            if showsCloseButton {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close", action: saveAndDismiss).keyboardShortcut(.cancelAction)
+                        .accessibilityLabel("Close item detail")
+                }
+            }
+        }
+        .onChange(of: isEditingDetails) { _, expanded in if !expanded { saveChanges() } }
         .confirmationDialog(
             "DELETE \(item.itemCode)?",
             isPresented: $isConfirmingDeletion,
@@ -64,160 +80,111 @@ struct ItemDetailView: View {
     }
 
     private var imagePanel: some View {
-        VStack(spacing: PyxisSpacing.md) {
-            LocalImageView(
-                url: viewModel.displayURL(for: item),
-                revision: viewModel.imageRevision
-            )
+        VStack(spacing: PyxisSpacing.sm) {
+            LocalImageView(url: viewModel.displayURL(for: item), revision: viewModel.imageRevision)
                 .frame(maxWidth: 330)
-                .frame(height: 420)
+                .frame(height: 300)
                 .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
                             in: RoundedRectangle(cornerRadius: 10))
-
             ItemCodeLabel(code: item.itemCode)
-
-            Text(ClosetItemImageResolver.hasCutout(for: item) ? "READY" : "ORIGINAL ONLY")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
-
-            Toggle("USE ORIGINAL", isOn: $viewModel.showOriginal)
-                .font(PyxisTypography.label)
-
-            Button(viewModel.isRetryingBackgroundRemoval ? "IMPROVING" : "IMPROVE CUTOUT") {
-                Task {
-                    await viewModel.retryBackgroundRemoval(for: item)
-                    saveChanges()
-                }
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .disabled(viewModel.isRetryingBackgroundRemoval)
-            .accessibilityLabel("Retry background removal")
-
-            if let retryMessage = viewModel.retryMessage {
-                Text(retryMessage.uppercased())
-                    .font(PyxisTypography.label)
-                    .foregroundStyle(PyxisColors.secondaryText)
-            }
-
-            if let saveErrorMessage {
-                InlineErrorMessage(message: saveErrorMessage)
-            }
         }
     }
 
     private var detailPanel: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            HStack {
-                Text("DETAIL")
-                    .font(colorScheme == .dark ? PyxisTypography.editorialTitle : PyxisTypography.title)
-                    .tracking(colorScheme == .dark ? 1.5 : 0)
-                Spacer()
-                if showsCloseButton {
-                    Button("CLOSE") {
-                        saveAndDismiss()
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityLabel("Close item detail")
-                }
-            }
-
-            utilityBlock
-
-            if let saveErrorMessage {
-                InlineErrorMessage(message: saveErrorMessage)
-            }
+            if let saveErrorMessage { InlineErrorMessage(message: saveErrorMessage) }
 
             if canBuildWithItem, let buildAction {
-                Button("BUILD WITH THIS") {
-                    buildAction(item)
-                }
-                .buttonStyle(MinimalButtonStyle())
+                Button("Build with this") { buildAction(item) }
+                    .buttonStyle(EditorialPrimaryButtonStyle())
             }
-
-            Button("WORE TODAY") {
+            Button("Wear today") {
                 OutfitWearService().markWorn(item: item)
                 saveChanges()
             }
             .buttonStyle(MinimalButtonStyle())
             .accessibilityLabel("Mark item worn today")
 
-            DisclosureGroup("EDIT DETAILS", isExpanded: $isEditingDetails) {
-                VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-                    TextField("DISPLAY NAME", text: optionalString($item.displayName))
-                    TextField("BRAND", text: optionalString($item.brand))
-                    TextField("SIZE", text: optionalString($item.size))
-                    TextField("NOTES", text: optionalString($item.notes), axis: .vertical)
-
-                    Picker("CATEGORY", selection: categoryBinding) {
-                        ForEach(ClothingCategory.allCases) { category in
-                            Text(category.rawValue.uppercased()).tag(category)
+            if fitUsageCount > 0 || item.wearCount > 0 {
+                VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+                    if fitUsageCount > 0 { Text("Used in \(fitUsageCount) fit\(fitUsageCount == 1 ? "" : "s")") }
+                    if item.wearCount > 0 {
+                        Text("Worn \(item.wearCount) time\(item.wearCount == 1 ? "" : "s")")
+                        if let date = item.lastWornDate {
+                            Text("Last worn \(date.formatted(date: .abbreviated, time: .omitted))")
                         }
                     }
-
-                    Picker("SUBTYPE", selection: subtypeBinding) {
-                        ForEach(ClothingSubtype.compatibleSubtypes(for: item.category)) { subtype in
-                            Text(subtype.rawValue.uppercased()).tag(subtype)
-                        }
-                    }
-
-                    Picker("COLOR", selection: colorBinding) {
-                        ForEach(ClosetColor.allCases) { color in
-                            Text(color.rawValue.uppercased()).tag(color)
-                        }
-                    }
-
-                    Toggle("FAVORITE", isOn: $item.favorite)
-                        .accessibilityLabel("Favorite item")
-
-                    Stepper("WEAR COUNT \(item.wearCount)", value: $item.wearCount, in: 0...999)
                 }
+                .font(PyxisTypography.proseCaption)
+                .foregroundStyle(PyxisColors.secondaryText)
             }
 
-            if !closets.isEmpty {
-                DisclosureGroup("CLOSETS") {
-                    VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                        ForEach(closets) { closet in
-                            Toggle(closet.displayName.uppercased(), isOn: closetBinding(for: closet))
+            DisclosureGroup("Edit details", isExpanded: $isEditingDetails) {
+                VStack(alignment: .leading, spacing: PyxisSpacing.md) {
+                    detailField("Name", text: optionalString($item.displayName))
+                    detailField("Brand", text: optionalString($item.brand))
+                    detailField("Size", text: optionalString($item.size))
+                    detailField("Notes", text: optionalString($item.notes), axis: .vertical)
+                    EditorialMenuPicker(title: "Category", value: item.category.rawValue.capitalized, selection: categoryBinding) {
+                        ForEach(ClothingCategory.allCases) { Text($0.rawValue.capitalized).tag($0) }
+                    }
+                    EditorialMenuPicker(title: "Type", value: item.subtype.rawValue.capitalized, selection: subtypeBinding) {
+                        ForEach(ClothingSubtype.compatibleSubtypes(for: item.category)) { Text($0.rawValue.capitalized).tag($0) }
+                    }
+                    EditorialMenuPicker(title: "Color", value: item.primaryColor.rawValue.capitalized, selection: colorBinding) {
+                        ForEach(ClosetColor.allCases) { Text($0.rawValue.capitalized).tag($0) }
+                    }
+                    Toggle("Favorite", isOn: $item.favorite)
+                    Stepper("Wear count \(item.wearCount)", value: $item.wearCount, in: 0...999)
+                }
+                .padding(.top, PyxisSpacing.md)
+            }
+            .frame(minHeight: 44)
+
+            DisclosureGroup("Edit photo") {
+                VStack(alignment: .leading, spacing: PyxisSpacing.md) {
+                    if ClosetItemImageResolver.hasCutout(for: item) {
+                        Toggle("Use original", isOn: $viewModel.showOriginal)
+                    }
+                    Button(viewModel.isRetryingBackgroundRemoval ? "Removing background…" : "Improve cutout") {
+                        Task {
+                            await viewModel.retryBackgroundRemoval(for: item)
+                            saveChanges()
                         }
+                    }
+                    .buttonStyle(MinimalButtonStyle())
+                    .disabled(viewModel.isRetryingBackgroundRemoval)
+                    .accessibilityLabel("Retry background removal")
+                    if let retryMessage = viewModel.retryMessage {
+                        Text(retryMessage).font(PyxisTypography.proseCaption)
+                            .foregroundStyle(PyxisColors.secondaryText)
+                    }
+                }
+                .padding(.top, PyxisSpacing.md)
+            }
+            .frame(minHeight: 44)
+
+            if !closets.isEmpty {
+                DisclosureGroup("Closets") {
+                    ForEach(closets) { closet in
+                        Toggle(closet.displayName, isOn: closetBinding(for: closet))
                     }
                     .padding(.top, PyxisSpacing.sm)
                 }
+                .frame(minHeight: 44)
             }
-
-            Button("DELETE ITEM") {
-                isConfirmingDeletion = true
-            }
-            .buttonStyle(MinimalButtonStyle())
-            .accessibilityLabel("Delete item")
         }
-        .font(PyxisTypography.body)
+        .font(PyxisTypography.control)
         .textFieldStyle(.plain)
+        .tint(PyxisColors.text)
     }
 
-    private var utilityBlock: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            Text("USED IN \(fitUsageCount) FIT\(fitUsageCount == 1 ? "" : "S")")
-            Text("WORN \(item.wearCount) TIME\(item.wearCount == 1 ? "" : "S")")
-            Text(lastWornText)
+    private func detailField(_ title: String, text: Binding<String>, axis: Axis = .horizontal) -> some View {
+        VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
+            Text(title).font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
+            EditorialTextField(title, text: text, axis: axis).frame(minHeight: 44).accessibilityLabel(title)
+                .padding(.horizontal, PyxisSpacing.sm).background(PyxisColors.field)
         }
-        .font(PyxisTypography.body)
-        .foregroundStyle(PyxisColors.secondaryText)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, PyxisSpacing.sm)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PyxisColors.hairline)
-                .frame(height: 1)
-        }
-    }
-
-    private var lastWornText: String {
-        guard let lastWornDate = item.lastWornDate else {
-            return "LAST WORN NEVER"
-        }
-
-        return "LAST WORN \(lastWornDate.formatted(date: .abbreviated, time: .omitted).uppercased())"
     }
 
     private var categoryBinding: Binding<ClothingCategory> {

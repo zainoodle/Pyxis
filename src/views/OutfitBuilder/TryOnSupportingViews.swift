@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct SavedTryOnEntryView: View {
+    @StateObject private var model = TryOnViewModel()
+    var body: some View { TryOnSavedPreviewsView(model: model) }
+}
+
 struct TryOnPrivacyView: View {
     @Environment(\.dismiss) private var dismiss
     var disclosure: String = TryOnPrivacy.disclosure
@@ -11,24 +16,23 @@ struct TryOnPrivacyView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: PyxisSpacing.lg) {
-                    Image(systemName: "hand.raised").font(.largeTitle)
-                    Text(TryOnPrivacy.title).font(PyxisTypography.title)
-                    Text(disclosure).font(PyxisTypography.body)
-                    Text("Only photos selected for a try-on are sent. Your closet and body measurements are not uploaded. Removing a reference photo does not delete previews you have chosen to save.")
-                        .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
-                    Text("Saved try-on photos are excluded from device backups. You can remove your reference photo or delete saved previews at any time.")
-                        .font(PyxisTypography.body).foregroundStyle(PyxisColors.secondaryText)
-                    Text(TryOnPrivacy.fitDisclaimer).font(PyxisTypography.label)
+                    Text(disclosure).font(PyxisTypography.prose)
+                    Text("Only selected photos are sent. Your closet and measurements stay on this device.")
+                        .font(PyxisTypography.prose).foregroundStyle(PyxisColors.secondaryText)
+                    Text("Saved photos and previews are excluded from backups. You can delete them anytime. Removing your reference photo keeps saved previews.")
+                        .font(PyxisTypography.prose).foregroundStyle(PyxisColors.secondaryText)
+                    Text(TryOnPrivacy.fitDisclaimer).font(PyxisTypography.proseCaption)
                     if requestsConsent {
-                        Button("AGREE AND TRY ON", action: agree).buttonStyle(MinimalButtonStyle())
-                        Button("NOT NOW") { dismiss() }.font(PyxisTypography.label)
+                        Button("Agree and generate", action: agree).buttonStyle(EditorialPrimaryButtonStyle())
+                        Button { dismiss() } label: { Text("Not now").font(PyxisTypography.control).frame(minHeight: 44) }
                     } else if hasConsent {
-                        Button("WITHDRAW PHOTO PROCESSING PERMISSION", role: .destructive) { revoke(); dismiss() }
-                            .font(PyxisTypography.label)
+                        Button(role: .destructive) { revoke(); dismiss() } label: {
+                            Text("Withdraw permission").font(PyxisTypography.control).frame(minHeight: 44)
+                        }
                     }
                 }.padding(PyxisSpacing.lg)
-            }.editorialNavigationTitle("Privacy")
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
+            }.editorialNavigationTitle("Photo processing")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
         }
     }
 }
@@ -41,7 +45,7 @@ struct TryOnClosetPicker: View {
     var body: some View {
         NavigationStack {
             List {
-                if items.isEmpty { Text("Add clothing to your closet, or use Add a photo to try something new.") }
+                if items.isEmpty { Text("No pieces yet. Use Add photo to choose one.").font(PyxisTypography.prose) }
                 ForEach(items) { item in
                     Button { select(item) } label: {
                         HStack {
@@ -54,7 +58,7 @@ struct TryOnClosetPicker: View {
                     }.disabled(selectedIDs.contains(item.id))
                 }
             }.editorialNavigationTitle("Your closet")
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
         }
     }
 }
@@ -68,7 +72,7 @@ struct TryOnSavedPreviewsView: View {
             ScrollView {
                 LazyVStack(spacing: PyxisSpacing.lg) {
                     if model.previews.isEmpty {
-                        ContentUnavailableView("No saved previews", systemImage: "photo.stack", description: Text("Save a try-on to keep it here, even when your allowance runs out."))
+                        ContentUnavailableView("No saved previews", systemImage: "photo.stack", description: Text("Saved previews will appear here."))
                     }
                     ForEach(model.previews) { preview in
                         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
@@ -78,19 +82,19 @@ struct TryOnSavedPreviewsView: View {
                                 .foregroundStyle(PyxisColors.secondaryText)
                             HStack {
                                 if let url = model.previewURL(preview) {
-                                    ShareLink(item: url) { Label("SHARE", systemImage: "square.and.arrow.up") }
+                                    ShareLink(item: url) { Label("Share", systemImage: "square.and.arrow.up") }
                                 }
                                 Spacer()
-                                Button("DELETE", role: .destructive) { pendingDeletion = preview }
+                                Button("Delete", role: .destructive) { pendingDeletion = preview }
                             }.font(PyxisTypography.label)
                         }
                     }
                     if let error = model.errorMessage { InlineErrorMessage(message: error) }
                 }.padding(PyxisSpacing.md)
             }.editorialNavigationTitle("Saved previews")
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("CLOSE") { dismiss() } } }
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
                 .confirmationDialog("Delete this preview from this device?", isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }), titleVisibility: .visible) {
-                    Button("DELETE PREVIEW", role: .destructive) { if let preview = pendingDeletion { model.deletePreview(preview) }; pendingDeletion = nil }
+                    Button("Delete preview", role: .destructive) { if let preview = pendingDeletion { model.deletePreview(preview) }; pendingDeletion = nil }
                 }
         }
     }

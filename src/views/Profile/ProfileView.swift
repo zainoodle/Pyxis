@@ -32,7 +32,7 @@ struct ProfileView: View {
                     NavigationLink {
                         SizingProfileView()
                     } label: {
-                        settingsRow("Fit passport", systemImage: "ruler")
+                        settingsRow("Measurements", systemImage: "ruler")
                     }
 
                     Text("APPEARANCE")

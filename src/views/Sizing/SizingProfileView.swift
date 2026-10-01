@@ -1,70 +1,101 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct SizingProfileView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \BodyProfile.dateUpdated, order: .reverse) private var profiles: [BodyProfile]
 
-    @State private var system: MeasurementSystem = .imperial
+    @State private var draft = BodyMeasurementDraft()
     @State private var fit: FitPreference = .regular
-    @State private var values: [MeasurementKey: String] = [:]
     @State private var category: SizeChartCategory = .top
-    @State private var chartRows = ["S", "M", "L"].map { ChartRowDraft(label: $0) }
+    @State private var chartRows = [ChartRowDraft(label: "")]
     @State private var recommendation: SizeRecommendation?
     @State private var message: String?
+    @State private var comparisonMessage: String?
+    @State private var isComparing = false
     @State private var isConfirmingDelete = false
+
+    private var system: MeasurementSystem { draft.system }
+
+    private var unitSelection: Binding<MeasurementSystem> {
+        Binding(get: { draft.system }, set: { newSystem in
+            let oldSystem = draft.system
+            draft.changeUnits(to: newSystem)
+            for index in chartRows.indices { chartRows[index].convertRanges(from: oldSystem, to: newSystem) }
+            clearComparison()
+        })
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PyxisSpacing.xl) {
-                intro
                 profileFields
-                sizeChecker
+                Button {
+                    dismissKeyboard()
+                    if saveProfile() { isComparing = true }
+                } label: {
+                    HStack {
+                        Text("Compare a size chart")
+                        Spacer()
+                        Image(systemName: "chevron.right").accessibilityHidden(true)
+                    }
+                    .font(PyxisTypography.control)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("measurements.compare")
                 privacy
             }
             .padding(24)
         }
         .editorialCanvas()
-        .editorialNavigationTitle("Fit passport")
+        .disclosureGroupStyle(EditorialDisclosureGroupStyle())
+        .editorialNavigationTitle("Measurements")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") { saveProfile() }
+                Button("Save") { dismissKeyboard(); saveProfile() }
+            }
+            ToolbarItem(placement: .keyboard) {
+                Button("Done", action: dismissKeyboard)
             }
         }
-        .onAppear(perform: loadProfile)
-        .onChange(of: system) { oldSystem, newSystem in
-            convertDisplayedValues(from: oldSystem, to: newSystem)
+        .navigationDestination(isPresented: $isComparing) {
+            ScrollView { sizeChecker.padding(24) }
+                .editorialCanvas()
+                .editorialNavigationTitle("Size chart")
+                .toolbar {
+                    ToolbarItem(placement: .keyboard) { Button("Done", action: dismissKeyboard) }
+                }
         }
-    }
-
-    private var intro: some View {
-        Text("Save what you know. Compare your measurements with a retailer’s size chart; sizing varies by brand.")
-            .font(PyxisTypography.label)
-            .foregroundStyle(PyxisColors.secondaryText)
+        .onAppear(perform: loadProfile)
     }
 
     private var profileFields: some View {
-        VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            Picker("UNITS", selection: $system) {
+        VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
+            Text("All fields optional")
+                .font(PyxisTypography.proseCaption)
+                .foregroundStyle(PyxisColors.secondaryText)
+            Picker("Units", selection: unitSelection) {
                 Text("IN / LB").tag(MeasurementSystem.imperial)
                 Text("CM / KG").tag(MeasurementSystem.metric)
             }
             .pickerStyle(.segmented)
 
-            Picker("PREFERRED FIT", selection: $fit) {
+            EditorialMenuPicker(title: "Fit preference", value: fit.rawValue.capitalized, selection: $fit) {
                 ForEach(FitPreference.allCases) { preference in
-                    Text(preference.rawValue.uppercased()).tag(preference)
+                    Text(preference.rawValue.capitalized).tag(preference)
                 }
             }
+            .frame(minHeight: 44)
 
-            Text("Measurements")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.secondaryText)
             ForEach([MeasurementKey.chest, .waist, .hip, .inseam, .foot]) { key in
                 MeasurementInput(key: key, system: system, value: binding(for: key))
             }
 
-            DisclosureGroup("Optional details") {
+            DisclosureGroup("More measurements") {
                 VStack(spacing: PyxisSpacing.md) {
                     ForEach([MeasurementKey.height, .weight, .shoulder]) { key in
                         MeasurementInput(key: key, system: system, value: binding(for: key))
@@ -73,13 +104,17 @@ struct SizingProfileView: View {
                 .padding(.top, PyxisSpacing.md)
             }
 
-            Text("Measure close to the body over light clothing. Keep the tape level and comfortably snug.")
-                .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.inactiveText)
+            DisclosureGroup("How to measure") {
+                Text("Measure over light clothing. Keep the tape level and comfortably snug.")
+                    .font(PyxisTypography.prose)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .padding(.top, PyxisSpacing.sm)
+            }
+            .frame(minHeight: 44)
 
             if let message {
-                Text(message.uppercased())
-                    .font(PyxisTypography.label)
+                Text(message)
+                    .font(PyxisTypography.proseCaption)
                     .foregroundStyle(PyxisColors.secondaryText)
             }
         }
@@ -89,101 +124,115 @@ struct SizingProfileView: View {
 
     private var sizeChecker: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            Text("Size check")
-                .font(PyxisTypography.editorialTitle)
-            Text("Enter ranges from the product’s size chart. Leave any unavailable measurements blank.")
-                .font(PyxisTypography.label)
+            Text("Use the retailer’s ranges in \(system == .metric ? "centimeters" : "inches").")
+                .font(PyxisTypography.proseCaption)
                 .foregroundStyle(PyxisColors.secondaryText)
 
-            Picker("CATEGORY", selection: $category) {
+            EditorialMenuPicker(title: "Category", value: category == .onePiece ? "One piece" : category.rawValue.capitalized, selection: $category) {
                 ForEach(SizeChartCategory.allCases) { value in
-                    Text(value.rawValue.uppercased()).tag(value)
+                    Text(value == .onePiece ? "One piece" : value.rawValue.capitalized).tag(value)
                 }
             }
-            .pickerStyle(.segmented)
+            .frame(minHeight: 44)
+            .onChange(of: category) { _, _ in clearComparison() }
 
             ForEach($chartRows) { $row in
                 VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    TextField("SIZE LABEL", text: $row.label)
-                    if category == .footwear {
-                        ChartRangeField(title: "FOOT LENGTH", value: $row.foot)
-                    } else {
-                        HStack {
-                            if category != .bottom { ChartRangeField(title: "CHEST", value: $row.chest) }
-                            ChartRangeField(title: "WAIST", value: $row.waist)
+                    HStack {
+                        EditorialTextField("Size label", placeholder: "Size, e.g. M", text: $row.label)
+                            .font(PyxisTypography.control)
+                            .accessibilityLabel("Size label")
+                            .frame(minHeight: 44)
+                        Button(role: .destructive) { removeChartRow(row.id); clearComparison() } label: {
+                            Image(systemName: "trash").frame(width: 44, height: 44).contentShape(Rectangle())
                         }
-                        HStack {
-                            if category != .top { ChartRangeField(title: "HIP", value: $row.hip) }
-                            if category == .bottom { ChartRangeField(title: "INSEAM", value: $row.inseam) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(row.label.isEmpty ? "Remove size" : "Remove size \(row.label)")
+                    }
+                    if category == .footwear {
+                        ChartRangeField(title: "Foot length", value: $row.foot)
+                    } else {
+                        rangeLayout {
+                            if category != .bottom { ChartRangeField(title: "Chest", value: $row.chest) }
+                            ChartRangeField(title: "Waist", value: $row.waist)
+                        }
+                        rangeLayout {
+                            if category != .top { ChartRangeField(title: "Hip", value: $row.hip) }
+                            if category == .bottom { ChartRangeField(title: "Inseam", value: $row.inseam) }
                         }
                     }
-                    Button("REMOVE SIZE", role: .destructive) { removeChartRow(row.id) }
-                        .font(PyxisTypography.label)
                 }
                 .padding(PyxisSpacing.sm)
                 .overlay { Rectangle().stroke(PyxisColors.hairline) }
             }
 
-            Button("ADD SIZE") { chartRows.append(ChartRowDraft(label: "")) }
+            Button("Add size", systemImage: "plus") { chartRows.append(ChartRowDraft(label: "")); clearComparison() }
                 .buttonStyle(MinimalButtonStyle())
 
-            Button("FIND MY SIZE") { findSize() }
-                .buttonStyle(MinimalButtonStyle())
+            Button("Compare sizes") { dismissKeyboard(); findSize() }
+                .buttonStyle(EditorialPrimaryButtonStyle())
+                .accessibilityIdentifier("measurements.compareSizes")
 
             if let recommendation {
                 VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                    Text("LIKELY SIZE \(recommendation.sizeLabel.uppercased())")
-                        .font(PyxisTypography.title)
-                    Text("CONFIDENCE \(Int(recommendation.confidence * 100))%")
-                        .font(PyxisTypography.label)
-                    Text(recommendation.explanation.uppercased())
-                        .font(PyxisTypography.label)
+                    Text("Size \(recommendation.sizeLabel)")
+                        .font(PyxisTypography.garmentTitle)
+                    Text(recommendation.explanation)
+                        .font(PyxisTypography.prose)
+                        .foregroundStyle(PyxisColors.secondaryText)
+                    Text("Sizing varies by brand and fabric.")
+                        .font(PyxisTypography.proseCaption)
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
                 .padding(PyxisSpacing.md)
                 .background(PyxisColors.field)
                 .accessibilityElement(children: .combine)
             }
+            if let comparisonMessage {
+                Text(comparisonMessage).font(PyxisTypography.prose)
+                    .foregroundStyle(PyxisColors.secondaryText)
+            }
         }
+        .onChange(of: chartRows) { _, _ in clearComparison() }
     }
+
+    private var rangeLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PyxisSpacing.sm))
+            : AnyLayout(HStackLayout(spacing: PyxisSpacing.sm))
+    }
+
+    private func clearComparison() { recommendation = nil; comparisonMessage = nil }
 
     private var privacy: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            Text("PRIVATE BY DEFAULT")
-                .font(PyxisTypography.label)
-            Text("Your Fit Passport stays in local app storage and is not included in AI image requests. Measurements are sizing guidance, not a medical assessment or fit guarantee.")
-                .font(PyxisTypography.label)
+            Text("Saved on this device. Not sent with AI photos.")
+                .font(PyxisTypography.proseCaption)
                 .foregroundStyle(PyxisColors.secondaryText)
             if !profiles.isEmpty {
-                Button("DELETE FIT PASSPORT", role: .destructive) {
+                Button(role: .destructive) {
                     isConfirmingDelete = true
+                } label: {
+                    Text("Delete measurements").font(PyxisTypography.control).frame(minHeight: 44)
                 }
             }
         }
-        .confirmationDialog("Delete your Fit Passport?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-            Button("DELETE FIT PASSPORT", role: .destructive, action: deleteProfile)
-            Button("CANCEL", role: .cancel) {}
+        .confirmationDialog("Delete your measurements?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Delete measurements", role: .destructive, action: deleteProfile)
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently removes your saved body measurements from this device.")
         }
     }
 
     private func binding(for key: MeasurementKey) -> Binding<String> {
-        Binding(get: { values[key, default: ""] }, set: { values[key] = $0 })
+        Binding(get: { draft.values[key, default: ""] }, set: { draft.values[key] = $0 })
     }
 
     private func loadProfile() {
         guard let profile = profiles.first else { return }
-        system = profile.measurementSystem
+        draft = BodyMeasurementDraft(profile: profile)
         fit = profile.fitPreference
-        values[.height] = display(profile.heightCentimeters, key: .height)
-        values[.weight] = display(profile.weightKilograms, key: .weight)
-        values[.chest] = display(profile.chestCentimeters, key: .chest)
-        values[.waist] = display(profile.waistCentimeters, key: .waist)
-        values[.hip] = display(profile.hipCentimeters, key: .hip)
-        values[.inseam] = display(profile.inseamCentimeters, key: .inseam)
-        values[.shoulder] = display(profile.shoulderCentimeters, key: .shoulder)
-        values[.foot] = display(profile.footLengthCentimeters, key: .foot)
     }
 
     @discardableResult
@@ -192,18 +241,18 @@ struct SizingProfileView: View {
         if profiles.isEmpty { modelContext.insert(profile) }
         profile.measurementSystem = system
         profile.fitPreference = fit
-        profile.heightCentimeters = canonical(.height)
-        profile.weightKilograms = canonical(.weight)
-        profile.chestCentimeters = canonical(.chest)
-        profile.waistCentimeters = canonical(.waist)
-        profile.hipCentimeters = canonical(.hip)
-        profile.inseamCentimeters = canonical(.inseam)
-        profile.shoulderCentimeters = canonical(.shoulder)
-        profile.footLengthCentimeters = canonical(.foot)
+        profile.heightCentimeters = draft.canonical(.height)
+        profile.weightKilograms = draft.canonical(.weight)
+        profile.chestCentimeters = draft.canonical(.chest)
+        profile.waistCentimeters = draft.canonical(.waist)
+        profile.hipCentimeters = draft.canonical(.hip)
+        profile.inseamCentimeters = draft.canonical(.inseam)
+        profile.shoulderCentimeters = draft.canonical(.shoulder)
+        profile.footLengthCentimeters = draft.canonical(.foot)
         profile.dateUpdated = .now
         do {
             try modelContext.save()
-            message = "Fit Passport saved"
+            message = "Measurements saved"
             return true
         } catch {
             modelContext.rollback()
@@ -213,11 +262,11 @@ struct SizingProfileView: View {
     }
 
     private func findSize() {
-        guard saveProfile() else { return }
+        guard saveProfile() else { comparisonMessage = message; return }
         guard let profile = profiles.first ?? (try? modelContext.fetch(FetchDescriptor<BodyProfile>()).first) else { return }
         let options = chartRows.compactMap { $0.option(system: system) }
         recommendation = SizeRecommendationService().recommend(profile: profile, category: category, options: options)
-        if recommendation == nil { message = "Add relevant measurements and chart ranges" }
+        comparisonMessage = recommendation == nil ? "No matching size. Check your measurements and chart ranges." : nil
     }
 
     private func removeChartRow(_ id: UUID) {
@@ -232,50 +281,18 @@ struct SizingProfileView: View {
         profiles.forEach(modelContext.delete)
         do {
             try modelContext.save()
-            values = [:]
+            draft.values = [:]
             recommendation = nil
-            message = "Fit Passport deleted"
+            message = "Measurements deleted"
         } catch {
             modelContext.rollback()
             message = PersistenceErrorMessage.saveFailed(error)
         }
     }
 
-    private func canonical(_ key: MeasurementKey) -> Double? {
-        guard let number = Double(values[key, default: ""].replacingOccurrences(of: ",", with: ".")), number > 0 else { return nil }
-        if system == .metric { return number }
-        return key == .weight ? number * 0.45359237 : number * 2.54
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-
-    private func display(_ value: Double?, key: MeasurementKey) -> String {
-        guard let value else { return "" }
-        let converted = system == .metric ? value : (key == .weight ? value / 0.45359237 : value / 2.54)
-        return converted.formatted(.number.precision(.fractionLength(0...1)))
-    }
-
-    private func convertDisplayedValues(from oldSystem: MeasurementSystem, to newSystem: MeasurementSystem) {
-        guard oldSystem != newSystem else { return }
-        for key in MeasurementKey.allCases {
-            guard let number = Double(values[key, default: ""].replacingOccurrences(of: ",", with: ".")) else { continue }
-            let converted: Double
-            if key == .weight {
-                converted = newSystem == .metric ? number * 0.45359237 : number / 0.45359237
-            } else {
-                converted = newSystem == .metric ? number * 2.54 : number / 2.54
-            }
-            values[key] = converted.formatted(.number.precision(.fractionLength(0...1)))
-        }
-        for index in chartRows.indices {
-            chartRows[index].convertRanges(from: oldSystem, to: newSystem)
-        }
-    }
-}
-
-private enum MeasurementKey: String, Identifiable, CaseIterable {
-    case height, weight, chest, waist, hip, inseam, shoulder, foot
-    var id: String { rawValue }
-    var title: String { self == .foot ? "FOOT LENGTH" : rawValue.uppercased() }
-    var accessibilityLabel: String { self == .foot ? "Foot length" : rawValue.capitalized }
 }
 
 private struct MeasurementInput: View {
@@ -286,19 +303,19 @@ private struct MeasurementInput: View {
         HStack {
             Text(key.title).font(PyxisTypography.label)
             Spacer()
-            TextField("OPTIONAL", text: $value)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 110)
-                .accessibilityLabel(key.accessibilityLabel)
+            EditorialTextField(key.accessibilityLabel, placeholder: "—", text: $value,
+                               keyboardType: .decimalPad, alignment: .trailing)
+                .frame(minWidth: 60, maxWidth: 110)
             Text(key == .weight ? (system == .metric ? "KG" : "LB") : (system == .metric ? "CM" : "IN"))
                 .font(PyxisTypography.label)
-                .foregroundStyle(PyxisColors.inactiveText)
+                .foregroundStyle(PyxisColors.secondaryText)
         }
+        .font(PyxisTypography.control)
+        .frame(minHeight: 44)
     }
 }
 
-private struct ChartRowDraft: Identifiable {
+private struct ChartRowDraft: Identifiable, Equatable {
     let id = UUID()
     var label: String
     var chest = ""
@@ -347,10 +364,15 @@ private struct ChartRangeField: View {
     let title: String
     @Binding var value: String
     var body: some View {
-        TextField("\(title) MIN-MAX", text: $value)
-            .keyboardType(.numbersAndPunctuation)
-            .font(PyxisTypography.label)
-            .padding(PyxisSpacing.sm)
-            .background(PyxisColors.field)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
+            EditorialTextField("\(title) range", placeholder: "Min–max", text: $value, keyboardType: .numbersAndPunctuation)
+                .font(PyxisTypography.control)
+                .frame(minHeight: 44)
+                .accessibilityLabel("\(title) range")
+        }
+        .padding(PyxisSpacing.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PyxisColors.field)
     }
 }

@@ -16,6 +16,7 @@ struct UppercaseNavLabel: View {
 }
 
 struct ItemCodeLabel: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let code: String
 
     var body: some View {
@@ -23,7 +24,8 @@ struct ItemCodeLabel: View {
             .font(PyxisTypography.editorialLabel)
             .tracking(1)
             .foregroundStyle(PyxisColors.text)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("Item code \(code)")
     }
 }
