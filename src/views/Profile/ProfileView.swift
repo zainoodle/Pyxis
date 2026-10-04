@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("pyxis.appearance") private var appearance = PyxisAppearance.system.rawValue
     @State private var selectedClosetID: UUID?
@@ -13,8 +12,8 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("WARDROBE")
-                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
-                        .tracking(colorScheme == .dark ? 1.5 : 0)
+                        .font(PyxisTypography.editorialLabel)
+                        .tracking(1)
                         .foregroundStyle(PyxisColors.secondaryText)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, PyxisSpacing.sm)
@@ -36,50 +35,33 @@ struct ProfileView: View {
                     }
 
                     Text("APPEARANCE")
-                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
-                        .tracking(colorScheme == .dark ? 1.5 : 0)
+                        .font(PyxisTypography.editorialLabel)
+                        .tracking(1)
                         .foregroundStyle(PyxisColors.secondaryText)
+                        .accessibilityAddTraits(.isHeader)
                         .padding(.top, PyxisSpacing.lg)
                         .padding(.bottom, PyxisSpacing.sm)
 
-                    if colorScheme == .dark {
-                        appearanceLayout {
-                            ForEach(PyxisAppearance.allCases) { option in
-                                Button { appearance = option.rawValue } label: {
-                                    Text(option.title)
-                                        .font(PyxisTypography.editorialLabel)
-                                        .tracking(1.5)
-                                        .foregroundStyle(appearance == option.rawValue ? PyxisColors.background : PyxisColors.secondaryText)
-                                        .frame(maxWidth: .infinity, minHeight: 44)
-                                        .background(appearance == option.rawValue ? PyxisColors.text : PyxisColors.field,
-                                                    in: RoundedRectangle(cornerRadius: 8))
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(PyxisColors.hairline, lineWidth: 1)
-                                        }
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(option.title.capitalized)
-                                .editorialGlow(cornerRadius: 8, strength: appearance == option.rawValue ? 1.1 : 0.5)
-                                .accessibilityAddTraits(appearance == option.rawValue ? .isSelected : [])
+                    appearanceLayout {
+                        ForEach(PyxisAppearance.allCases) { option in
+                            Button { appearance = option.rawValue } label: {
+                                Text(option.title.capitalized)
+                                    .font(PyxisTypography.control)
+                                    .foregroundStyle(appearance == option.rawValue ? PyxisColors.background : PyxisColors.text)
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                                    .background(appearance == option.rawValue ? PyxisColors.text : PyxisColors.field,
+                                                in: RoundedRectangle(cornerRadius: 8))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .strokeBorder(PyxisColors.controlBorder, lineWidth: 0.5)
+                                    }
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("profile.appearance.\(option.rawValue)")
+                            .accessibilityAddTraits(appearance == option.rawValue ? .isSelected : [])
                         }
-                        .accessibilityElement(children: .contain)
-                    } else {
-                        Picker("APPEARANCE", selection: $appearance) {
-                            ForEach(PyxisAppearance.allCases) { option in
-                                Text(option.title).tag(option.rawValue)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityElement(children: .contain)
                     }
-                    Text("PYXIS")
-                        .font(PyxisTypography.editorialMicro)
-                        .tracking(3)
-                        .foregroundStyle(PyxisColors.inactiveText)
-                        .padding(.top, 40)
-                        .accessibilityHidden(true)
+                    .accessibilityElement(children: .contain)
                 }
                 .padding(.top, 24)
             }
@@ -98,13 +80,15 @@ struct ProfileView: View {
 
     private func settingsRow(_ title: String, systemImage: String) -> some View {
         HStack(spacing: PyxisSpacing.md) {
-            Image(systemName: systemImage)
-                .font(.system(size: 20, weight: .light))
-                .accessibilityHidden(true)
-                .frame(width: 24)
-                .foregroundStyle(PyxisColors.secondaryText)
+            if !dynamicTypeSize.isAccessibilitySize {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .light))
+                    .accessibilityHidden(true)
+                    .frame(width: 24)
+                    .foregroundStyle(PyxisColors.secondaryText)
+            }
             Text(title)
-                .font(PyxisTypography.body)
+                .font(PyxisTypography.control)
                 .tracking(0)
                 .multilineTextAlignment(.leading)
 

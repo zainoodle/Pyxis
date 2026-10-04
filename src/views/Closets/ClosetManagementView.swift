@@ -16,7 +16,7 @@ struct ClosetManagementView: View {
                 createRow
 
                 if let message {
-                    Text(message.uppercased())
+                    Text(message)
                         .font(PyxisTypography.label)
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
@@ -26,7 +26,7 @@ struct ClosetManagementView: View {
                 }
 
                 if closets.isEmpty {
-                    Text("NO CUSTOM CLOSETS")
+                    Text("Create a closet to group your pieces.")
                         .font(PyxisTypography.body)
                         .foregroundStyle(PyxisColors.inactiveText)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,12 +67,11 @@ struct ClosetManagementView: View {
     }
 
     private var nameField: some View {
-        TextField("Closet name", text: $newClosetName)
+        EditorialTextField("Closet name", placeholder: "Closet name", text: $newClosetName)
             .accessibilityLabel("Closet name")
             .textFieldStyle(.plain)
             .font(PyxisTypography.body)
             .padding(.horizontal, PyxisSpacing.sm)
-            .padding(.vertical, PyxisSpacing.sm)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(PyxisColors.field)
@@ -84,7 +83,7 @@ struct ClosetManagementView: View {
     }
 
     private var createButton: some View {
-        Button("CREATE") {
+        Button("Create") {
             create()
         }
         .buttonStyle(MinimalButtonStyle())
@@ -163,11 +162,11 @@ private struct ClosetEditorRow: View {
             }
 
             if items.isEmpty {
-                Text("NO CLOTHING ITEMS")
+                Text("Add pieces to your wardrobe to organize them here.")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.inactiveText)
             } else {
-                DisclosureGroup("ITEMS") {
+                DisclosureGroup("Pieces") {
                     VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                         ForEach(items) { item in
                             Toggle(itemTitle(for: item), isOn: membershipBinding(for: item))
@@ -190,7 +189,7 @@ private struct ClosetEditorRow: View {
     }
 
     private var editableName: some View {
-        TextField("CLOSET NAME", text: nameBinding)
+        TextField("Closet name", text: nameBinding)
             .textFieldStyle(.plain)
             .font(PyxisTypography.body)
     }
@@ -204,12 +203,12 @@ private struct ClosetEditorRow: View {
 
     private var rowActions: some View {
         HStack(spacing: PyxisSpacing.sm) {
-            Button(selectedClosetID == closet.id ? "VIEWING" : "VIEW") {
+            Button(selectedClosetID == closet.id ? "Selected" : "Select") {
                 selectedClosetID = closet.id
             }
             .buttonStyle(MinimalButtonStyle())
 
-            Button("DELETE") {
+            Button("Delete", role: .destructive) {
                 deleteAction()
             }
             .buttonStyle(MinimalButtonStyle())

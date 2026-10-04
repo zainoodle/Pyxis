@@ -2,7 +2,8 @@ import SwiftData
 import SwiftUI
 
 struct ItemDetailView: View {
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
@@ -35,19 +36,12 @@ struct ItemDetailView: View {
 
     var body: some View {
         ScrollView {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: PyxisSpacing.xl) {
-                    imagePanel
-                    detailPanel
-                        .frame(maxWidth: 330)
-                }
-
-                VStack(spacing: PyxisSpacing.lg) {
-                    imagePanel
-                    detailPanel
-                }
+            detailLayout {
+                imagePanel
+                detailPanel
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(PyxisSpacing.md)
+            .padding(24)
         }
         .editorialCanvas()
         .disclosureGroupStyle(EditorialDisclosureGroupStyle())
@@ -79,13 +73,17 @@ struct ItemDetailView: View {
         }
     }
 
+    private var detailLayout: AnyLayout {
+        horizontalSizeClass == .regular && !dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(HStackLayout(alignment: .top, spacing: PyxisSpacing.xl))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: PyxisSpacing.lg))
+    }
+
     private var imagePanel: some View {
         VStack(spacing: PyxisSpacing.sm) {
-            LocalImageView(url: viewModel.displayURL(for: item), revision: viewModel.imageRevision)
-                .frame(maxWidth: 330)
+            GarmentStage(url: viewModel.displayURL(for: item), revision: viewModel.imageRevision)
+                .frame(maxWidth: .infinity)
                 .frame(height: 300)
-                .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
-                            in: RoundedRectangle(cornerRadius: 10))
             ItemCodeLabel(code: item.itemCode)
         }
     }

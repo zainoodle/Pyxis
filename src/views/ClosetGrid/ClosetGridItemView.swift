@@ -8,12 +8,12 @@ struct ClosetGridItemView: View {
         guard let storage = ImageStorageService.shared else {
             return nil
         }
-        return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
+        return storage.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-            LocalImageView(url: imageURL, revision: imageRevision)
+            GarmentStage(url: imageURL, revision: imageRevision)
                 .frame(height: dynamicTypeSize.isAccessibilitySize ? 190 : 150)
 
             Text(item.displayName ?? item.subtype.rawValue.capitalized)

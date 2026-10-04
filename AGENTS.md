@@ -2,17 +2,18 @@
 
 - Be concise and high signal. State blockers plainly.
 - Read `CONTRIBUTING.md` before changing code or preparing a PR.
-- Keep one purpose per branch and PR; use `codex/<short-purpose>` branches.
-- Codex owns descriptive Conventional Commit PR titles and keeps the PR description current.
-- Before adding unrelated work, tell Isaiah: “This needs a separate PR: <proposed title>,” explain why, and keep it separate. Do not wait for him to remember.
+- Keep changes scoped. Reuse the current task branch for related work; use a separate local branch or worktree when changes overlap.
+- Do not create, push, or update a PR unless Isaiah explicitly asks for that PR action. Complete and verify work locally by default.
+- When a PR is requested, use a descriptive Conventional Commit title and keep its description current.
+- Before adding unrelated work, explain the scope boundary to Isaiah and keep the changes separate locally. Do not create another PR automatically.
 - Check the current branch, diff, and PR before starting; preserve existing work. Use a separate worktree when tasks overlap. Explicitly identify dependent PRs.
 - Keep app entry points in `src/main/`, business logic in `src/services/`, models in `src/models/`, and shared helpers in `src/utils/`. Follow the existing view and persistence structure.
 - Preserve the local-first experience. Never commit secrets, silently add photo uploads, or change stored data without an upgrade/migration plan.
 - Test changed behavior with relevant existing checks; add regression coverage for bugs. Check visible changes on a simulator or device.
 - Use `major.minor.patch` app versions and an increasing build counter from `config/Version.xcconfig`; prepare changes with `scripts/version.py`, never bump versions for each PR.
-- Maintain one release-note fragment per PR and update it during review. Keep docs aligned with the final change.
+- When a PR is requested, maintain one release-note fragment for it and update it during review. Keep docs aligned with the final change.
 - Report checks as passed, failed, or blocked; never describe unrun checks as passing.
-- Prepare draft PRs with the problem, resulting behavior, verification, and relevant risks. Isaiah decides when to merge or release; do not merge or publish without his instruction.
+- If Isaiah requests a PR, prepare it as a draft with the problem, resulting behavior, verification, and relevant risks. Isaiah decides when to merge or release; do not merge or publish without his instruction.
 
 ## UI/UX skills are the default
 

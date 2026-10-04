@@ -70,4 +70,17 @@ final class GarmentImageFramingTests: XCTestCase {
         CIImage(color: .white).cropped(to: subject)
             .composited(over: CIImage(color: .clear).cropped(to: canvas))
     }
+
+    func testBalancedFramingFitsWideShoesAndNarrowTrousersWithoutDistortion() {
+        let container = CGSize(width: 330, height: 420)
+        for size in [CGSize(width: 700, height: 300), CGSize(width: 240, height: 900), CGSize(width: 600, height: 650)] {
+            let display = GarmentImageFraming.balancedDisplaySize(imageSize: size, visibleFraction: 0.6, in: container)
+            XCTAssertLessThanOrEqual(display.width, container.width * 0.9 + 0.01)
+            XCTAssertLessThanOrEqual(display.height, container.height * 0.88 + 0.01)
+            XCTAssertEqual(display.width / display.height, size.width / size.height, accuracy: 0.001)
+        }
+        let sparse = GarmentImageFraming.balancedDisplaySize(imageSize: container, visibleFraction: 0.3, in: container)
+        let dense = GarmentImageFraming.balancedDisplaySize(imageSize: container, visibleFraction: 0.95, in: container)
+        XCTAssertGreaterThan(sparse.height, dense.height)
+    }
 }
