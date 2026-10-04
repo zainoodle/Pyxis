@@ -31,10 +31,10 @@ private struct EditorialCanvas: ViewModifier {
         content.background {
             PyxisColors.background
                 .overlay {
-                    if colorScheme == .dark, contrast != .increased, !reduceTransparency {
+                    if contrast != .increased, !reduceTransparency {
                         RadialGradient(
-                            colors: [.white.opacity(0.045), .clear],
-                            center: UnitPoint(x: 0.42, y: 0.43),
+                            colors: [PyxisColors.surface.opacity(colorScheme == .dark ? 0.8 : 0.95), .clear],
+                            center: UnitPoint(x: 0.36, y: 0.22),
                             startRadius: 0,
                             endRadius: 370
                         )

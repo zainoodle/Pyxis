@@ -1,6 +1,6 @@
 # Version control and releases
 
-Use one focused PR per change, Conventional Commit titles, one release-note fragment per PR, semantic marketing versions, and increasing iOS build numbers. `CONTRIBUTING.md` defines code review and branch rules.
+Work locally until Isaiah requests a PR. For requested PRs, use one focused change, a Conventional Commit title, and one release-note fragment. Use semantic marketing versions and increasing iOS build numbers. `CONTRIBUTING.md` defines code review and branch rules.
 
 ## Setup
 
@@ -13,10 +13,10 @@ The commit hook validates subjects. The pre-push hook blocks direct pushes to `m
 
 GitHub requires PRs, passing `validate` and `quality` checks, and resolved conversations on `main`. Squash merging uses the PR title as the commit subject. Isaiah authorizes merges and releases. Legacy migration commits preceding policy introduction retain their existing titles.
 
-## Each PR
+## When a PR is requested
 
 1. Start a short-lived `codex/<purpose>` branch from current `main` (or explicitly declare a dependent PR).
-2. Make one coherent change and create a draft PR with a Conventional Commit title.
+2. Make one coherent change locally. Create a draft PR with a Conventional Commit title only when Isaiah requests it.
 3. Create one note and update it throughout review:
 
    ```bash
@@ -67,7 +67,7 @@ python3 scripts/version.py next
 
 Preparation updates the version config, writes the dated changelog, and archives all pending fragments under `changes/archive/<version>/`. Internal-only notes are archived but omitted from public changelog entries. The command does not commit, tag, upload, or publish anything. Validation and collision checks run before file changes. CI rejects malformed values, duplicate Xcode overrides, and version/build regressions.
 
-Review and commit the diff, then open a `release: X.Y.Z` PR. Record validation and migration/recovery details. Archived notes satisfy this PR's fragment requirement, and an empty pending directory is valid. Corrections to the same release candidate should update its archived notes and changelog in that release PR.
+Review and commit the diff. Open a `release: X.Y.Z` PR when Isaiah requests it. Record validation and migration/recovery details. Archived notes satisfy this PR's fragment requirement, and an empty pending directory is valid. Corrections to the same release candidate should update its archived notes and changelog in that release PR.
 
 For another TestFlight candidate of the same version:
 

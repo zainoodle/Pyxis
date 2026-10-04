@@ -119,7 +119,7 @@ struct SizingProfileView: View {
             }
         }
         .padding(PyxisSpacing.md)
-        .background(PyxisColors.field)
+        .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var sizeChecker: some View {
@@ -163,7 +163,7 @@ struct SizingProfileView: View {
                     }
                 }
                 .padding(PyxisSpacing.sm)
-                .overlay { Rectangle().stroke(PyxisColors.hairline) }
+                .overlay { RoundedRectangle(cornerRadius: 8).stroke(PyxisColors.hairline) }
             }
 
             Button("Add size", systemImage: "plus") { chartRows.append(ChartRowDraft(label: "")); clearComparison() }
@@ -185,7 +185,7 @@ struct SizingProfileView: View {
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
                 .padding(PyxisSpacing.md)
-                .background(PyxisColors.field)
+                .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
                 .accessibilityElement(children: .combine)
             }
             if let comparisonMessage {
@@ -237,6 +237,10 @@ struct SizingProfileView: View {
 
     @discardableResult
     private func saveProfile() -> Bool {
+        guard draft.invalidKeys.isEmpty else {
+            message = "Enter a positive number for " + draft.invalidKeys.map { $0.title.lowercased() }.joined(separator: ", ") + ", or leave the field empty."
+            return false
+        }
         let profile = profiles.first ?? BodyProfile()
         if profiles.isEmpty { modelContext.insert(profile) }
         profile.measurementSystem = system
@@ -373,6 +377,6 @@ private struct ChartRangeField: View {
         }
         .padding(PyxisSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PyxisColors.field)
+        .background(PyxisColors.field, in: RoundedRectangle(cornerRadius: 8))
     }
 }

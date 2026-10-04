@@ -35,8 +35,10 @@ struct OutfitBuilderView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     OutfitFlatLayView(items: selectedPieces)
                         .frame(height: dynamicTypeSize.isAccessibilitySize ? 220 : 320)
-                        .padding(.vertical, 10)
-                        .accessibilityLabel("Your fit, \(selectedPieces.count) pieces")
+                        .garmentSurface()
+                        .padding(.vertical, 16)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Your fit, \(selectedPieces.count) \(selectedPieces.count == 1 ? "piece" : "pieces")")
                     ForEach(selectedPieces) { item in pieceRow(item) }
                 }
                 .padding(.horizontal, 24)
@@ -102,7 +104,7 @@ struct OutfitBuilderView: View {
             Text("Your fit")
                 .font(PyxisTypography.pageTitle)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(selectedPieces.count) pieces · \(isDraftSaved ? "Draft saved" : "Working draft")")
+            Text("\(selectedPieces.count) \(selectedPieces.count == 1 ? "piece" : "pieces") · \(isDraftSaved ? "Draft saved" : "Working draft")")
                 .font(PyxisTypography.editorialLabel)
                 .foregroundStyle(PyxisColors.secondaryText)
                 .accessibilityIdentifier("fit.draftStatus")

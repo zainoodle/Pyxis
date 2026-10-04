@@ -62,9 +62,9 @@ struct SavedFitsGalleryView: View {
                     }
 
                     if savedOutfits.isEmpty {
-                        emptyState("Your first fit", detail: "Bring pieces from your closet together.")
-                        if let buildAction {
-                            if draftData.isEmpty {
+                        if draftData.isEmpty {
+                            emptyState("Your first fit", detail: "Bring pieces from your closet together.")
+                            if let buildAction {
                                 Button("Create a fit", action: buildAction)
                                     .buttonStyle(EditorialPrimaryButtonStyle())
                             }
@@ -214,7 +214,6 @@ private struct FitsBrowseMenu: View {
 }
 
 private struct OutfitGalleryTile: View {
-    @Environment(\.colorScheme) private var colorScheme
     let outfit: Outfit
     let items: [ClosetItem]
 
@@ -225,32 +224,23 @@ private struct OutfitGalleryTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
             OutfitFlatLayView(items: pieces)
-                .frame(height: colorScheme == .dark ? 180 : 208)
-                .background {
-                    if colorScheme == .light {
-                        RoundedRectangle(cornerRadius: 9).fill(PyxisColors.galleryCanvas)
-                    }
-                }
+                .frame(height: 208)
+                .garmentSurface()
 
             HStack(alignment: .top, spacing: PyxisSpacing.xs) {
                 VStack(alignment: .leading, spacing: PyxisSpacing.xs) {
                     Text(outfit.name?.uppercased() ?? outfit.dateCreated.formatted(date: .numeric, time: .omitted))
-                        .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.label)
-                        .tracking(colorScheme == .dark ? 1.1 : 0)
+                        .font(PyxisTypography.editorialLabel)
+                        .tracking(0.6)
                         .foregroundStyle(PyxisColors.text)
                         .lineLimit(2)
                     Text("\(pieces.count) PIECES" + (outfit.wearCount > 0 ? " · WORN \(outfit.wearCount)×" : ""))
-                        .font(colorScheme == .dark ? PyxisTypography.editorialMicro : PyxisTypography.code)
-                        .tracking(colorScheme == .dark ? 0.7 : 0)
+                        .font(PyxisTypography.editorialMicro)
+                        .tracking(0.4)
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
                 Spacer(minLength: 0)
-                if outfit.favorite && colorScheme == .light {
-                    Image(systemName: "heart.fill")
-                        .font(PyxisTypography.label)
-                        .foregroundStyle(PyxisColors.text)
-                        .accessibilityHidden(true)
-                }
+
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -273,6 +263,15 @@ struct OutfitFlatLayView: View {
                 }
                 .foregroundStyle(PyxisColors.secondaryText)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if items.count == 1, let item = items.first {
+                LocalImageView(
+                    url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item)),
+                    revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000),
+                    balancedFraming: true, castsShadow: true
+                )
+                .padding(16)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .accessibilityLabel(item.displayName ?? item.itemCode)
             } else {
                 ZStack {
                     ForEach(Array(items.prefix(6))) { item in

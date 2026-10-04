@@ -4,12 +4,16 @@ import SwiftUI
 struct EditorialClosetGallery: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var captionHeight: CGFloat = 184
+    @ScaledMetric(relativeTo: .body) private var minimumCaptionHeight: CGFloat = 208
+    @State private var measuredCaptionHeight: CGFloat = 0
+    @State private var inspectedItem: ClosetItem?
+    @State private var lastDragTime = -Double.infinity
     let items: [ClosetItem]
     @Binding var selection: UUID?
     let buildAction: (UUID?) -> Void
 
     private var selectedIndex: Int { items.firstIndex { $0.id == selection } ?? 0 }
+    private var captionHeight: CGFloat { max(minimumCaptionHeight, measuredCaptionHeight) }
 
     var body: some View {
         GeometryReader { geometry in
@@ -20,6 +24,7 @@ struct EditorialClosetGallery: View {
                 gallery(width: geometry.size.width, imageHeight: imageHeight)
             }
         }
+        .navigationDestination(item: $inspectedItem) { detail(for: $0) }
         .onChange(of: items.map(\.id), initial: true) { oldIDs, newIDs in
             if let selection, newIDs.contains(selection) { return }
             let index = selection.flatMap { oldIDs.firstIndex(of: $0) } ?? 0
@@ -28,21 +33,43 @@ struct EditorialClosetGallery: View {
     }
 
     private func gallery(width: CGFloat, imageHeight: CGFloat) -> some View {
-        VStack(spacing: 0) {
+        let garmentWidth = max(1, width * 0.72)
+        let sideMargin = (width - garmentWidth) / 2
+        return VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 0) {
                         ForEach(items) { item in
-                            garmentLink(for: item, width: max(1, width - 48), height: imageHeight)
+                            garmentLink(for: item, width: garmentWidth, height: imageHeight)
                                 .id(item.id)
                         }
                     }
                     .scrollTargetLayout()
                 }
-                .contentMargins(.horizontal, 24, for: .scrollContent)
+                .contentMargins(.horizontal, sideMargin, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                 .scrollPosition(id: $selection, anchor: .center)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { _ in lastDragTime = ProcessInfo.processInfo.systemUptime }
+                        .onEnded { _ in lastDragTime = ProcessInfo.processInfo.systemUptime }
+                )
                 .frame(height: imageHeight)
+                .coordinateSpace(name: ClosetRackGarment.coordinateSpace)
+                .background {
+                    ZStack(alignment: .top) {
+                        GarmentStageBackground()
+                        if items.contains(where: { $0.imageCutoutPath != nil && GarmentRackSupport.forCategory($0.category) != nil }) {
+                            ClosetRackRail()
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(PyxisColors.hairline.opacity(0.4), lineWidth: 0.5)
+                        .allowsHitTesting(false)
+                }
                 .onAppear { proxy.scrollTo(selection, anchor: .center) }
                 .onChange(of: imageHeight) { _, _ in proxy.scrollTo(selection, anchor: .center) }
                 .onChange(of: width) { _, _ in proxy.scrollTo(selection, anchor: .center) }
@@ -51,26 +78,40 @@ struct EditorialClosetGallery: View {
             if !items.isEmpty {
                 caption(for: items[selectedIndex])
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: captionHeight, alignment: .bottom)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background {
+                        GeometryReader { geometry in
+                            Color.clear.preference(key: RackCaptionHeightKey.self, value: geometry.size.height)
+                        }
+                    }
+                    .frame(minHeight: dynamicTypeSize.isAccessibilitySize ? 0 : captionHeight, alignment: .bottom)
+                    .onPreferenceChange(RackCaptionHeightKey.self) { height in
+                        if abs(height - measuredCaptionHeight) > 0.5 { measuredCaptionHeight = height }
+                    }
             }
         }
     }
 
     private func garmentLink(for item: ClosetItem, width: CGFloat, height: CGFloat) -> some View {
         let isSelected = item.id == (selection ?? items.first?.id)
-        return NavigationLink {
-            detail(for: item)
-        } label: {
-            LocalImageView(
-                url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item)),
-                revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
-            )
-            .padding(.vertical, 12)
-            .frame(width: width, height: height)
-            .shadow(color: .black.opacity(0.2), radius: 12, y: 10)
-            .contentShape(Rectangle())
+        let dimsNeighbors = !reduceMotion
+        return ClosetRackGarment(
+            url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item)),
+            revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000),
+            category: item.category, width: width, height: height
+        )
+        .frame(width: width, height: height)
+        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+            content.opacity(phase.isIdentity || !dimsNeighbors ? 1 : 0.74)
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard ProcessInfo.processInfo.systemUptime - lastDragTime > 0.18 else { return }
+            inspectedItem = item
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { inspectedItem = item }
         .accessibilityLabel("\(item.itemCode), \(item.displayName ?? item.subtype.rawValue)")
         .accessibilityHint("Opens garment details")
         .accessibilityIdentifier("closet.garment.\(item.itemCode)")
@@ -97,7 +138,7 @@ struct EditorialClosetGallery: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 8)
+        .padding(.top, 16)
         .padding(.bottom, 16)
     }
 
@@ -140,4 +181,9 @@ struct EditorialClosetGallery: View {
         let index = min(max(0, selectedIndex + offset), items.count - 1)
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { selection = items[index].id }
     }
+}
+
+private struct RackCaptionHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
