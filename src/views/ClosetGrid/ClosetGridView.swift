@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ClosetGridView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = ClosetGridViewModel()
@@ -13,11 +12,6 @@ struct ClosetGridView: View {
     @Environment(\.modelContext) private var modelContext
     @FocusState private var isSearchFocused: Bool
     private let buildAction: (UUID?) -> Void
-
-    private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: PyxisSpacing.md),
-              count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
-    }
 
     init(buildAction: @escaping (UUID?) -> Void = { _ in }) {
         self.buildAction = buildAction
@@ -124,21 +118,7 @@ struct ClosetGridView: View {
             }
             Spacer()
         } else {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: colorScheme == .dark ? PyxisSpacing.md : PyxisSpacing.xl) {
-                    ForEach(filteredItems) { item in
-                        NavigationLink {
-                            ItemDetailView(item: item, showsCloseButton: false) { buildItem in
-                                buildAction(buildItem.id)
-                            }
-                        } label: {
-                            ClosetGridItemView(item: item)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, PyxisSpacing.md)
-            }
+            ClosetSpotlightView(items: filteredItems, buildAction: buildAction)
         }
     }
 
