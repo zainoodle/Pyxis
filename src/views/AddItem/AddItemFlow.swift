@@ -6,6 +6,7 @@ struct AddItemFlow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var existingItems: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = AddItemViewModel()
@@ -14,6 +15,8 @@ struct AddItemFlow: View {
     @State private var saveErrorMessage: String?
     @State private var didSave = false
     @State private var processingTask: Task<Void, Never>?
+    @State private var previewAppearance = PyxisAppearance.system
+    @State private var requestsSoftening = false
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
     private let initialClosetID: UUID?
@@ -71,7 +74,7 @@ struct AddItemFlow: View {
                     save()
                 }
                 .buttonStyle(EditorialPrimaryButtonStyle())
-                .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+                .disabled(viewModel.isEditingPhoto || (viewModel.result?.originalPath.isEmpty ?? true))
                 .accessibilityLabel(viewModel.stage.isFailed ? "Save piece with original photo" : "Save piece")
                 .accessibilityIdentifier("piece.save")
                 .padding(PyxisSpacing.md)
@@ -83,8 +86,30 @@ struct AddItemFlow: View {
             }
         }
         .onAppear(perform: applyInitialCloset)
+        #if DEBUG
+        .task {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard viewModel.selectedImageURL == nil,
+                  let flag = arguments.firstIndex(of: "-pyxis.importFixture"),
+                  arguments.indices.contains(flag + 1) else { return }
+            let url = URL(fileURLWithPath: arguments[flag + 1])
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            viewModel.selectImage(url)
+            applyInitialMetadata()
+            processingTask = Task { await viewModel.processSelectedImage() }
+        }
+        #endif
         .onChange(of: closets.map(\.id)) { _, _ in
             applyInitialCloset()
+        }
+        .onChange(of: requestsSoftening) { _, enabled in
+            processingTask = Task {
+                await viewModel.setSoftensCreases(enabled)
+                requestsSoftening = viewModel.softensCreases
+            }
+        }
+        .onChange(of: viewModel.imageRevision) { _, _ in
+            requestsSoftening = viewModel.softensCreases
         }
         .onDisappear {
             processingTask?.cancel()
@@ -132,9 +157,20 @@ struct AddItemFlow: View {
                 isProcessing: viewModel.stage.isProcessing,
                 imageRevision: viewModel.imageRevision
             )
-            .id(viewModel.imageRevision)
             .frame(maxWidth: 300)
             .frame(height: 300)
+            .environment(\.colorScheme, previewAppearance.colorScheme ?? colorScheme)
+
+            if viewModel.result?.cutoutPath != nil {
+                Picker("Preview background", selection: $previewAppearance) {
+                    Text("Current").tag(PyxisAppearance.system)
+                    Text("Light").tag(PyxisAppearance.light)
+                    Text("Dark").tag(PyxisAppearance.dark)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 300)
+                .accessibilityIdentifier("piece.previewAppearance")
+            }
 
             if let candidateItemCode { ItemCodeLabel(code: candidateItemCode) }
 
@@ -143,8 +179,25 @@ struct AddItemFlow: View {
             if let aiError = viewModel.aiEnhancementError {
                 InlineErrorMessage(message: aiError)
             }
+            if let refinementError = viewModel.photoRefinementError {
+                InlineErrorMessage(message: refinementError)
+            }
 
             if !viewModel.stage.isProcessing {
+                if viewModel.result?.cutoutPath != nil {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Button(requestsSoftening ? "Restore natural texture" : "Soften small creases") {
+                            requestsSoftening.toggle()
+                        }
+                        .buttonStyle(MinimalButtonStyle())
+                        .disabled(viewModel.isEditingPhoto)
+                        .accessibilityIdentifier("piece.softenCreases")
+                        .accessibilityValue(viewModel.softensCreases ? "Softened" : "Natural")
+                        Text(viewModel.isRefiningPhoto ? "Refining photo…" : "On this device. Reduces fine creases; keeps the original photo.")
+                            .font(PyxisTypography.proseCaption)
+                            .foregroundStyle(PyxisColors.secondaryText)
+                    }
+                }
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: PyxisSpacing.sm) {
                         secondaryProcessingActions
@@ -153,13 +206,14 @@ struct AddItemFlow: View {
                         secondaryProcessingActions
                     }
                 }
+                .disabled(viewModel.isEditingPhoto)
 
                 if viewModel.isAIStudioAvailable {
                     Button(viewModel.isAIEnhancing ? "Generating…" : "AI de-wrinkle") {
                         Task { await viewModel.makePristineWithAI() }
                     }
                     .buttonStyle(MinimalButtonStyle())
-                    .disabled(viewModel.isAIEnhancing || (viewModel.result?.originalPath.isEmpty ?? true))
+                    .disabled(viewModel.isEditingPhoto || (viewModel.result?.originalPath.isEmpty ?? true))
                     .accessibilityLabel("Generate a pristine AI garment image")
 
                     Text("Sends this photo to xAI, which may retain API data for up to 30 days. Check fabric, logos, and condition before saving.")
@@ -343,7 +397,7 @@ private struct StudioCutoutProcessingView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                LocalImageView(url: url, revision: imageRevision)
+                LocalImageView(url: url, revision: imageRevision, balancedFraming: true, castsShadow: true)
                     .saturation(isProcessing ? 0.15 : 1)
                     .opacity(isProcessing ? 0.42 : 1)
                     .scaleEffect(isProcessing && isLifted ? 1.025 : 1)
@@ -397,9 +451,15 @@ private struct StudioCutoutProcessingView: View {
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipShape(Rectangle())
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .background(PyxisColors.field)
+        .background { GarmentStageBackground() }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(PyxisColors.hairline.opacity(0.7), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
         .onAppear {
             updateAnimation()
         }

@@ -67,7 +67,8 @@ final class GarmentMaskRefinementTests: XCTestCase {
         let source = try LocalBackgroundRemovalService.orientationCorrectedImage(from: URL(fileURLWithPath: sourcePath))
         let hint = try? LocalBackgroundRemovalService.bestForegroundMask(for: source, ciContext: context)
         let segmenter = SAMGarmentSegmenter(modelDirectory: URL(fileURLWithPath: modelPath))
-        let mask = try await segmenter.mask(for: source, foregroundHint: hint)
+        let rawMask = try await segmenter.mask(for: source, foregroundHint: hint)
+        let mask = GarmentPhotoRefinementService.refinedMask(rawMask, extent: source.extent)
         let output = source.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputMaskImageKey: mask,
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: source.extent)

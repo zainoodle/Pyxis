@@ -31,11 +31,10 @@ struct ItemCodeLabel: View {
 }
 
 struct MinimalButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var colorScheme
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.body)
-            .tracking(colorScheme == .dark ? 1.2 : 0)
+            .font(PyxisTypography.editorialLabel)
+            .tracking(0.6)
             .foregroundStyle(PyxisColors.text)
             .padding(.horizontal, PyxisSpacing.md)
             .padding(.vertical, PyxisSpacing.sm)
@@ -46,7 +45,7 @@ struct MinimalButtonStyle: ButtonStyle {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(PyxisColors.hairline, lineWidth: 1)
+                    .stroke(PyxisColors.controlBorder, lineWidth: 1)
             }
             .editorialGlow(cornerRadius: 8, strength: configuration.isPressed ? 0.4 : 0.7)
             .opacity(configuration.isPressed ? 0.55 : 1)

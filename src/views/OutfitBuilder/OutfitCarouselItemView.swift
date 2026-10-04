@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct OutfitCarouselItemView: View {
-    @Environment(\.colorScheme) private var colorScheme
     let item: ClosetItem
     let isSelected: Bool
     let action: () -> Void
@@ -10,17 +9,14 @@ struct OutfitCarouselItemView: View {
         guard let storage = ImageStorageService.shared else {
             return nil
         }
-        return storage.url(for: ClosetItemImageResolver.preferredDisplayPath(for: item))
+        return storage.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item))
     }
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: PyxisSpacing.sm) {
-                LocalImageView(url: imageURL, revision: imageRevision)
+                GarmentStage(url: imageURL, revision: imageRevision)
                     .frame(height: 126)
-                    .padding(.horizontal, PyxisSpacing.sm)
-                    .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
-                                in: RoundedRectangle(cornerRadius: 8))
 
                 ItemCodeLabel(code: item.itemCode)
 

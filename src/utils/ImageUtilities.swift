@@ -75,6 +75,21 @@ public enum ImageUtilities {
     }
 
     public static func rotatedImageData(
+        from imageData: Data,
+        direction: RotationDirection
+    ) throws -> Data {
+        guard let source = CIImage(data: imageData),
+              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        let rotated = source.oriented(direction == .clockwise ? .right : .left)
+        guard let data = CIContext().pngRepresentation(of: rotated, format: .RGBA8, colorSpace: colorSpace) else {
+            throw ImageUtilityError.couldNotEncodeImage
+        }
+        return data
+    }
+
+    public static func rotatedImageData(
         from imageURL: URL,
         direction: RotationDirection
     ) throws -> Data {

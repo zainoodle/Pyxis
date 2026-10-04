@@ -4,12 +4,14 @@ import SwiftUI
 struct EditorialClosetGallery: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var captionHeight: CGFloat = 184
+    @ScaledMetric(relativeTo: .body) private var minimumCaptionHeight: CGFloat = 208
+    @State private var measuredCaptionHeight: CGFloat = 0
     let items: [ClosetItem]
     @Binding var selection: UUID?
     let buildAction: (UUID?) -> Void
 
     private var selectedIndex: Int { items.firstIndex { $0.id == selection } ?? 0 }
+    private var captionHeight: CGFloat { max(minimumCaptionHeight, measuredCaptionHeight) }
 
     var body: some View {
         GeometryReader { geometry in
@@ -28,21 +30,41 @@ struct EditorialClosetGallery: View {
     }
 
     private func gallery(width: CGFloat, imageHeight: CGFloat) -> some View {
-        VStack(spacing: 0) {
+        let garmentWidth = max(1, width * 0.68)
+        let sideMargin = (width - garmentWidth) / 2
+        return VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 0) {
                         ForEach(items) { item in
-                            garmentLink(for: item, width: max(1, width - 48), height: imageHeight)
+                            garmentLink(for: item, width: garmentWidth, height: imageHeight)
                                 .id(item.id)
                         }
                     }
                     .scrollTargetLayout()
                 }
-                .contentMargins(.horizontal, 24, for: .scrollContent)
+                .contentMargins(.horizontal, sideMargin, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                 .scrollPosition(id: $selection, anchor: .center)
                 .frame(height: imageHeight)
+                .coordinateSpace(name: ClosetRackGarment.coordinateSpace)
+                .background { GarmentStageBackground() }
+                .overlay(alignment: .top) {
+                    if items.contains(where: { $0.imageCutoutPath != nil && GarmentRackSupport.forCategory($0.category) != nil }) {
+                        Rectangle()
+                            .fill(PyxisColors.secondaryText.opacity(0.55))
+                            .frame(height: 1.5)
+                            .padding(.top, GarmentRackGeometry.hookY)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(PyxisColors.hairline.opacity(0.65), lineWidth: 1)
+                        .allowsHitTesting(false)
+                }
                 .onAppear { proxy.scrollTo(selection, anchor: .center) }
                 .onChange(of: imageHeight) { _, _ in proxy.scrollTo(selection, anchor: .center) }
                 .onChange(of: width) { _, _ in proxy.scrollTo(selection, anchor: .center) }
@@ -51,7 +73,16 @@ struct EditorialClosetGallery: View {
             if !items.isEmpty {
                 caption(for: items[selectedIndex])
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: captionHeight, alignment: .bottom)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background {
+                        GeometryReader { geometry in
+                            Color.clear.preference(key: RackCaptionHeightKey.self, value: geometry.size.height)
+                        }
+                    }
+                    .frame(minHeight: dynamicTypeSize.isAccessibilitySize ? 0 : captionHeight, alignment: .bottom)
+                    .onPreferenceChange(RackCaptionHeightKey.self) { height in
+                        if abs(height - measuredCaptionHeight) > 0.5 { measuredCaptionHeight = height }
+                    }
             }
         }
     }
@@ -61,13 +92,12 @@ struct EditorialClosetGallery: View {
         return NavigationLink {
             detail(for: item)
         } label: {
-            LocalImageView(
+            ClosetRackGarment(
                 url: ImageStorageService.shared?.url(for: ClosetItemImageResolver.preferredFullSizePath(for: item)),
-                revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000)
+                revision: Int(item.effectiveDateUpdated.timeIntervalSince1970 * 1_000),
+                category: item.category, width: width, height: height
             )
-            .padding(.vertical, 12)
             .frame(width: width, height: height)
-            .shadow(color: .black.opacity(0.2), radius: 12, y: 10)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -97,7 +127,7 @@ struct EditorialClosetGallery: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 8)
+        .padding(.top, 16)
         .padding(.bottom, 16)
     }
 
@@ -140,4 +170,9 @@ struct EditorialClosetGallery: View {
         let index = min(max(0, selectedIndex + offset), items.count - 1)
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { selection = items[index].id }
     }
+}
+
+private struct RackCaptionHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

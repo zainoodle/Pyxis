@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct ItemDetailView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Outfit.dateCreated, order: .reverse) private var outfits: [Outfit]
@@ -81,11 +80,9 @@ struct ItemDetailView: View {
 
     private var imagePanel: some View {
         VStack(spacing: PyxisSpacing.sm) {
-            LocalImageView(url: viewModel.displayURL(for: item), revision: viewModel.imageRevision)
+            GarmentStage(url: viewModel.displayURL(for: item), revision: viewModel.imageRevision)
                 .frame(maxWidth: 330)
                 .frame(height: 300)
-                .background(colorScheme == .dark ? PyxisColors.surface : PyxisColors.imageCanvas,
-                            in: RoundedRectangle(cornerRadius: 10))
             ItemCodeLabel(code: item.itemCode)
         }
     }
