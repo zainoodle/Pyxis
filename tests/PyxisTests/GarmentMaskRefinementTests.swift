@@ -67,7 +67,12 @@ final class GarmentMaskRefinementTests: XCTestCase {
         let source = try LocalBackgroundRemovalService.orientationCorrectedImage(from: URL(fileURLWithPath: sourcePath))
         let hint = try? LocalBackgroundRemovalService.bestForegroundMask(for: source, ciContext: context)
         let segmenter = SAMGarmentSegmenter(modelDirectory: URL(fileURLWithPath: modelPath))
-        let mask = try await segmenter.mask(for: source, foregroundHint: hint)
+        // Exercise the same no-Vision route used when iOS cannot supply a foreground hint.
+        let fallbackMask = try await segmenter.mask(for: source, foregroundHint: nil)
+        let fallbackStats = try XCTUnwrap(BackgroundMaskInstanceStats(instance: 0, maskImage: fallbackMask, ciContext: context))
+        XCTAssertNotNil(BackgroundMaskCandidateSelector.preferredCandidateIndex(from: [fallbackStats]))
+        let rawMask = try await segmenter.mask(for: source, foregroundHint: hint)
+        let mask = GarmentPhotoRefinementService.refinedMask(rawMask, extent: source.extent)
         let output = source.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputMaskImageKey: mask,
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: source.extent)

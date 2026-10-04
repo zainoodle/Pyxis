@@ -6,19 +6,26 @@ enum ClosetPresentation: String, CaseIterable {
 }
 
 struct ClosetPresentationPicker: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var selection: String
 
     var body: some View {
-        HStack(spacing: 18) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 24))
+        return layout {
             ForEach(ClosetPresentation.allCases, id: \.rawValue) { mode in
                 Button { selection = mode.rawValue } label: {
-                    Text(mode.title)
-                        .font(PyxisTypography.control)
+                    Text(mode.title.uppercased())
+                        .font(PyxisTypography.closetBrowse)
+                        .fontWeight(selection == mode.rawValue ? .semibold : .regular)
+                        .tracking(1.4)
+                        .fixedSize(horizontal: true, vertical: true)
                         .foregroundStyle(selection == mode.rawValue ? PyxisColors.text : PyxisColors.inactiveText)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
                         .overlay(alignment: .bottom) {
                             if selection == mode.rawValue {
-                                Rectangle().fill(PyxisColors.text).frame(height: 1)
+                                Rectangle().fill(PyxisColors.text).frame(height: 2)
                             }
                         }
                         .frame(minWidth: 44, minHeight: 44)

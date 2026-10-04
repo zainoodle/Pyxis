@@ -16,7 +16,7 @@ struct MetadataEditorView: View {
                 EditorialMenuPicker(title: "Type", value: viewModel.subtype.rawValue.capitalized, selection: $viewModel.subtype) {
                     ForEach(ClothingSubtype.compatibleSubtypes(for: viewModel.category)) { Text($0.rawValue.capitalized).tag($0) }
                 }
-                EditorialMenuPicker(title: "Color", value: viewModel.primaryColor.rawValue.capitalized, selection: $viewModel.primaryColor) {
+                EditorialMenuPicker(title: "Color", value: viewModel.primaryColor.rawValue.capitalized, selection: Binding(get: { viewModel.primaryColor }, set: viewModel.updateColor)) {
                     ForEach(ClosetColor.allCases) { Text($0.rawValue.capitalized).tag($0) }
                 }
                 if viewModel.classificationConfidence > 0 || viewModel.colorConfidence > 0 {

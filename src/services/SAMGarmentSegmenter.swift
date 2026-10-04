@@ -81,7 +81,7 @@ actor SAMGarmentSegmenter {
 
     private func automaticPoints(for image: CIImage, hint: CIImage?) throws -> [CGPoint] {
         guard let hint else {
-            return [CGPoint(x: 0.4, y: 0.5), CGPoint(x: 0.6, y: 0.5), CGPoint(x: 0.5, y: 0.7)]
+            return [CGPoint(x: 0.35, y: 0.5), CGPoint(x: 0.65, y: 0.5), CGPoint(x: 0.5, y: 0.75)]
         }
         let side = 256
         let resized = hint.transformed(by: CGAffineTransform(
@@ -145,7 +145,12 @@ actor SAMGarmentSegmenter {
                 throw BackgroundRemovalError.modelUnavailable
             }
             let configuration = MLModelConfiguration()
+            // Simulator GPU inference is not representative of physical-device execution.
+            #if targetEnvironment(simulator)
+            configuration.computeUnits = .cpuOnly
+            #else
             configuration.computeUnits = .cpuAndGPU
+            #endif
             return try MLModel(contentsOf: url, configuration: configuration)
         }
         let loaded = try Models(image: load("ImageEncoder"), prompt: load("PromptEncoder"), decoder: load("MaskDecoder"))

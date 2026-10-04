@@ -76,6 +76,8 @@ public final class ImageStorageService: @unchecked Sendable {
 
         try fileManager.copyItem(at: sourceURL, to: destination)
         try protect(destination)
+        NotificationCenter.default.post(name: Notification.Name("pyxis.imageDidChange"), object: nil,
+                                        userInfo: ["url": destination])
         return relativePath(for: destination)
     }
 
@@ -83,6 +85,8 @@ public final class ImageStorageService: @unchecked Sendable {
         let destination = cutoutsURL.appendingPathComponent("\(itemID.uuidString).png")
         try data.write(to: destination, options: .atomic)
         try protect(destination)
+        NotificationCenter.default.post(name: Notification.Name("pyxis.imageDidChange"), object: nil,
+                                        userInfo: ["url": destination])
         return relativePath(for: destination)
     }
 
@@ -90,6 +94,8 @@ public final class ImageStorageService: @unchecked Sendable {
         let destination = thumbnailsURL.appendingPathComponent("\(itemID.uuidString).png")
         try data.write(to: destination, options: .atomic)
         try protect(destination)
+        NotificationCenter.default.post(name: Notification.Name("pyxis.imageDidChange"), object: nil,
+                                        userInfo: ["url": destination])
         return relativePath(for: destination)
     }
 
@@ -102,25 +108,39 @@ public final class ImageStorageService: @unchecked Sendable {
         _ imageSet: StoredImageSet,
         direction: ImageUtilities.RotationDirection
     ) throws -> StoredImageSet {
-        let originalURL = url(for: imageSet.originalPath)
-        try rotateImage(at: originalURL, direction: direction)
-
-        if let cutoutPath = imageSet.cutoutPath {
-            try rotateImage(at: url(for: cutoutPath), direction: direction)
+        // Prepare every representation before touching the accepted files.
+        var updates: [(url: URL, before: Data?, after: Data)] = []
+        for path in [imageSet.originalPath, imageSet.cutoutPath].compactMap({ $0 }) {
+            let target = url(for: path)
+            let before = try Data(contentsOf: target)
+            let after = try ImageUtilities.rotatedImageData(from: before, direction: direction, jpegEncoding: ["jpg", "jpeg"].contains(target.pathExtension.lowercased()))
+            updates.append((target, before, after))
         }
-
-        let thumbnailSourcePath = imageSet.cutoutPath ?? imageSet.originalPath
-        let thumbnailPath = try makeThumbnail(
-            from: url(for: thumbnailSourcePath),
-            itemID: imageSet.itemID
-        )
-
-        return StoredImageSet(
-            itemID: imageSet.itemID,
-            originalPath: imageSet.originalPath,
-            cutoutPath: imageSet.cutoutPath,
-            thumbnailPath: thumbnailPath
-        )
+        let thumbnailURL = thumbnailsURL.appendingPathComponent("\(imageSet.itemID.uuidString).png")
+        let thumbnailData = try ImageUtilities.thumbnailPNGData(from: updates.last!.after)
+        let oldThumbnail = fileManager.fileExists(atPath: thumbnailURL.path)
+            ? try Data(contentsOf: thumbnailURL) : nil
+        updates.append((thumbnailURL, oldThumbnail, thumbnailData))
+        var written = 0
+        do {
+            for update in updates {
+                try update.after.write(to: update.url, options: .atomic)
+                written += 1
+                try protect(update.url)
+            }
+        } catch {
+            for update in updates.prefix(written).reversed() {
+                if let before = update.before { try before.write(to: update.url, options: .atomic) }
+                else { try fileManager.removeItem(at: update.url) }
+            }
+            throw error
+        }
+        for update in updates {
+            NotificationCenter.default.post(name: Notification.Name("pyxis.imageDidChange"), object: nil,
+                                            userInfo: ["url": update.url])
+        }
+        return StoredImageSet(itemID: imageSet.itemID, originalPath: imageSet.originalPath,
+                              cutoutPath: imageSet.cutoutPath, thumbnailPath: relativePath(for: thumbnailURL))
     }
 
     public func url(for relativePath: String) -> URL {
@@ -163,15 +183,6 @@ public final class ImageStorageService: @unchecked Sendable {
         if fileManager.fileExists(atPath: fileURL.path) {
             try? fileManager.removeItem(at: fileURL)
         }
-    }
-
-    private func rotateImage(
-        at imageURL: URL,
-        direction: ImageUtilities.RotationDirection
-    ) throws {
-        let data = try ImageUtilities.rotatedImageData(from: imageURL, direction: direction)
-        try data.write(to: imageURL, options: .atomic)
-        try protect(imageURL)
     }
 
     private func protect(_ url: URL) throws {

@@ -25,6 +25,58 @@ final class AddItemViewModelTests: XCTestCase {
         XCTAssertNotNil(item.colorConfidence)
     }
 
+    func testCreaseSmoothingRevertsExactlyAndKeepsOriginalUnchanged() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "shirt.png", root: root, format: .png)
+        let storage = try ImageStorageService(rootURL: root)
+        let viewModel = AddItemViewModel(imageStorage: storage,
+                                        backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage))
+        viewModel.selectImage(source)
+        await viewModel.processSelectedImage()
+        let initial = try XCTUnwrap(viewModel.result)
+        let id = try XCTUnwrap(viewModel.makeClosetItem(existingCodes: [])?.id)
+        let original = try Data(contentsOf: storage.url(for: initial.originalPath))
+        let cutout = try storage.saveCutoutPNG(original, itemID: id)
+        viewModel.result = BackgroundRemovalResult(originalPath: initial.originalPath, cutoutPath: cutout,
+                                                  thumbnailPath: initial.thumbnailPath, status: .succeeded)
+        viewModel.stage = .processed
+        await viewModel.setSoftensCreases(true)
+        XCTAssertTrue(viewModel.softensCreases)
+        XCTAssertFalse(viewModel.isEditingPhoto)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: initial.originalPath)), original)
+        await viewModel.setSoftensCreases(false)
+        XCTAssertFalse(viewModel.softensCreases)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: cutout)), original)
+        XCTAssertEqual(viewModel.result?.cutoutPath, cutout)
+        await viewModel.setSoftensCreases(true)
+        try viewModel.rotateProcessedImage(.clockwise)
+        await viewModel.setSoftensCreases(false)
+        let expected = try ImageUtilities.rotatedImageData(from: original, direction: .clockwise)
+        XCTAssertEqual(try Data(contentsOf: storage.url(for: cutout)), expected)
+        viewModel.discardDraft()
+        XCTAssertNil(viewModel.result)
+        XCTAssertFalse(viewModel.softensCreases)
+    }
+
+    func testManualColorSurvivesAnalysisAndRetryButResetsForAnotherPhoto() async throws {
+        let root = try makeTemporaryRoot()
+        let source = try makeImageFile(named: "black-shirt.jpg", root: root, color: .red, format: .jpeg)
+        let storage = try ImageStorageService(rootURL: root)
+        let model = AddItemViewModel(imageStorage: storage,
+                                     backgroundRemovalService: FailingBackgroundRemovalService(imageStorage: storage))
+        model.selectImage(source)
+        model.updateColor(.blue)
+        await model.processSelectedImage()
+        XCTAssertEqual(model.primaryColor, .blue)
+        XCTAssertEqual(model.colorConfidence, 0)
+        await model.processSelectedImage()
+        XCTAssertEqual(model.primaryColor, .blue)
+        let next = try makeImageFile(named: "next.jpg", root: root, color: .red, format: .jpeg)
+        model.selectImage(next)
+        await model.processSelectedImage()
+        XCTAssertEqual(model.primaryColor, .red)
+    }
+
     func testUsesFilenameColorWhenImageAnalysisHasNoVisiblePixels() async throws {
         let root = try makeTemporaryRoot()
         let source = try makeImageFile(

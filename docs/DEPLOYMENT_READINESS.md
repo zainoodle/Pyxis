@@ -1,6 +1,19 @@
 # Pyxis Deployment Readiness
 
-Last audited: 2026-08-27
+Current local audit: **2026-10-02**. Integrated source: primary `codex/editorial-archive`, version **1.0.0 (1)**, minimum **iOS 17**. See [UI_POLISH_AUDIT.md](UI_POLISH_AUDIT.md) for precise fixes, native evidence and remaining gates.
+
+## Current candidate status
+
+- **Passed:** integrated Debug simulator build, generic unsigned Release iPhoneOS build, static deployment preflight, model/resource/privacy/debug-marker checks, 192 core tests plus separately executed SAM integration, 25 workflow tests and 26 backend tests.
+- **Simulator verified:** native import/extraction/save/relaunch/original recovery on iOS 26.5; extraction and error recovery on iOS 27; rack motion/tap/Reduce Motion; light/dark and accessibility text; Closet/Fits/Profile/Measurements/closet management core flows. The full matrix and limits are in the audit.
+- **Blocked/unverified:** paired phone is unreachable; physical camera, hardware inference/performance, iOS 17 runtime, full VoiceOver, live AI, StoreKit Sandbox and production service behavior remain gates. Distribution artifact is unsigned; no signing/export/submission was performed.
+- Production AI endpoint/token are blank; DEBUG fixture/diagnostic/private-PC/test-token content is absent from Release. Existing shared-token cleanup architecture remains a public AI release blocker. No personal photo was uploaded.
+- Current privacy manifest declares UserDefaults reason CA92.1 and photo/purchase metadata as configured in source. Both cleanup and try-on services exist. Historical claims below about no required-reason APIs, a single networking surface, unlinked photos, device availability or distribution status are **dated evidence only**, superseded where they conflict with this audit.
+- No version increment, deployment-target change, automatic migration/reprocessing, PR, push or release occurred.
+
+## Historical readiness notes
+
+The remainder records earlier work and is not certification of this candidate. Earlier audit date: 2026-08-27.
 
 ## Outfit on you — current change
 

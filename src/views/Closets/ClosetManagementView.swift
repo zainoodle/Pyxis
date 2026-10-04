@@ -1,11 +1,11 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct ClosetManagementView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
-    @Binding var selectedClosetID: UUID?
     @State private var newClosetName = ""
     @State private var message: String?
     @State private var saveErrorMessage: String?
@@ -16,7 +16,7 @@ struct ClosetManagementView: View {
                 createRow
 
                 if let message {
-                    Text(message.uppercased())
+                    Text(message)
                         .font(PyxisTypography.label)
                         .foregroundStyle(PyxisColors.secondaryText)
                 }
@@ -26,7 +26,7 @@ struct ClosetManagementView: View {
                 }
 
                 if closets.isEmpty {
-                    Text("NO CUSTOM CLOSETS")
+                    Text("Create a closet to group your pieces.")
                         .font(PyxisTypography.body)
                         .foregroundStyle(PyxisColors.inactiveText)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -36,8 +36,7 @@ struct ClosetManagementView: View {
                         ForEach(closets) { closet in
                             ClosetEditorRow(
                                 closet: closet,
-                                items: items,
-                                selectedClosetID: $selectedClosetID,
+                                items: items.filter { !$0.isDeleted },
                                 saveErrorMessage: $saveErrorMessage
                             ) {
                                 delete(closet)
@@ -50,6 +49,10 @@ struct ClosetManagementView: View {
         }
         .editorialCanvas()
         .editorialNavigationTitle("Closets")
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItem(placement: .keyboard) { Button("Done", action: dismissKeyboard) }
+        }
     }
 
     private var createRow: some View {
@@ -67,12 +70,11 @@ struct ClosetManagementView: View {
     }
 
     private var nameField: some View {
-        TextField("Closet name", text: $newClosetName)
+        EditorialTextField("Closet name", placeholder: "Closet name", text: $newClosetName)
             .accessibilityLabel("Closet name")
             .textFieldStyle(.plain)
             .font(PyxisTypography.body)
             .padding(.horizontal, PyxisSpacing.sm)
-            .padding(.vertical, PyxisSpacing.sm)
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(PyxisColors.field)
@@ -84,7 +86,7 @@ struct ClosetManagementView: View {
     }
 
     private var createButton: some View {
-        Button("CREATE") {
+        Button("Create") {
             create()
         }
         .buttonStyle(MinimalButtonStyle())
@@ -96,56 +98,58 @@ struct ClosetManagementView: View {
             return
         }
         if let existing = closets.first(where: { $0.displayName.caseInsensitiveCompare(cleanedName) == .orderedSame }) {
-            selectedClosetID = existing.id
-            message = "\(existing.displayName) selected"
-            newClosetName = ""
+            message = "A closet named \(existing.displayName) already exists."
+            dismissKeyboard()
             return
         }
 
         let closet = Closet(name: cleanedName)
         modelContext.insert(closet)
-        selectedClosetID = closet.id
-        newClosetName = ""
         do {
             try modelContext.save()
+            newClosetName = ""
+            dismissKeyboard()
             message = "\(closet.displayName) created"
             saveErrorMessage = nil
         } catch {
-            selectedClosetID = nil
             modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
     }
 
     private func delete(_ closet: Closet) {
-        let previousSelection = selectedClosetID
         let deletedName = closet.displayName
-        if selectedClosetID == closet.id {
-            selectedClosetID = nil
-        }
         modelContext.delete(closet)
         do {
             try modelContext.save()
             message = "\(deletedName) deleted"
             saveErrorMessage = nil
         } catch {
-            selectedClosetID = previousSelection
             modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
     }
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 }
 
 private struct ClosetEditorRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Bindable var closet: Closet
     let items: [ClosetItem]
-    @Binding var selectedClosetID: UUID?
     @Binding var saveErrorMessage: String?
     let deleteAction: () -> Void
+    @State private var isConfirmingDelete = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
+            if dynamicTypeSize.isAccessibilitySize {
+                editableName
+                itemCount
+                rowActions
+            } else {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: PyxisSpacing.md) {
                     editableName
@@ -161,21 +165,24 @@ private struct ClosetEditorRow: View {
                     rowActions
                 }
             }
+            }
 
             if items.isEmpty {
-                Text("NO CLOTHING ITEMS")
+                Text("Add pieces to your wardrobe to organize them here.")
                     .font(PyxisTypography.label)
                     .foregroundStyle(PyxisColors.inactiveText)
             } else {
-                DisclosureGroup("ITEMS") {
+                DisclosureGroup("Pieces") {
                     VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
                         ForEach(items) { item in
                             Toggle(itemTitle(for: item), isOn: membershipBinding(for: item))
+                                .frame(minHeight: 44)
                         }
                     }
                     .padding(.top, PyxisSpacing.sm)
                 }
                 .font(PyxisTypography.body)
+                .frame(minHeight: 44)
             }
         }
         .padding(PyxisSpacing.md)
@@ -190,7 +197,8 @@ private struct ClosetEditorRow: View {
     }
 
     private var editableName: some View {
-        TextField("CLOSET NAME", text: nameBinding)
+        EditorialTextField("Closet name", text: nameBinding, axis: .vertical)
+            .accessibilityLabel("Rename \(closet.displayName)")
             .textFieldStyle(.plain)
             .font(PyxisTypography.body)
     }
@@ -199,20 +207,22 @@ private struct ClosetEditorRow: View {
         Text("\(closet.itemCount)")
             .font(PyxisTypography.code)
             .foregroundStyle(PyxisColors.secondaryText)
-            .accessibilityLabel("\(closet.itemCount) items")
+            .accessibilityLabel("\(closet.itemCount) \(closet.itemCount == 1 ? "item" : "items")")
     }
 
     private var rowActions: some View {
         HStack(spacing: PyxisSpacing.sm) {
-            Button(selectedClosetID == closet.id ? "VIEWING" : "VIEW") {
-                selectedClosetID = closet.id
+            Button("Delete", role: .destructive) {
+                isConfirmingDelete = true
             }
             .buttonStyle(MinimalButtonStyle())
-
-            Button("DELETE") {
-                deleteAction()
-            }
-            .buttonStyle(MinimalButtonStyle())
+            .accessibilityLabel("Delete closet \(closet.displayName)")
+        }
+        .confirmationDialog("Delete this closet?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Delete closet", role: .destructive, action: deleteAction)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The group will be removed. Your pieces stay in your wardrobe.")
         }
     }
 
@@ -241,12 +251,13 @@ private struct ClosetEditorRow: View {
             try modelContext.save()
             saveErrorMessage = nil
         } catch {
+            modelContext.rollback()
             saveErrorMessage = PersistenceErrorMessage.saveFailed(error)
         }
     }
 
     private func itemTitle(for item: ClosetItem) -> String {
         let name = item.displayName ?? item.subtype.rawValue
-        return "\(item.itemCode) \(name)".uppercased()
+        return "\(item.itemCode) \(name)"
     }
 }

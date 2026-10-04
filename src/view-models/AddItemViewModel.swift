@@ -29,6 +29,10 @@ final class AddItemViewModel: ObservableObject {
     @Published var imageRevision = 0
     @Published var isAIEnhancing = false
     @Published var aiEnhancementError: String?
+    @Published private(set) var softensCreases = false
+    @Published private(set) var isRefiningPhoto = false
+    @Published private(set) var photoRefinementError: String?
+    private var naturalCutoutData: Data?
 
     private let imageStorage: ImageStorageService?
     private let backgroundRemovalService: (any BackgroundRemovalServiceProtocol)?
@@ -36,12 +40,15 @@ final class AddItemViewModel: ObservableObject {
     private let classificationService: any ClothingClassificationProviding
     private let aiStudioService: any AIGarmentStudioProviding
     private var userAdjustedClassification = false
+    private var userAdjustedColor = false
     private var draftItemID = UUID()
     private var processingGeneration: UInt64 = 0
 
     var isAIStudioAvailable: Bool {
         aiStudioService.isConfigured
     }
+
+    var isEditingPhoto: Bool { isRefiningPhoto || isAIEnhancing || stage == .processing }
 
     init() {
         do {
@@ -78,12 +85,14 @@ final class AddItemViewModel: ObservableObject {
     func selectImage(_ url: URL) {
         invalidateProcessing()
         processingMessage = nil
+        resetPhotoRefinement()
         discardProcessedImages()
         discardTemporaryImport()
         draftItemID = UUID()
         selectedImageURL = url
         stage = .selected
         userAdjustedClassification = false
+        userAdjustedColor = false
         primaryColor = .unknown
         colorConfidence = 0
         let classification = classificationService.classify(filename: url.lastPathComponent)
@@ -92,6 +101,12 @@ final class AddItemViewModel: ObservableObject {
             primaryColor = colorHint.primaryColor
             colorConfidence = colorHint.confidence
         }
+    }
+
+    func updateColor(_ color: ClosetColor) {
+        userAdjustedColor = true
+        primaryColor = color
+        colorConfidence = 0
     }
 
     func updateCategory(
@@ -111,6 +126,7 @@ final class AddItemViewModel: ObservableObject {
     }
 
     func processSelectedImage(itemID: UUID? = nil) async {
+        guard !isRefiningPhoto, !isAIEnhancing else { return }
         guard let selectedImageURL else {
             return
         }
@@ -178,7 +194,7 @@ final class AddItemViewModel: ObservableObject {
             return
         }
 
-        if let analysis = suggestions.0,
+        if !userAdjustedColor, let analysis = suggestions.0,
            analysis.primaryColor != .unknown,
            analysis.confidence > 0 {
             primaryColor = analysis.primaryColor
@@ -196,6 +212,7 @@ final class AddItemViewModel: ObservableObject {
         }
         draftItemID = processingItemID
         result = processed
+        resetPhotoRefinement()
         if !processed.originalPath.isEmpty, let imageStorage {
             discardTemporaryImport(at: selectedImageURL)
             self.selectedImageURL = imageStorage.url(for: processed.originalPath)
@@ -214,7 +231,7 @@ final class AddItemViewModel: ObservableObject {
         existingCodes: Set<String>,
         preferredItemCode: String? = nil
     ) -> ClosetItem? {
-        guard let result, !result.originalPath.isEmpty else {
+        guard !isEditingPhoto, let result, !result.originalPath.isEmpty else {
             return nil
         }
 
@@ -264,10 +281,43 @@ final class AddItemViewModel: ObservableObject {
         discardTemporaryImport()
         result = nil
         selectedImageURL = nil
+        resetPhotoRefinement()
+    }
+
+    func setSoftensCreases(_ enabled: Bool) async {
+        guard enabled != softensCreases, !isEditingPhoto,
+              let imageStorage, let result, let cutoutPath = result.cutoutPath else { return }
+        isRefiningPhoto = true
+        photoRefinementError = nil
+        let generation = processingGeneration
+        defer { isRefiningPhoto = false }
+        do {
+            let natural = try naturalCutoutData ?? Data(contentsOf: imageStorage.url(for: cutoutPath))
+            naturalCutoutData = natural
+            let data = try await Task.detached(priority: .userInitiated) {
+                enabled ? try GarmentPhotoRefinementService.softenedCreasesPNG(from: natural) : natural
+            }.value
+            guard !Task.isCancelled, generation == processingGeneration else { return }
+            _ = try imageStorage.saveCutoutPNG(data, itemID: draftItemID)
+            let thumbnail = try? imageStorage.makeThumbnail(from: imageStorage.url(for: cutoutPath), itemID: draftItemID)
+            self.result = BackgroundRemovalResult(originalPath: result.originalPath, cutoutPath: cutoutPath,
+                                                  thumbnailPath: thumbnail ?? result.thumbnailPath, status: .succeeded)
+            softensCreases = enabled
+            imageRevision += 1
+        } catch {
+            if generation == processingGeneration { photoRefinementError = "Couldn’t soften this photo. Kept your current cutout." }
+        }
+    }
+
+    private func resetPhotoRefinement() {
+        naturalCutoutData = nil
+        softensCreases = false
+        photoRefinementError = nil
     }
 
     func makePristineWithAI() async {
-        guard let imageStorage, let result, !result.originalPath.isEmpty else { return }
+        guard !isEditingPhoto, let imageStorage, let result, !result.originalPath.isEmpty else { return }
+        let generation = processingGeneration
         isAIEnhancing = true
         aiEnhancementError = nil
         defer { isAIEnhancing = false }
@@ -275,6 +325,7 @@ final class AddItemViewModel: ObservableObject {
             let data = try await aiStudioService.makePristineGarment(
                 from: imageStorage.url(for: result.originalPath)
             )
+            guard !Task.isCancelled, generation == processingGeneration else { return }
             let cutoutPath = try imageStorage.saveCutoutPNG(data, itemID: draftItemID)
             let thumbnailPath = try? imageStorage.makeThumbnail(
                 from: imageStorage.url(for: cutoutPath), itemID: draftItemID
@@ -286,12 +337,14 @@ final class AddItemViewModel: ObservableObject {
                 status: .succeeded
             )
             imageRevision += 1
+            resetPhotoRefinement()
         } catch {
             aiEnhancementError = error.localizedDescription
         }
     }
 
     func rotateProcessedImage(_ direction: ImageUtilities.RotationDirection) throws {
+        guard !isEditingPhoto else { return }
         guard let imageStorage else {
             throw AddItemImageEditingError.storageUnavailable
         }
@@ -317,6 +370,9 @@ final class AddItemViewModel: ObservableObject {
             errorMessage: result.errorMessage
         )
         selectedImageURL = imageStorage.url(for: rotatedImageSet.originalPath)
+        if let naturalCutoutData {
+            self.naturalCutoutData = try ImageUtilities.rotatedImageData(from: naturalCutoutData, direction: direction)
+        }
         imageRevision += 1
     }
 

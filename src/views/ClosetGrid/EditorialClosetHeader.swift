@@ -11,6 +11,5 @@ struct EditorialClosetHeader: View {
                 HeaderIconButton(symbol: "plus", label: "Add new item", identifier: "closet.add", action: addAction)
             }
         }
-        .padding(.horizontal, 24)
     }
 }

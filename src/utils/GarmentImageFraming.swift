@@ -59,7 +59,8 @@ enum GarmentImageFraming {
 
         let visibleRect = CGRect(
             x: extent.minX + CGFloat(minX) / scale,
-            y: extent.minY + CGFloat(minY) / scale,
+            // Bitmap rows are top-first; Core Image crop rectangles are bottom-origin.
+            y: extent.maxY - CGFloat(maxY + 1) / scale,
             width: CGFloat(maxX - minX + 1) / scale,
             height: CGFloat(maxY - minY + 1) / scale
         ).intersection(extent)
@@ -88,6 +89,19 @@ enum GarmentImageFraming {
             && analysis.visibleFraction <= 0.82
             && analysis.fillFraction >= 0.08
             && analysis.touchingEdgeCount < 3
+    }
+
+    /// Equalizes visual weight using opaque area, capped by both axes so narrow and wide
+    /// silhouettes retain their proportions and never lose sleeves, hems, or shoe pairs.
+    static func balancedDisplaySize(imageSize: CGSize, visibleFraction: Double, in container: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0,
+              container.width > 0, container.height > 0 else { return .zero }
+        let fit = min(container.width * 0.90 / imageSize.width,
+                      container.height * 0.88 / imageSize.height)
+        let opaqueArea = imageSize.width * imageSize.height * CGFloat(max(0.01, visibleFraction))
+        let areaScale = sqrt(container.width * container.height * 0.34 / opaqueArea)
+        let scale = min(fit, areaScale)
+        return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
     }
 
     static func framedDisplayImage(_ image: CGImage, using context: CIContext) -> CGImage {

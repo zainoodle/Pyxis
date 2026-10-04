@@ -38,6 +38,21 @@ final class GarmentImageFramingTests: XCTestCase {
         XCTAssertEqual(CGFloat(savedCutout.height), analysis.frameRect.height, accuracy: 2)
     }
 
+    func testAsymmetricTransparentMarginsKeepSubjectInCoreImageCoordinates() throws {
+        let canvas = CGRect(x: 0, y: 0, width: 200, height: 240)
+        let subject = CGRect(x: 35, y: 20, width: 90, height: 60)
+        let source = cutout(canvas: canvas, subject: subject)
+        let cg = try XCTUnwrap(context.createCGImage(source, from: canvas))
+        let decoded = CIImage(cgImage: cg)
+        let analysis = try XCTUnwrap(GarmentImageFraming.analyze(decoded, using: context))
+        XCTAssertEqual(analysis.visibleRect.minY, subject.minY, accuracy: 1)
+        XCTAssertEqual(analysis.visibleRect.maxY, subject.maxY, accuracy: 1)
+        let framed = GarmentImageFraming.framedDisplayImage(cg, using: context)
+        let finalAnalysis = try XCTUnwrap(GarmentImageFraming.analyze(CIImage(cgImage: framed), using: context))
+        XCTAssertEqual(finalAnalysis.visibleRect.height, subject.height, accuracy: 1)
+        XCTAssertEqual(finalAnalysis.visibleRect.width, subject.width, accuracy: 1)
+    }
+
     func testAutomaticReviewRejectsEmptyTinyAndFullFrameMasks() throws {
         let canvas = CGRect(x: 0, y: 0, width: 200, height: 200)
         XCTAssertNil(GarmentImageFraming.analyze(
@@ -69,5 +84,18 @@ final class GarmentImageFramingTests: XCTestCase {
     private func cutout(canvas: CGRect, subject: CGRect) -> CIImage {
         CIImage(color: .white).cropped(to: subject)
             .composited(over: CIImage(color: .clear).cropped(to: canvas))
+    }
+
+    func testBalancedFramingFitsWideShoesAndNarrowTrousersWithoutDistortion() {
+        let container = CGSize(width: 330, height: 420)
+        for size in [CGSize(width: 700, height: 300), CGSize(width: 240, height: 900), CGSize(width: 600, height: 650)] {
+            let display = GarmentImageFraming.balancedDisplaySize(imageSize: size, visibleFraction: 0.6, in: container)
+            XCTAssertLessThanOrEqual(display.width, container.width * 0.9 + 0.01)
+            XCTAssertLessThanOrEqual(display.height, container.height * 0.88 + 0.01)
+            XCTAssertEqual(display.width / display.height, size.width / size.height, accuracy: 0.001)
+        }
+        let sparse = GarmentImageFraming.balancedDisplaySize(imageSize: container, visibleFraction: 0.3, in: container)
+        let dense = GarmentImageFraming.balancedDisplaySize(imageSize: container, visibleFraction: 0.95, in: container)
+        XCTAssertGreaterThan(sparse.height, dense.height)
     }
 }

@@ -6,6 +6,7 @@ struct AddItemFlow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var existingItems: [ClosetItem]
     @Query(sort: \Closet.dateUpdated, order: .reverse) private var closets: [Closet]
     @StateObject private var viewModel = AddItemViewModel()
@@ -14,6 +15,8 @@ struct AddItemFlow: View {
     @State private var saveErrorMessage: String?
     @State private var didSave = false
     @State private var processingTask: Task<Void, Never>?
+    @State private var previewAppearance = PyxisAppearance.system
+    @State private var requestsSoftening = false
     private let initialCategory: ClothingCategory?
     private let initialSubtype: ClothingSubtype?
     private let initialClosetID: UUID?
@@ -47,7 +50,10 @@ struct AddItemFlow: View {
                     InlineErrorMessage(message: saveErrorMessage)
                 }
 
-                if viewModel.selectedImageURL == nil {
+                if viewModel.selectedImageURL == nil || hasUnreadableImport {
+                    if hasUnreadableImport {
+                        InlineErrorMessage(message: "This image couldn’t be opened. Choose another photo to continue.")
+                    }
                     ImageImportView { url in
                         processingTask?.cancel()
                         viewModel.selectImage(url)
@@ -66,12 +72,12 @@ struct AddItemFlow: View {
         }
         .editorialCanvas()
         .safeAreaInset(edge: .bottom) {
-            if viewModel.selectedImageURL != nil, !viewModel.stage.isProcessing {
+            if viewModel.selectedImageURL != nil, !viewModel.stage.isProcessing, !hasUnreadableImport {
                 Button("Save piece") {
                     save()
                 }
                 .buttonStyle(EditorialPrimaryButtonStyle())
-                .disabled(viewModel.result?.originalPath.isEmpty ?? true)
+                .disabled(viewModel.isEditingPhoto || (viewModel.result?.originalPath.isEmpty ?? true))
                 .accessibilityLabel(viewModel.stage.isFailed ? "Save piece with original photo" : "Save piece")
                 .accessibilityIdentifier("piece.save")
                 .padding(PyxisSpacing.md)
@@ -83,8 +89,30 @@ struct AddItemFlow: View {
             }
         }
         .onAppear(perform: applyInitialCloset)
+        #if DEBUG
+        .task {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard viewModel.selectedImageURL == nil,
+                  let flag = arguments.firstIndex(of: "-pyxis.importFixture"),
+                  arguments.indices.contains(flag + 1) else { return }
+            let url = URL(fileURLWithPath: arguments[flag + 1])
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            viewModel.selectImage(url)
+            applyInitialMetadata()
+            processingTask = Task { await viewModel.processSelectedImage() }
+        }
+        #endif
         .onChange(of: closets.map(\.id)) { _, _ in
             applyInitialCloset()
+        }
+        .onChange(of: requestsSoftening) { _, enabled in
+            processingTask = Task {
+                await viewModel.setSoftensCreases(enabled)
+                requestsSoftening = viewModel.softensCreases
+            }
+        }
+        .onChange(of: viewModel.imageRevision) { _, _ in
+            requestsSoftening = viewModel.softensCreases
         }
         .onDisappear {
             processingTask?.cancel()
@@ -92,6 +120,10 @@ struct AddItemFlow: View {
                 viewModel.discardDraft()
             }
         }
+    }
+
+    private var hasUnreadableImport: Bool {
+        viewModel.stage.isFailed && (viewModel.result?.originalPath.isEmpty ?? true)
     }
 
     @ViewBuilder
@@ -132,9 +164,20 @@ struct AddItemFlow: View {
                 isProcessing: viewModel.stage.isProcessing,
                 imageRevision: viewModel.imageRevision
             )
-            .id(viewModel.imageRevision)
             .frame(maxWidth: 300)
             .frame(height: 300)
+            .environment(\.colorScheme, previewAppearance.colorScheme ?? colorScheme)
+
+            if viewModel.result?.cutoutPath != nil {
+                Picker("Preview background", selection: $previewAppearance) {
+                    Text("Current").tag(PyxisAppearance.system)
+                    Text("Light").tag(PyxisAppearance.light)
+                    Text("Dark").tag(PyxisAppearance.dark)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 300)
+                .accessibilityIdentifier("piece.previewAppearance")
+            }
 
             if let candidateItemCode { ItemCodeLabel(code: candidateItemCode) }
 
@@ -143,8 +186,25 @@ struct AddItemFlow: View {
             if let aiError = viewModel.aiEnhancementError {
                 InlineErrorMessage(message: aiError)
             }
+            if let refinementError = viewModel.photoRefinementError {
+                InlineErrorMessage(message: refinementError)
+            }
 
             if !viewModel.stage.isProcessing {
+                if viewModel.result?.cutoutPath != nil {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Button(requestsSoftening ? "Restore natural texture" : "Soften small creases") {
+                            requestsSoftening.toggle()
+                        }
+                        .buttonStyle(MinimalButtonStyle())
+                        .disabled(viewModel.isEditingPhoto)
+                        .accessibilityIdentifier("piece.softenCreases")
+                        .accessibilityValue(viewModel.softensCreases ? "Softened" : "Natural")
+                        Text(viewModel.isRefiningPhoto ? "Refining photo…" : "On this device. Reduces fine creases; keeps the original photo.")
+                            .font(PyxisTypography.proseCaption)
+                            .foregroundStyle(PyxisColors.secondaryText)
+                    }
+                }
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: PyxisSpacing.sm) {
                         secondaryProcessingActions
@@ -153,13 +213,14 @@ struct AddItemFlow: View {
                         secondaryProcessingActions
                     }
                 }
+                .disabled(viewModel.isEditingPhoto)
 
                 if viewModel.isAIStudioAvailable {
                     Button(viewModel.isAIEnhancing ? "Generating…" : "AI de-wrinkle") {
                         Task { await viewModel.makePristineWithAI() }
                     }
                     .buttonStyle(MinimalButtonStyle())
-                    .disabled(viewModel.isAIEnhancing || (viewModel.result?.originalPath.isEmpty ?? true))
+                    .disabled(viewModel.isEditingPhoto || (viewModel.result?.originalPath.isEmpty ?? true))
                     .accessibilityLabel("Generate a pristine AI garment image")
 
                     Text("Sends this photo to xAI, which may retain API data for up to 30 days. Check fabric, logos, and condition before saving.")
@@ -335,111 +396,27 @@ private struct StudioCutoutProcessingView: View {
     let url: URL?
     let isProcessing: Bool
     let imageRevision: Int
-    @Environment(\.accessibilityReduceMotion) private var prefersReducedMotion
-    @State private var sweepOffset: CGFloat = -1
-    @State private var isLifted = false
-    @State private var isFinishVisible = false
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                LocalImageView(url: url, revision: imageRevision)
-                    .saturation(isProcessing ? 0.15 : 1)
-                    .opacity(isProcessing ? 0.42 : 1)
-                    .scaleEffect(isProcessing && isLifted ? 1.025 : 1)
-                    .animation(.easeOut(duration: 0.28), value: isProcessing)
-                    .animation(.easeOut(duration: 0.34), value: isLifted)
-
+        LocalImageView(url: url, revision: imageRevision, balancedFraming: true, castsShadow: true)
+            .opacity(isProcessing ? 0.55 : 1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .bottom) {
                 if isProcessing {
-                    PyxisColors.field
-                        .opacity(0.56)
-
-                    Ellipse()
-                        .fill(PyxisColors.shadow.opacity(prefersReducedMotion ? 0.12 : 0.2))
-                        .frame(
-                            width: min(proxy.size.width * 0.34, 104),
-                            height: prefersReducedMotion ? 8 : 10
-                        )
-                        .blur(radius: prefersReducedMotion ? 4 : 6)
-                        .scaleEffect(x: isLifted ? 1 : 0.64, y: 1)
-                        .opacity(isLifted ? 1 : 0)
-                        .offset(y: proxy.size.height * 0.23)
-                        .animation(.easeOut(duration: 0.28), value: isLifted)
-
-                    if !prefersReducedMotion {
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.clear, PyxisColors.surface.opacity(0.88), .clear],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: proxy.size.width * 0.62, height: proxy.size.height * 1.6)
-                            .rotationEffect(.degrees(-18))
-                            .offset(x: sweepOffset * proxy.size.width * 1.35)
-                            .blendMode(.screen)
+                    HStack(spacing: 10) {
+                        ProgressView().tint(PyxisColors.text)
+                        Text("Removing background")
+                            .font(PyxisTypography.proseCaption)
+                            .foregroundStyle(PyxisColors.text)
                     }
-
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundStyle(PyxisColors.secondaryText)
-                        .opacity(
-                            isFinishVisible
-                                ? (prefersReducedMotion ? 0.22 : 0.62)
-                                : 0
-                        )
-                        .padding(PyxisSpacing.md)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .animation(.easeOut(duration: 0.22), value: isFinishVisible)
-                        .accessibilityHidden(true)
-
+                    .padding(12)
+                    .background(PyxisColors.surface, in: RoundedRectangle(cornerRadius: 8))
+                    .padding(12)
                 }
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipShape(Rectangle())
-        }
-        .background(PyxisColors.field)
-        .onAppear {
-            updateAnimation()
-        }
-        .onChange(of: isProcessing) { _, _ in
-            updateAnimation()
-        }
-        .onChange(of: prefersReducedMotion) { _, _ in
-            updateAnimation()
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(isProcessing ? "Removing image background" : "Clothing image preview")
-    }
-
-    private func updateAnimation() {
-        guard isProcessing else {
-            sweepOffset = -1
-            isFinishVisible = false
-            withAnimation(.easeOut(duration: 0.2)) {
-                isLifted = false
-            }
-            return
-        }
-
-        guard !prefersReducedMotion else {
-            sweepOffset = -1
-            isLifted = true
-            isFinishVisible = true
-            return
-        }
-
-        isFinishVisible = false
-        withAnimation(.easeOut(duration: 0.34)) {
-            isLifted = true
-        }
-        withAnimation(.easeOut(duration: 0.22).delay(0.65)) {
-            isFinishVisible = true
-        }
-        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-            sweepOffset = 1
-        }
+            .garmentSurface()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(isProcessing ? "Removing image background" : "Clothing image preview")
     }
 }
 

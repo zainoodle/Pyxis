@@ -2,7 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct OutfitDetailView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClosetItem.dateAdded, order: .reverse) private var items: [ClosetItem]
@@ -30,9 +29,7 @@ struct OutfitDetailView: View {
                 }
                 OutfitFlatLayView(items: selectedItems)
                     .frame(height: 265)
-                    .background {
-                        if colorScheme == .light { RoundedRectangle(cornerRadius: 10).fill(PyxisColors.galleryCanvas) }
-                    }
+                    .garmentSurface()
                     .accessibilityHidden(true)
 
                 Button("Wear today", action: markWornToday)

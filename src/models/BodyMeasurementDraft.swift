@@ -42,13 +42,21 @@ struct BodyMeasurementDraft {
         system = newSystem
     }
 
+    /// Empty optional fields are valid. Nonempty invalid input must not erase saved values.
+    var invalidKeys: [MeasurementKey] {
+        MeasurementKey.allCases.filter { key in
+            !values[key, default: ""].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && canonical(key) == nil
+        }
+    }
+
     func canonical(_ key: MeasurementKey) -> Double? {
-        guard let number = number(for: key), number > 0 else { return nil }
+        guard let number = number(for: key), number.isFinite, number > 0 else { return nil }
         return system == .metric ? number : number * factor(for: key)
     }
 
     private func number(for key: MeasurementKey) -> Double? {
-        Double(values[key, default: ""].replacingOccurrences(of: ",", with: "."))
+        Double(values[key, default: ""].trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: "."))
     }
 
     private func factor(for key: MeasurementKey) -> Double { key == .weight ? 0.45359237 : 2.54 }

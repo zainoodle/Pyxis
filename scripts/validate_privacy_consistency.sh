@@ -27,7 +27,7 @@ rg -q 'NSPrivacyCollectedDataTypePhotosorVideos' assets/PrivacyInfo.xcprivacy \
   || fail "privacy manifest must declare photos or videos for optional AI functionality"
 rg -q 'NSPrivacyCollectedDataTypePurposeAppFunctionality' assets/PrivacyInfo.xcprivacy \
   || fail "privacy manifest must limit declared photo use to app functionality"
-rg -q 'UP TO 30 DAYS' src/views/AddItem/AddItemFlow.swift \
+rg -qi 'up to 30 days' src/views/AddItem/AddItemFlow.swift \
   || fail "garment AI disclosure is missing the retention statement"
 rg -q 'zero-retention processing' src/models/TryOn.swift \
   || fail "try-on disclosure must require zero-retention processing"

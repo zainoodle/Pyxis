@@ -10,6 +10,9 @@ struct ImageImportView: View {
     @State private var isDropTargeted = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var importMessage: String?
+    @State private var isLoadingPhoto = false
+    @State private var isImportActive = false
+    @State private var importGeneration = UUID()
 
     var body: some View {
         VStack(spacing: PyxisSpacing.md) {
@@ -19,6 +22,13 @@ struct ImageImportView: View {
             .buttonStyle(EditorialPrimaryButtonStyle())
             .accessibilityLabel("Choose clothing image from photo library")
             .accessibilityIdentifier("piece.choosePhoto")
+            .disabled(isLoadingPhoto)
+
+            if isLoadingPhoto {
+                ProgressView("Loading photo…")
+                    .font(PyxisTypography.proseCaption)
+                    .accessibilityIdentifier("piece.photoLoading")
+            }
 
             Button("Take photo") {
                 guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
@@ -35,6 +45,13 @@ struct ImageImportView: View {
                     ? "Available"
                     : "Unavailable on this device"
             )
+
+            if !UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Text("Camera isn’t available here. Choose a photo or use More to import an image file.")
+                    .font(PyxisTypography.proseCaption)
+                    .foregroundStyle(PyxisColors.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Menu {
                 Button("Choose file", systemImage: "doc") { isShowingImporter = true }
@@ -64,6 +81,11 @@ struct ImageImportView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { isImportActive = true }
+        .onDisappear {
+            isImportActive = false
+            importGeneration = UUID()
+        }
         .onDrop(of: [UTType.fileURL.identifier, UTType.image.identifier], isTargeted: $isDropTargeted) { providers in
             loadFirstURL(from: providers)
         }
@@ -72,8 +94,13 @@ struct ImageImportView: View {
                 return
             }
 
+            isLoadingPhoto = true
+            importMessage = nil
+            defer { isLoadingPhoto = false }
             do {
-                guard let data = try await selectedPhoto.loadTransferable(type: Data.self) else {
+                let loadedData = try await selectedPhoto.loadTransferable(type: Data.self)
+                try Task.checkCancellation()
+                guard let data = loadedData else {
                     reportImportFailure()
                     return
                 }
@@ -81,8 +108,15 @@ struct ImageImportView: View {
                 let url = FileManager.default.temporaryDirectory
                     .appendingPathComponent("Pyxis-photo-\(UUID().uuidString).jpg")
                 try data.write(to: url, options: .atomic)
+                guard !Task.isCancelled else {
+                    try? FileManager.default.removeItem(at: url)
+                    return
+                }
                 finishImport(url)
+            } catch is CancellationError {
+                // Dismissal abandons this import; never reopen an already closed draft.
             } catch {
+                guard !Task.isCancelled else { return }
                 reportImportFailure()
             }
         }
@@ -113,20 +147,22 @@ struct ImageImportView: View {
             return false
         }
 
+        importGeneration = UUID()
+        let generation = importGeneration
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
                 if let data = item as? Data,
                    let url = URL(dataRepresentation: data, relativeTo: nil) {
                     DispatchQueue.main.async {
-                        finishImport(url)
+                        finishAsyncImport(url, generation: generation)
                     }
                 } else if let url = item as? URL {
                     DispatchQueue.main.async {
-                        finishImport(url)
+                        finishAsyncImport(url, generation: generation)
                     }
                 } else {
                     DispatchQueue.main.async {
-                        reportImportFailure()
+                        reportAsyncImportFailure(generation: generation)
                     }
                 }
             }
@@ -136,6 +172,7 @@ struct ImageImportView: View {
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
             provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, _ in
                 guard let url else {
+                    DispatchQueue.main.async { reportAsyncImportFailure(generation: generation) }
                     return
                 }
 
@@ -146,11 +183,11 @@ struct ImageImportView: View {
                 do {
                     try FileManager.default.copyItem(at: url, to: temporaryURL)
                     DispatchQueue.main.async {
-                        finishImport(temporaryURL)
+                        finishAsyncImport(temporaryURL, generation: generation, ownsTemporaryFile: true)
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        reportImportFailure()
+                        reportAsyncImportFailure(generation: generation)
                     }
                 }
             }
@@ -159,13 +196,28 @@ struct ImageImportView: View {
         return false
     }
 
+    private func finishAsyncImport(_ url: URL, generation: UUID, ownsTemporaryFile: Bool = false) {
+        guard isImportActive, generation == importGeneration else {
+            if ownsTemporaryFile { try? FileManager.default.removeItem(at: url) }
+            return
+        }
+        finishImport(url)
+    }
+
+    private func reportAsyncImportFailure(generation: UUID) {
+        guard isImportActive, generation == importGeneration else { return }
+        reportImportFailure()
+    }
+
     private func finishImport(_ url: URL) {
+        importGeneration = UUID()
         importMessage = nil
         onSelect(url)
     }
 
     private func reportImportFailure() {
-        importMessage = "Import failed"
+        importMessage = "Couldn’t open this photo. Choose it again or try another image."
+        selectedPhoto = nil
     }
 
     private func finishCameraCapture(_ image: UIImage) {

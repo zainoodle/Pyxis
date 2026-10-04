@@ -55,6 +55,12 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
     public func processImage(at originalURL: URL, itemID: UUID) async -> BackgroundRemovalResult {
         await Task.detached(priority: .userInitiated) { [imageStorage, ciContext] in
             do {
+                let scoped = originalURL.startAccessingSecurityScopedResource()
+                defer { if scoped { originalURL.stopAccessingSecurityScopedResource() } }
+                guard let source = CGImageSourceCreateWithURL(originalURL as CFURL, nil),
+                      CGImageSourceCreateImageAtIndex(source, 0, nil) != nil else {
+                    throw BackgroundRemovalError.couldNotLoadImage
+                }
                 let originalPath = try imageStorage.saveOriginal(from: originalURL, itemID: itemID)
                 let originalStoredURL = imageStorage.url(for: originalPath)
 
@@ -118,9 +124,18 @@ public final class LocalBackgroundRemovalService: BackgroundRemovalServiceProtoc
         ciContext: CIContext
     ) async throws -> Data {
         let inputImage = try orientationCorrectedImage(from: imageURL)
+        // Keep a supplied transparent silhouette; re-segmenting can lose sleeves or one shoe.
+        if let supplied = GarmentImageFraming.analyze(inputImage, using: ciContext),
+           GarmentImageFraming.acceptsAutomaticCutout(supplied),
+           let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+           let data = ciContext.pngRepresentation(of: inputImage.cropped(to: supplied.frameRect),
+                                                 format: .RGBA8, colorSpace: colorSpace) {
+            return data
+        }
         // Vision supplies only approximate garment locations. SAM produces the final mask.
         let hint = try? bestForegroundMask(for: inputImage, ciContext: ciContext)
-        let maskImage = try await SAMGarmentSegmenter.shared.mask(for: inputImage, foregroundHint: hint)
+        let rawMask = try await SAMGarmentSegmenter.shared.mask(for: inputImage, foregroundHint: hint)
+        let maskImage = GarmentPhotoRefinementService.refinedMask(rawMask, extent: inputImage.extent)
         let transparentBackground = CIImage(color: .clear).cropped(to: inputImage.extent)
 
         let filter = CIFilter.blendWithMask()

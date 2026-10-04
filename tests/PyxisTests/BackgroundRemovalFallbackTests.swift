@@ -4,6 +4,22 @@ import XCTest
 @testable import PyxisCore
 
 final class BackgroundRemovalFallbackTests: XCTestCase {
+    func testUnreadableImportCannotBecomeASavableOriginalOnlyPiece() async throws {
+        let root = try makeTemporaryRoot()
+        let input = root.appendingPathComponent("broken.jpg")
+        let bytes = Data("not an image".utf8)
+        try bytes.write(to: input)
+        let storage = try ImageStorageService(rootURL: root.appendingPathComponent("storage"))
+        let result = await LocalBackgroundRemovalService(imageStorage: storage).processImage(at: input, itemID: UUID())
+        XCTAssertEqual(result.status, .failed)
+        XCTAssertTrue(result.originalPath.isEmpty)
+        XCTAssertNil(result.cutoutPath)
+        XCTAssertNil(result.thumbnailPath)
+        XCTAssertEqual(result.errorMessage, "Image import failed — try another image")
+        XCTAssertEqual(try Data(contentsOf: input), bytes)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: storage.originalsURL.path).isEmpty)
+    }
+
     func testBackgroundRemovalAppliesEXIFOrientationBeforeVisionAnalysis() throws {
         let root = try makeTemporaryRoot()
         let url = root.appendingPathComponent("oriented.jpg")

@@ -41,4 +41,16 @@ final class BodyMeasurementDraftTests: XCTestCase {
         XCTAssertEqual(draft.values[.waist], "invalid")
         for key in [MeasurementKey.chest, .waist, .hip, .height] { XCTAssertNil(draft.canonical(key)) }
     }
+    func testInvalidNonemptyMeasurementsAreIdentifiedBeforeSaving() {
+        let draft = BodyMeasurementDraft(values: [.chest: "40", .waist: "invalid", .hip: "0", .height: "-2", .weight: "inf", .foot: "  "])
+        XCTAssertEqual(Set(draft.invalidKeys), Set([.waist, .hip, .height, .weight]))
+        XCTAssertNil(draft.canonical(.weight))
+        XCTAssertEqual(draft.canonical(.chest), 101.6)
+    }
+
+    func testWhitespaceAndDecimalCommaRemainValid() {
+        let draft = BodyMeasurementDraft(system: .metric, values: [.chest: " 99,5 "])
+        XCTAssertTrue(draft.invalidKeys.isEmpty)
+        XCTAssertEqual(draft.canonical(.chest), 99.5)
+    }
 }

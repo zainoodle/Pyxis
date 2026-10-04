@@ -2,15 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>PYXIS_AI_ACCESS_TOKEN</key>
+	<string>$(PYXIS_AI_ACCESS_TOKEN)</string>
+	<key>PYXIS_AI_BASE_URL</key>
+	<string>$(PYXIS_AI_BASE_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>IBMPlexMono-Light.ttf</string>
 		<string>IBMPlexMono-Regular.ttf</string>
 		<string>IBMPlexMono-Medium.ttf</string>
+		<string>Antonio-Light.ttf</string>
+		<string>Newsreader-Light.ttf</string>
+		<string>Newsreader-Regular.ttf</string>
+		<string>Newsreader-Medium.ttf</string>
+		<string>Newsreader-LightItalic.ttf</string>
+		<string>CormorantGaramond-Light.ttf</string>
+		<string>CormorantGaramond-Regular.ttf</string>
+		<string>CormorantGaramond-Medium.ttf</string>
+		<string>CormorantGaramond-LightItalic.ttf</string>
+		<string>InstrumentSerif-Regular.ttf</string>
+		<string>InstrumentSerif-Italic.ttf</string>
 	</array>
-	<key>PYXIS_AI_ACCESS_TOKEN</key>
-	<string>$(PYXIS_AI_ACCESS_TOKEN)</string>
-	<key>PYXIS_AI_BASE_URL</key>
-	<string>$(PYXIS_AI_BASE_URL)</string>
 </dict>
 </plist>

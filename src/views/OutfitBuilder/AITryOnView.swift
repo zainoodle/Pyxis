@@ -104,7 +104,7 @@ struct AITryOnView: View {
 
     private var referenceSection: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
-            Text("Your photo").font(PyxisTypography.editorialTitle)
+            Text("Your photo").font(PyxisDisplayFace.current.sectionTitle)
             if let url = model.showsOriginal ? model.personURL : (model.generatedURL ?? model.personURL) {
                 LocalImageView(url: url)
                     .frame(maxWidth: .infinity).frame(height: model.generatedURL == nil ? 340 : 420)
@@ -153,7 +153,7 @@ struct AITryOnView: View {
     private var clothingSection: some View {
         VStack(alignment: .leading, spacing: PyxisSpacing.md) {
             HStack {
-                Text("Pieces").font(PyxisTypography.editorialTitle)
+                Text("Pieces").font(PyxisDisplayFace.current.sectionTitle)
                 Spacer()
                 Text("\(model.garments.count)/6").font(PyxisTypography.label).foregroundStyle(PyxisColors.secondaryText)
             }
@@ -192,7 +192,7 @@ struct AITryOnView: View {
             ProgressView("Checking availability…").font(PyxisTypography.label)
         } else if model.isPrivatePC {
             VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                Text("Your PC").font(PyxisTypography.editorialTitle)
+                Text("Your PC").font(PyxisDisplayFace.current.sectionTitle)
                 Text("Keep your PC online during generation. No subscription required.")
                     .font(PyxisTypography.prose).foregroundStyle(PyxisColors.secondaryText)
                 if let counts = model.configuration?.supportedGarmentCounts, !counts.contains(model.garments.count) {
@@ -213,7 +213,7 @@ struct AITryOnView: View {
             }
         } else if purchase.authorization == nil {
             VStack(alignment: .leading, spacing: PyxisSpacing.sm) {
-                Text("Try-on subscription").font(PyxisTypography.editorialTitle)
+                Text("Try-on subscription").font(PyxisDisplayFace.current.sectionTitle)
                 Text("\(model.configuration?.limit ?? 20) previews per month. Failed generations don’t count.")
                     .font(PyxisTypography.prose)
                 if let product = purchase.product {

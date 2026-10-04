@@ -8,9 +8,12 @@ final class ItemDetailViewModel: ObservableObject {
     @Published var imageRevision = 0
 
     private let imageStorage: ImageStorageService?
+    private let backgroundRemovalService: (any BackgroundRemovalServiceProtocol)?
 
-    init() {
-        imageStorage = try? ImageStorageService()
+    init(imageStorage: ImageStorageService? = try? ImageStorageService(),
+         backgroundRemovalService: (any BackgroundRemovalServiceProtocol)? = nil) {
+        self.imageStorage = imageStorage
+        self.backgroundRemovalService = backgroundRemovalService
     }
 
     func displayURL(for item: ClosetItem) -> URL? {
@@ -28,15 +31,19 @@ final class ItemDetailViewModel: ObservableObject {
     }
 
     func retryBackgroundRemoval(for item: ClosetItem) async {
-        guard let imageStorage, !isRetryingBackgroundRemoval else {
+        guard let imageStorage, !isRetryingBackgroundRemoval,
+              ItemImageProcessingState.shared.begin(item.id) else {
             return
         }
 
         retryMessage = nil
         isRetryingBackgroundRemoval = true
-        defer { isRetryingBackgroundRemoval = false }
+        defer {
+            isRetryingBackgroundRemoval = false
+            ItemImageProcessingState.shared.end(item.id)
+        }
 
-        let service = LocalBackgroundRemovalService(imageStorage: imageStorage)
+        let service = backgroundRemovalService ?? LocalBackgroundRemovalService(imageStorage: imageStorage)
         let result = await service.processImage(
             at: imageStorage.url(for: item.imageOriginalPath),
             itemID: Self.backgroundRemovalItemID(for: item)
@@ -80,4 +87,15 @@ final class ItemDetailViewModel: ObservableObject {
     func deleteImages(_ imageSet: StoredImageSet) {
         imageStorage?.deleteImages(imageSet)
     }
+}
+
+/// Shared across detail instances: navigating away cannot make an in-flight piece deletable.
+@MainActor
+final class ItemImageProcessingState: ObservableObject {
+    static let shared = ItemImageProcessingState()
+    @Published private(set) var itemIDs: Set<UUID> = []
+
+    func begin(_ id: UUID) -> Bool { itemIDs.insert(id).inserted }
+    func end(_ id: UUID) { itemIDs.remove(id) }
+    func contains(_ id: UUID) -> Bool { itemIDs.contains(id) }
 }

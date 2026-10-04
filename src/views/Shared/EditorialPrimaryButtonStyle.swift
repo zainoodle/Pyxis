@@ -6,7 +6,7 @@ struct EditorialPrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(PyxisTypography.control)
+            .font(PyxisTypography.button)
             .foregroundStyle(PyxisColors.background)
             .frame(maxWidth: .infinity, minHeight: 50)
             .padding(.vertical, 2)

@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SearchAndFilterView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Binding var filterState: ClosetFilterState
     let closets: [Closet]
     @State private var isShowingMoreFilters = false
@@ -49,8 +48,9 @@ struct SearchAndFilterView: View {
             } label: {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(browseTitle)
+                        Text(browseTitle.uppercased())
                             .font(PyxisTypography.closetBrowse)
+                            .tracking(1.4)
                             .multilineTextAlignment(.leading)
 
                         if let browseDetail {
@@ -65,8 +65,7 @@ struct SearchAndFilterView: View {
                         .font(.system(size: 10, weight: .medium))
                         .accessibilityHidden(true)
                 }
-                .tracking(1.1)
-                .foregroundStyle(colorScheme == .dark ? PyxisColors.secondaryText : PyxisColors.text)
+                .foregroundStyle(PyxisColors.text)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }

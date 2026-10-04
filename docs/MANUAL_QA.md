@@ -1,75 +1,53 @@
-# Pyxis Manual QA
+# Pyxis native acceptance checks
 
-Run this checklist on iPhone or iOS Simulator after Xcode builds the `Pyxis` scheme and `./scripts/build_and_run.sh --verify` launches the app on a booted simulator.
+Use the integrated primary checkout and record its exact build, runtime, appearance and text size. Use disposable wardrobe data. Passing core tests or launching the app does not complete this checklist. Current findings/evidence are in [UI_POLISH_AUDIT.md](UI_POLISH_AUDIT.md); release gates remain separate from visual review.
 
-1. Launch Pyxis.
-2. Confirm the first screen is Closet: a garment gallery in Dark appearance and a grid in Light appearance.
-3. Confirm the empty state says `ADD FIRST ITEM`.
-4. On a Release build, confirm `SEED CLOSET` is not visible.
-5. Press `Command+N`.
-6. Press `Escape` and confirm the add sheet closes.
-7. Press `Command+N` again.
-8. On a Release build, confirm `DEMO IMAGE` is not visible in the import step.
-9. On a physical iPhone, tap `TAKE PHOTO`, approve camera access, capture a clothing item, and choose `Use Photo`; on Simulator, confirm the unavailable camera action cannot be opened. Repeat the add flow with `PHOTO LIBRARY` or `CHOOSE FILE` to confirm existing imports still work.
-10. Confirm the stable `ADD PHOTO → CLEAN IMAGE → REVIEW DETAILS` indicator advances and the original preview appears.
-11. Confirm background removal starts without blocking the UI and the labeled review form remains visible.
-12. Confirm the cutout automatically fills its frame with a small margin and needs no approval step. If the mask is empty, tiny, or covers nearly the whole image, confirm `ORIGINAL ONLY` appears and the original can still be saved.
-    Tap `IMPROVE CUTOUT` in Add Item and on a saved item. Confirm accepted results use the same framing and refresh the preview; rejected results retain the current cutout and thumbnail. Repeat after rotating, and confirm the stored original remains readable.
-13. Test flat-lay and hanger photos against wood, patterned fabric, and a plain wall. Confirm the garment outline excludes the hanger and background. Include a hand touching the garment and nearby body parts; inspect that no skin remains and no fabric is removed. With a pair of shoes, confirm both pieces remain. These are acceptance checks, not guarantees from mask confidence alone. Repeat offline. Use the [cutout diagnostic](CUTOUT_PIPELINE.md#local-verification) to inspect the production result without modifying a saved item.
-14. With `PYXIS_AI_BASE_URL` configured, tap `AI DE-WRINKLE`, confirm the disclosure appears before the action, and verify the generated result replaces the cutout preview while the original remains stored.
-15. Build a fit, tap `TRY THIS FIT ON YOU`, choose a full-body photo, generate, and confirm the person and selected garments are sent only after tapping the generate button. Confirm offline/backend failures remain retryable.
-16. Compare AI results with the originals and confirm the interface does not describe the try-on as a size or fit guarantee.
-17. Open `PROFILE > FIT PASSPORT`, save a partial profile, go back and reopen it, and confirm the values persist.
-18. Toggle between imperial and metric units twice and confirm profile values and retailer chart ranges convert without drift or reinterpretation.
-19. Enter three retailer size-chart rows and confirm the result names the likely size, measurements used, preferred fit, confidence, and fit disclaimer. Remove comparable chart fields and confirm no recommendation is invented.
-20. Confirm `DELETE FIT PASSPORT` is available after a profile has been saved.
-21. Enter a body measurement outside every supplied chart range and confirm Pyxis returns no recommendation. Enter foot length and footwear ranges and confirm footwear sizing uses only foot length.
-22. Delete the Fit Passport, cancel the confirmation, and confirm the values remain; repeat and confirm deletion.
-23. Start importing a photo, wait for processing, close without saving, and confirm the draft image files are removed from `Application Support/Pyxis/Images`.
-24. Confirm category, subtype, and color suggestions are populated.
-25. Edit display name, brand, size, tags, notes, category, subtype, color, and favorite.
-26. Save the item.
-27. Confirm the saved item appears in Closet. In Dark appearance, it becomes the selected garment; open its detail to verify the same product-style code shown during Studio Snap.
-28. Scroll rapidly through a seeded closet and swipe outfit rows; confirm images appear without blocking scrolling or repeatedly flashing `NO IMAGE`.
-    Confirm previously saved transparent cutouts also fill their frames without changing their stored originals.
-29. Quit Pyxis, relaunch it, and confirm the item persists.
-30. In Dark appearance, open All pieces beneath the Closet heading. Select Tops, Bottoms, and Outerwear in turn, then toggle Favorites only. Open Sort & filter, change Sort from Newest, and select a closet, type, and color. Confirm the gallery updates and the menu label summarizes active choices. Choose All pieces and confirm category and type clear. Tap Clear all and confirm search, closet, category, subtype, color, favorites, and sort return to defaults. In Light appearance, confirm the shared compact header opens search from its magnifying glass and the garment grid remains available.
-31. Leave the active search and filters applied, open an item, and return to Closet; confirm the state remains intact. Terminate and relaunch Pyxis; confirm Closet starts with the default unfiltered, newest-first catalog because filters are intentionally session-scoped.
-32. Press `Command+F` and search by item code, display name, brand, tag, notes, category, subtype, and color.
-33. Open item detail, toggle original/cutout, retry background removal, edit metadata, press `Escape`, reopen detail, and confirm the edits persisted.
-34. Use the `CLOSET`, `BUILD`, `FITS`, and `PROFILE` tabs. Confirm each tab preserves predictable navigation, item and fit details use standard back navigation, and only focused capture/import tasks appear as sheets.
-35. In the outfit builder, build and save both a shirt/pants/shoes fit and a one-piece/shoes fit. Confirm selecting a one-piece clears separates and selecting a separate clears the one-piece.
-36. With no saved fits, open the `FITS` tab, tap `BUILD A FIT`, and confirm the `BUILD` tab opens directly without a modal handoff delay.
-37. Open a saved fit, duplicate it, share its text summary, then cancel and confirm its delete dialog. Delete the duplicate and confirm closet items remain.
-38. Delete a closet item used by a saved fit and confirm fit detail reports the missing item.
-39. During background removal, confirm the Studio Snap surface shows `SAVING CLEAN ITEM`, the item subtype, candidate item code, a small settling contact shadow, and a restrained finish sparkle; turn on Reduce Motion and confirm no sweep animation plays.
-40. With a large accessibility text size, confirm navigation, sizing fields, filters, builder rows, and saved-fit actions remain readable and tappable. Use VoiceOver to confirm measurement names and selected outfit items are announced.
-41. Tap `WORE TODAY`; confirm the wear count increments and the last-worn date becomes today after closing and reopening the item.
-42. Tap `DELETE ITEM`, cancel the confirmation, and confirm the item remains. Repeat, confirm deletion, and confirm the item and related image files disappear.
-43. Run `./scripts/build_and_run.sh --verify` twice and confirm the second run terminates the existing simulator app before launching a fresh process.
-44. Disconnect network and repeat launch/import/save/search to confirm core local behavior remains available.
+## Closet and rack
 
-## Editorial dark Closet regression checks
+- Check gallery and grid in both appearances; layout choice is independent of appearance. Inspect dark and light clothing, shoes, wide/long garments, empty wardrobe, empty search, favorites and filtered results.
+- Swipe normally, flick rapidly, reverse direction, interrupt settling and stop deceleration with a touch. Swipes must never open details; a fresh deliberate tap must. Image, code, caption and position must agree after every gesture.
+- Filter/search while a later piece is selected; preserve it when still present and choose a valid neighbor otherwise. Repeat after adding/deleting a piece and switching layouts.
+- Supported opaque tee/shoulder and waistband silhouettes may use a hanger/clip hint. Asymmetric, unusual-neckline, strappy, translucent or otherwise ambiguous images must gracefully remain flat. Check actual photographs: cached alpha-contour validation is not anatomical ground truth.
+- Verify the hook engages the rail, supports stay behind opaque cloth, and the full silhouette stays within the stage during a small rigid swing. Garment pixels/aspect ratio must remain unchanged.
+- Enable Reduce Motion: no decorative swing or neighbor fading; navigation and selection still work. Check largest text and compact/large screens: scroll to the full caption and Build action.
+- Use VoiceOver on hardware for reading order, a single selected garment, activation and Next/Previous garment. Automated accessibility-tree inspection is not VoiceOver acceptance.
 
-- Swipe through at least three pieces: image, name, category, and count must agree. Tap a garment, return, switch to Fits and back; selection must be preserved.
-- Search from the magnifying glass, select a result, open its detail, and return. Clear search and confirm the selected garment still agrees with the caption. Try a query with no results and use Clear all.
-- Filter while a later garment is selected. If the selected garment remains in the results, keep it centered; otherwise select a valid remaining garment. Check favorites with zero results.
-- Import a new garment while a later garment is selected. After save, the image and caption must both refer to the new garment when it matches the active filters.
-- At default text size, the entire garment caption and count must sit above the bottom navigation. Confirm only one set of tabs is exposed, and the custom bar reserves its own layout space.
-- Change Dynamic Type while the second garment is selected. Its image and caption must remain paired. At the largest accessibility size, scroll the gallery vertically to reach the full caption/count; tab labels must remain readable.
-- Use a transparent original without a processed cutout. The large gallery must show the original at display resolution, not an enlarged thumbnail. Keep thumbnail resolution for compact search results.
-- Turn on Increase Contrast or Reduce Transparency and confirm the decorative backdrop lighting disappears. With Reduce Motion, VoiceOver Next/Previous garment actions should change selection without an animated transition.
+## Import, editing and recovery
 
-Local verification evidence and exact checks: [editorial design QA](../design-qa.md).
+- Use the real PhotosPicker, file importer and camera where available. Include a camera image with EXIF orientation, an opaque photo and a transparent cutout. Check photo loading, cancel, retry, invalid/unreadable input and offline use. A DEBUG fixture launcher does not replace picker/camera checks.
+- Cancel during a delayed transfer and processing; confirm no abandoned draft files or late sheet changes. Drop-provider callbacks must also be ignored after dismissal.
+- Inspect extraction edges against Current/Light/Dark backgrounds. Retry a rejected result; retain the accepted cutout and readable original. An incorrect result must not be accepted by weakening quality thresholds.
+- Test SAM on native iOS, not just macOS. Compiled decoder outputs are FLOAT32, weights remain FLOAT16; verify the pinned bundled model files and no-Vision fallback. Broaden photographs to patterned backgrounds, hands, paired shoes, dresses and lace.
+- Toggle Soften small creases and Restore natural texture; restoration must be byte-exact and original storage independent. Rotate both natural/softened states; failure must leave accepted files unchanged. Preserve EXIF display orientation and JPEG encoding.
+- Edit color/category while analysis is pending. Manual choices must survive completion and retry. Inspect long names, tags, notes, keyboard and large text; Save stays unavailable during photo edits.
+- Save, relaunch, reopen and toggle Use original. Verify original/cutout/thumbnail persistence. Delete only the disposable test item and confirm its associated files are removed.
 
-## Cohesive screen hierarchy
+## Saved garment details
 
-- Closet, Fits, and Profile use the same 32-point IBM Plex Mono title, 24-point side margins, and compact top spacing. Closet and Fits group search/add together in 44-point targets.
-- On Fits, open search, search by garment name, select a result, return, toggle Favorites, and clear all filters. With no saved fits, hide browse controls and offer Create a fit.
-- Create and save a fit. Confirm the builder has one title, a piece count, a readable clothing tray, and reachable Save fit / Try on actions above navigation.
-- Open Add piece and cancel. Confirm Photo / Clean up / Details remain legible, with the current step announced.
-- Open Closets and Fit passport from Profile, then return. Check inline titles, spacing, and the native back action.
-- At maximum accessibility text, Fits uses one column and stacks its browse count; Profile keeps icons compact, wraps labels left aligned, and stacks appearance choices.
-- Repeat the primary header/search checks in Light appearance. Its existing garment grid and light palette remain available.
+- Edit metadata with Edit details expanded, then Back/Close without collapsing. Reopen and verify values, updated date and local memory search. A failed save must keep the detail visible with a useful error.
+- Improve cutout and return to gallery/grid/Fits without restarting: every image consumer must show the new accepted file. Check rapid replacement during a pending decode.
+- Start Improve, navigate away, reopen the same piece: Delete and a second improvement must remain unavailable until the first completes. Verify failure preserves the existing cutout/thumbnail.
+- Mark Wear today and check count/date after relaunch. Cancel and then confirm deletion; fits referencing the deleted piece must explain the missing item.
 
-Current captures, findings, and verification: [cohesive UI review](COHESIVE_UI_REVIEW.md).
+## Fits, suggestions and builder
+
+- Check no saved fits, suggestions, saved draft and populated fits. Save a suggestion, search/favorite/clear filters, open details, duplicate, share/cancel, cancel deletion and delete a duplicate. Clothing must remain.
+- Build shirt/pants/shoes and one-piece/shoes fits. Selecting one-piece clears separates and vice versa. Swap/remove pieces, save, leave/resume a draft and relaunch. Inspect one-piece and multi-piece image composition.
+- Inspect standard and accessibility sizes, light/dark, keyboard, long names and missing-piece states. Essential Save/Build actions stay reachable.
+- Exercise the actual configured AI service's availability, disclosure/consent, failed requests, cancellation/retry and success when authorized. Missing configuration must remain honest; a mocked transport test is not live generation or purchase acceptance. Never introduce a new photo-upload service for QA.
+
+## Profile, Measurements and Closets
+
+- Profile appearance controls preserve geometry/hierarchy in both themes. Check all navigation and supporting screens with largest text.
+- Save/reopen partial measurements; switch units twice without drift. Nonempty invalid/zero/negative/nonfinite input must show an error before changing persisted values. Empty optional fields may clear a measurement deliberately.
+- Supply retailer chart ranges and check matching size, unmatched size and no comparable measurements. Changing category/chart clears stale recommendations. Verify footwear uses foot length and keep the fit disclaimer.
+- Cancel and confirm profile deletion. Create/rename a closet, edit membership, relaunch, cancel and confirm group deletion; garments remain. Duplicate names explain the conflict. Keyboard Done and large-text controls remain usable.
+- Browse a closet through Closet's existing filter; Profile management does not offer a disconnected Select control.
+
+## Release and device matrix
+
+- Run relevant package, workflow/backend and static privacy/configuration checks; build the final Debug simulator and Release device artifact after all source changes.
+- Inspect Release for bundled models, permission text, deployment target, absence of DEBUG seed/import/diagnostic/private-PC behavior and absence of embedded credentials. Do not bump versions for routine local review.
+- Test iOS 17 (declared minimum) and current runtimes, compact and large phones, both appearances, large text and Reduce Motion. Record unavailable runtimes as unverified; do not raise the target to bypass a failure.
+- Use a connected physical phone for touch feel, real camera, inference quality/performance and VoiceOver. A browser mirror is only a viewing aid. Record physical unavailability separately.
+- Verify existing-data upgrade/recovery before distribution. Complete production authentication, StoreKit/backend/privacy and signing/TestFlight checks separately, with explicit release authorization.

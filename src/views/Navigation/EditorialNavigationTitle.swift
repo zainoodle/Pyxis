@@ -11,7 +11,7 @@ private struct EditorialNavigationTitle: ViewModifier {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text(title)
-                        .font(PyxisTypography.body)
+                        .font(PyxisDisplayFace.current.navigationTitle)
                         .foregroundStyle(PyxisColors.text)
                         .lineLimit(1)
                         .accessibilityAddTraits(.isHeader)

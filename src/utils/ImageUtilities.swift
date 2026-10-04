@@ -75,6 +75,26 @@ public enum ImageUtilities {
     }
 
     public static func rotatedImageData(
+        from imageData: Data,
+        direction: RotationDirection,
+        jpegEncoding: Bool = false
+    ) throws -> Data {
+        guard let source = CIImage(data: imageData, options: [.applyOrientationProperty: true]),
+              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        let rotated = source.oriented(direction == .clockwise ? .right : .left)
+        let context = CIContext()
+        let encoded = jpegEncoding
+            ? context.jpegRepresentation(of: rotated, colorSpace: colorSpace, options: [:])
+            : context.pngRepresentation(of: rotated, format: .RGBA8, colorSpace: colorSpace)
+        guard let data = encoded else {
+            throw ImageUtilityError.couldNotEncodeImage
+        }
+        return data
+    }
+
+    public static func rotatedImageData(
         from imageURL: URL,
         direction: RotationDirection
     ) throws -> Data {
@@ -146,8 +166,21 @@ public enum ImageUtilities {
         from imageURL: URL,
         maxPixelSize: CGFloat = 420
     ) throws -> Data {
-        guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
-              let cgImage = CGImageSourceCreateThumbnailAtIndex(
+        guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        return try thumbnailPNGData(from: source, maxPixelSize: maxPixelSize)
+    }
+
+    public static func thumbnailPNGData(from data: Data, maxPixelSize: CGFloat = 420) throws -> Data {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            throw ImageUtilityError.couldNotLoadImage
+        }
+        return try thumbnailPNGData(from: source, maxPixelSize: maxPixelSize)
+    }
+
+    private static func thumbnailPNGData(from source: CGImageSource, maxPixelSize: CGFloat) throws -> Data {
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(
                 source,
                 0,
                 [

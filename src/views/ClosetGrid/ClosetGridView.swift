@@ -30,6 +30,7 @@ struct ClosetGridView: View {
                 addAction: { isShowingAddFlow = true },
                 searchAction: { isShowingSearch = true }
             )
+            .padding(.horizontal, 24)
 
             if let savedItemPrompt {
                 SavedItemBuildPrompt(item: savedItemPrompt) {
@@ -51,6 +52,11 @@ struct ClosetGridView: View {
             content
         }
         .editorialCanvas()
+        #if DEBUG
+        .task {
+            if ProcessInfo.processInfo.arguments.contains("-pyxis.importFixture") { isShowingAddFlow = true }
+        }
+        #endif
         .toolbar {
             Button("ADD") {
                 isShowingAddFlow = true

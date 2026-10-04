@@ -31,11 +31,13 @@ struct ItemCodeLabel: View {
 }
 
 struct MinimalButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(colorScheme == .dark ? PyxisTypography.editorialLabel : PyxisTypography.body)
-            .tracking(colorScheme == .dark ? 1.2 : 0)
+            .font(PyxisTypography.button)
+            .tracking(0.2)
             .foregroundStyle(PyxisColors.text)
             .padding(.horizontal, PyxisSpacing.md)
             .padding(.vertical, PyxisSpacing.sm)
@@ -46,10 +48,10 @@ struct MinimalButtonStyle: ButtonStyle {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(PyxisColors.hairline, lineWidth: 1)
+                    .stroke(PyxisColors.controlBorder, lineWidth: 1)
             }
-            .editorialGlow(cornerRadius: 8, strength: configuration.isPressed ? 0.4 : 0.7)
-            .opacity(configuration.isPressed ? 0.55 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
             .contentShape(Rectangle())
     }
 }
@@ -104,7 +106,7 @@ struct InlineErrorMessage: View {
     let message: String
 
     var body: some View {
-        Text(message.uppercased())
+        Text(message)
             .font(PyxisTypography.label)
             .foregroundStyle(PyxisColors.error)
             .frame(maxWidth: .infinity, alignment: .leading)
